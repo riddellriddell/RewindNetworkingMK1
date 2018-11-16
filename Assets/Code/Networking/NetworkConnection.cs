@@ -8,10 +8,18 @@ namespace Networking
     public class NetworkConnection : MonoBehaviour
     {
 
-        //all the connections 
-        public List<Connection> m_conConnectionList;
+        public InternetConnectionSimulator m_icwConnectionSimulation;
 
-        public byte PlayerID;
+        //all the connections 
+        public List<Connection> m_conConnectionList = new List<Connection>();
+
+        //the local id of the player
+        public byte m_bPlayerID;
+
+        //the unique id for this play
+        public long m_lPlayerUniqueID;
+
+
 
         public delegate void PacketDataIn(byte bPlayerID, Packet pktInput);
         public event PacketDataIn m_evtPacketDataIn;
@@ -31,6 +39,23 @@ namespace Networking
         {
             //add connection to connection list
             m_conConnectionList.Add(conDebugConnection);
+        }
+
+        public void MakeTestingConnection(NetworkConnection nwcConnectionTarget)
+        {
+            //create new connection 
+            Connection m_conLocalConnection = new Connection(nwcConnectionTarget.m_bPlayerID);
+            m_conLocalConnection.m_icsConnectionSim = m_icwConnectionSimulation;
+
+            Connection m_conTargetConnection = new Connection(m_bPlayerID);
+            m_conTargetConnection.m_icsConnectionSim = m_icwConnectionSimulation;
+
+            m_conLocalConnection.m_conConnectionTarget = m_conTargetConnection;
+            m_conTargetConnection.m_conConnectionTarget = m_conLocalConnection;
+
+            MakeConnection(m_conLocalConnection);
+            nwcConnectionTarget.MakeConnection(m_conTargetConnection);
+
         }
 
         public void UpdateConnections(int iCurrentTick)
@@ -102,7 +127,7 @@ namespace Networking
 
         public Connection MakeConnectionOffer()
         {
-            Connection conOffer = new Connection(PlayerID);
+            Connection conOffer = new Connection(m_bPlayerID);
 
             return conOffer;
         }
@@ -112,7 +137,7 @@ namespace Networking
             MakeConnection(conConnectionOffer);
 
 
-            Connection conOffer = new Connection(PlayerID);
+            Connection conOffer = new Connection(m_bPlayerID);
 
             return conOffer;
         }
@@ -127,10 +152,7 @@ namespace Networking
             //check if packet was for networking only
             switch (pktPacket.m_ptyPacketType)
             {
-                case Packet.PacketType.Connection:
-
-                    break;
-
+ 
                 default:
                     //fire event 
                     m_evtPacketDataIn?.Invoke(bPlayerConnection, pktPacket);

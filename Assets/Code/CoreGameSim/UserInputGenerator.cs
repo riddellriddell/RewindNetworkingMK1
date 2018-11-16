@@ -6,7 +6,9 @@ public class UserInputGenerator : MonoBehaviour
 {
     public string m_strVertical;
     public string m_strHorizontal;
+    public string m_strStartGameShortcut;
 
+    public bool m_bStartGame;
 
     public byte m_bOldInput
     {
@@ -31,6 +33,8 @@ public class UserInputGenerator : MonoBehaviour
     void Update()
     {
         byte bNewInput = (byte)InputKeyFrame.Input.None;
+
+        m_bStartGame = Input.GetKey(m_strStartGameShortcut);
 
         float fInput = Input.GetAxisRaw(m_strVertical);
 

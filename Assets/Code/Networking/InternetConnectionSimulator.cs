@@ -15,13 +15,16 @@ namespace Networking
             public float m_fTimeOfDelivery;
         }
 
-        public float m_fMinLag;
-        public float m_fMaxLag;
-        public float m_fMinOutage;
-        public float m_fMaxOutage;
-        public float m_fMinTimeBetweenOutages;
-        public float m_fMaxTimeBetweenOutages;
-        public float m_fPacketLoss;
+        public bool m_bEnableLag = false;
+        public float m_fMinLag = 0.25f;
+        public float m_fMaxLag = 1f;
+        public bool m_bEnableOutages = false;
+        public float m_fMinOutage = 0.25f;
+        public float m_fMaxOutage = 8f;
+        public float m_fMinTimeBetweenOutages = 3;
+        public float m_fMaxTimeBetweenOutages = 9;
+        public bool m_bEnablePacketLoss = false;
+        public float m_fPacketLoss = 0.3f;
 
         private float m_fTimeUntillNextOutage;
         private float m_fOutageTimeRemainig;
@@ -106,22 +109,29 @@ namespace Networking
 
         private bool IsPacketDropped()
         {
-            if (m_fOutageTimeRemainig > 0)
+            if (m_fOutageTimeRemainig > 0 && m_bEnableOutages)
             {
                 return true;
             }
 
-            if (Random.Range(0f, 1f) < m_fPacketLoss)
+            if (Random.Range(0f, 1f) < m_fPacketLoss && m_bEnablePacketLoss)
             {
-                return false;
+                return true;
             }
 
-            return true;
+            return false;
         }
 
         private float CalcuateDeliveryTime()
         {
-            return Time.timeSinceLevelLoad + Random.Range(m_fMinLag, m_fMaxLag);
+            if (m_bEnableLag)
+            {
+                return Time.timeSinceLevelLoad + Random.Range(m_fMinLag, m_fMaxLag);
+            }
+            else
+            {
+                return Time.timeSinceLevelLoad;
+            }
         }
     }
 }
