@@ -36,6 +36,10 @@ public class SimManager : MonoBehaviour
 
     public float m_fDebugScale;
 
+    public bool m_bShowDebug;
+
+    public Color m_colDebugCollour;
+
     protected GameLoopState m_glsGameState;
 
     protected float m_fNetworkTimeOfCountdownStart;
@@ -109,7 +113,7 @@ public class SimManager : MonoBehaviour
 
     public void OnDrawGizmos()
     {
-        if (m_simGameSim == null)
+        if (m_simGameSim == null || m_bShowDebug == false)
         {
             return;
         }
@@ -119,9 +123,16 @@ public class SimManager : MonoBehaviour
 
         for (int i = 0; i < frmLatestFrame.PlayerCount; i++)
         {
-            Vector3 drawPos = new Vector3((float)frmLatestFrame.m_v2iPosition[i].X * m_fDebugScale, 0, (float)frmLatestFrame.m_v2iPosition[i].Y * m_fDebugScale);
+            Vector3 vecDrawPos = new Vector3((float)frmLatestFrame.m_v2iPosition[i].X * m_fDebugScale, 0, (float)frmLatestFrame.m_v2iPosition[i].Y * m_fDebugScale);
 
-            Gizmos.DrawSphere(drawPos, 1);
+            Color colDefaultColor = Gizmos.color;
+
+            Gizmos.color = m_colDebugCollour;
+
+            Gizmos.DrawSphere(vecDrawPos, 1);
+
+            Gizmos.color = colDefaultColor;
+
         }
     }
 

@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class TimeKeeper : MonoBehaviour {
+public class TimeKeeper : MonoBehaviour
+{
 
 	// Use this for initialization
 	void Start () {
