@@ -21,4 +21,18 @@ public struct InputKeyFrame
     
     public int m_iTick;
     public byte m_iInput;    
+
+    public int AddToByteArray(byte[] bByteArray, int iOffsetInArray)
+    {
+        byte[] bIntBytes = BitConverter.GetBytes(m_iTick);
+
+        for(int i = 0; i < bIntBytes.Length; i++)
+        {
+            bByteArray[iOffsetInArray++] = bIntBytes[i];
+        }
+
+        bByteArray[iOffsetInArray++] = m_iInput;
+        
+        return iOffsetInArray;
+    }
 }

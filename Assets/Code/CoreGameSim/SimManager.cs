@@ -179,7 +179,7 @@ public class SimManager : MonoBehaviour
             StartCountDownPacket scdStartPacket = pktPacket as StartCountDownPacket;
 
             //get the game start time
-            if (m_dtmTimeToStartGame == null || m_dtmTimeToStartGame.Ticks > scdStartPacket.m_lGameStartTime)
+            if (m_glsGameState == GameLoopState.LOBBY || m_dtmTimeToStartGame == null || m_dtmTimeToStartGame.Ticks > scdStartPacket.m_lGameStartTime)
             {
                 //set the game start time to the closest time
                 m_dtmTimeToStartGame = scdStartPacket.GameStartTime;
@@ -251,7 +251,7 @@ public class SimManager : MonoBehaviour
     private void UpdateCountDownState()
     {       
 
-        if (DateTime.UtcNow > m_dtmTimeToStartGame)
+        if (DateTime.UtcNow.Ticks > m_dtmTimeToStartGame.Ticks)
         {
             SwitchToActiveState();
         }

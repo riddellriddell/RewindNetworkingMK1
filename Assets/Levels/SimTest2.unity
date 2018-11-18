@@ -286,15 +286,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aad5b031cf66087489d8c7c0dcb7ae6b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_fCountDownTime: 5
+  m_fCountDownTime: 10
   m_uigInputGenerator: {fileID: 421822573}
   m_ntcNetworkConnection: {fileID: 421822571}
   m_ntcConnectionTarget: {fileID: 1568822424}
   m_gstSettings: {fileID: 11400000, guid: e400905f6de704d478385473909a3fed, type: 2}
   m_playerCount: 0
   m_fDebugScale: 0.5
-  m_bShowDebug: 0
-  m_colDebugCollour: {r: 0.13501246, g: 0.27009866, b: 0.7735849, a: 0}
+  m_bShowDebug: 1
+  m_colDebugCollour: {r: 0.13501246, g: 0.27009866, b: 0.7735849, a: 0.6627451}
 --- !u!114 &421822571
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -365,15 +365,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_bEnableLag: 1
-  m_fMinLag: 0.1
-  m_fMaxLag: 0.1
-  m_bEnableOutages: 0
+  m_fMinLag: 0.4
+  m_fMaxLag: 0.5
+  m_bEnableOutages: 1
   m_fMinOutage: 0
-  m_fMaxOutage: 0
-  m_fMinTimeBetweenOutages: 99
-  m_fMaxTimeBetweenOutages: 100
-  m_bEnablePacketLoss: 0
-  m_fPacketLoss: 0
+  m_fMaxOutage: 3
+  m_fMinTimeBetweenOutages: 5
+  m_fMaxTimeBetweenOutages: 20
+  m_bEnablePacketLoss: 1
+  m_fPacketLoss: 0.3
 --- !u!4 &1375160710
 Transform:
   m_ObjectHideFlags: 0
@@ -415,15 +415,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aad5b031cf66087489d8c7c0dcb7ae6b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_fCountDownTime: 5
+  m_fCountDownTime: 10
   m_uigInputGenerator: {fileID: 0}
   m_ntcNetworkConnection: {fileID: 1568822424}
   m_ntcConnectionTarget: {fileID: 0}
   m_gstSettings: {fileID: 11400000, guid: e400905f6de704d478385473909a3fed, type: 2}
   m_playerCount: 0
   m_fDebugScale: 0.5
-  m_bShowDebug: 0
-  m_colDebugCollour: {r: 0.8301887, g: 0.2217605, b: 0.16838734, a: 0}
+  m_bShowDebug: 1
+  m_colDebugCollour: {r: 0.8301887, g: 0.2217605, b: 0.16838734, a: 0.62352943}
 --- !u!114 &1568822424
 MonoBehaviour:
   m_ObjectHideFlags: 0

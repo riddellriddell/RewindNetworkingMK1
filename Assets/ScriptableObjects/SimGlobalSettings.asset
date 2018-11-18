@@ -18,7 +18,7 @@ MonoBehaviour:
     IntValue: {x: 1, y: 1}
     DecimalOffset: 1
   MovementSpeed:
-    IntValue: 1
+    IntValue: 3
     DecimalOffset: 1
   GameFieldSize:
     IntValue: {x: 100, y: 100}

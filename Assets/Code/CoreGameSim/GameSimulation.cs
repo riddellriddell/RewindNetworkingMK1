@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using FixedPointy;
+using System;
 
 public class GameSimulation
 {
@@ -86,6 +87,26 @@ public class GameSimulation
 
     }
 
+    public  FrameData GetFrameData(int iTick)
+    {       
+        return m_frmDenseFrameQueue[GetFrameDataIndex(iTick)];
+    }
+
+    public int GetFrameDataIndex(int iTick)
+    {
+        //get last resolved tick frame
+        int iOffsetFromLatest = m_iLatestTick - iTick;
+
+        //check if lookup is overrunning the dense queue 
+        if (iOffsetFromLatest >= m_frmDenseFrameQueue.Count - 1)
+        {
+            Debug.LogError("Frame Request Over flowing buffer by " + (iOffsetFromLatest - m_frmDenseFrameQueue.Count) + " buffer size is " + m_frmDenseFrameQueue.Count);
+        }
+
+        //get the lookup index in the buffer 
+        return HelperFunctions.mod((m_iDenseQueueHead - iOffsetFromLatest), m_frmDenseFrameQueue.Count);
+    }
+
     public void UpdateSimulation(int iTargetTick)
     {
         //check if last resolved tick is older than latest tick
@@ -98,10 +119,10 @@ public class GameSimulation
         int iFamesToCalculate = iTargetTick - m_iLastResolvedTick;
 
         //get last resolved tick frame
-        int iStartFrameOffset = m_frmDenseFrameQueue[m_iDenseQueueHead].m_iTickNumber - m_iLastResolvedTick;
+        int iStartFrameOffset = m_iLatestTick - m_iLastResolvedTick;
 
         //get spot to look up in buffer 
-        int iStartIndex = HelperFunctions.mod((m_iDenseQueueHead - iStartFrameOffset) , m_frmDenseFrameQueue.Count);
+        int iStartIndex = GetFrameDataIndex(m_iLastResolvedTick);
 
         //get the frame data 
         FrameData frmFrameToSimulate = m_frmDenseFrameQueue[iStartIndex];
@@ -111,23 +132,22 @@ public class GameSimulation
 
         for(int i = 0; i < iFamesToCalculate; i++)
         {
-            //get output frame 
-            iOutputIndex = HelperFunctions.mod((iStartIndex + i) + 1 , m_frmDenseFrameQueue.Count);
+            //get output frame thats 1 ahead of the current frame / start index 
+            iOutputIndex = GetFrameDataIndex(m_iLastResolvedTick + 1);
+
+            //get target frame output 
             frmFrameOutput = m_frmDenseFrameQueue[iOutputIndex];
 
             //simulate frame
             SimulateFrame(m_setGameSettings, m_conConstantGameData, m_ipbPlayerInputs, m_bInputsForTick, frmFrameToSimulate, frmFrameOutput);
             
             //shift simulation forwards 
-            frmFrameToSimulate = frmFrameOutput;          
+            frmFrameToSimulate = frmFrameOutput;
 
+            //set head of simulation
+            m_iDenseQueueHead = iOutputIndex;
+            m_iLastResolvedTick = frmFrameToSimulate.m_iTickNumber;
         }
-
-        //set head of simulation
-        m_iDenseQueueHead = iOutputIndex;
-
-        m_iLastResolvedTick = iTargetTick;
-
     }
 
     //simulate a single frame 
@@ -249,5 +269,10 @@ public class GameSimulation
         }
 
         return true;
+    }
+
+    public void GetHashForFrame(byte[] bOutput, int iTick)
+    {
+
     }
 }
