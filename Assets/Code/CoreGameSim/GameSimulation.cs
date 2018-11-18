@@ -3,12 +3,15 @@ using System.Collections;
 using System.Collections.Generic;
 using FixedPointy;
 using System;
+using System.Security.Cryptography;
 
 public class GameSimulation
 {
     public GameSettings m_setGameSettings;
 
     public ConstData m_conConstantGameData;
+
+    public bool m_bEnableDebugHashChecks = true;
 
     //the most recent tick
     public int m_iLatestTick
@@ -137,7 +140,7 @@ public class GameSimulation
 
             //get target frame output 
             frmFrameOutput = m_frmDenseFrameQueue[iOutputIndex];
-
+                       
             //simulate frame
             SimulateFrame(m_setGameSettings, m_conConstantGameData, m_ipbPlayerInputs, m_bInputsForTick, frmFrameToSimulate, frmFrameOutput);
             
@@ -153,6 +156,13 @@ public class GameSimulation
     //simulate a single frame 
     public bool SimulateFrame(GameSettings setSettings, ConstData conConstantGameData, List<InputBuffer> ipbPlayerInputs, List<byte> bInputsForTick, FrameData frmFrameToSimulate, FrameData frmSimulatedFrame)
     {
+        //check if running hash debugs
+        if(m_bEnableDebugHashChecks)
+        {
+            //clear frame data 
+            frmSimulatedFrame.ResetData();
+        }
+
         //was simulation successfull
         bool bSuccess = false;
 
@@ -167,6 +177,15 @@ public class GameSimulation
 
          //perform all moves
          bSuccess = PerformMoveProcess(setSettings, conConstantGameData, bInputsForTick, frmFrameToSimulate, frmSimulatedFrame, setSettings.m_fixTickDelta);
+
+        //do hash checks 
+        if(m_bEnableDebugHashChecks)
+        {
+            if(DataHashValidation.LogDataHash(GetHashForInputs(frmFrameToSimulate.m_iTickNumber), frmFrameToSimulate.m_iTickNumber, GetHashForFrame(frmFrameToSimulate.m_iTickNumber),"") == false)
+            {
+                Debug.LogError("Move Command Failed Hash Check");
+            }
+        }
 
         //perform all attacks 
 
@@ -271,8 +290,39 @@ public class GameSimulation
         return true;
     }
 
-    public void GetHashForFrame(byte[] bOutput, int iTick)
+    public byte[] GetHashForInputs(int iTick)
     {
+        //create small array to hold temp results
+        byte[] bIndivitualHash = new byte[8];
 
+        //create byte array for all hash results
+        byte[] bHashResults = new byte[bIndivitualHash.Length * m_ipbPlayerInputs.Count];
+
+        //loop through all input buffers 
+        for(int i = 0; i < m_ipbPlayerInputs.Count; i += bIndivitualHash.Length)
+        {
+            //get input hash
+            m_ipbPlayerInputs[i].GetHashCodeForInputs(bIndivitualHash,0, iTick);
+
+            //add to main list 
+            for( int j = 0; j < bIndivitualHash.Length; j++)
+            {
+                bHashResults[i + j] = bIndivitualHash[j];
+            }
+        }
+
+        MD5 md5 = MD5.Create();
+
+        //generate the hash code 
+        return md5.ComputeHash(bHashResults);
+    }
+
+    public byte[] GetHashForFrame(int iTick)
+    {
+        byte[] bHash = new byte[8];
+
+        GetFrameData(iTick).GetHashCode(bHash);
+
+        return bHash;
     }
 }

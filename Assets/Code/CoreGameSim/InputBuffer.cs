@@ -118,7 +118,7 @@ public class InputBuffer
         {
             if(m_ikfInputBuffer[i].m_iTick >= iStartTick)
             {
-                iStartTick = iEndIndex = i;
+                iStartIndex = iEndIndex = i;
                 break;
             }
         }
@@ -138,7 +138,7 @@ public class InputBuffer
         //get end index 
         for(;iEndIndex < m_ikfInputBuffer.Count; iEndIndex++)
         {
-            if (m_ikfInputBuffer[iEndIndex].m_iTick > iEndIndex)
+            if (m_ikfInputBuffer[iEndIndex].m_iTick > iEndTick)
             {
                 break;
             }

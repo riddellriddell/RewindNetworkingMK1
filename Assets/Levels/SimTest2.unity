@@ -286,7 +286,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aad5b031cf66087489d8c7c0dcb7ae6b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_fCountDownTime: 10
+  m_fCountDownTime: 5
   m_uigInputGenerator: {fileID: 421822573}
   m_ntcNetworkConnection: {fileID: 421822571}
   m_ntcConnectionTarget: {fileID: 1568822424}
@@ -415,7 +415,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aad5b031cf66087489d8c7c0dcb7ae6b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_fCountDownTime: 10
+  m_fCountDownTime: 5
   m_uigInputGenerator: {fileID: 0}
   m_ntcNetworkConnection: {fileID: 1568822424}
   m_ntcConnectionTarget: {fileID: 0}

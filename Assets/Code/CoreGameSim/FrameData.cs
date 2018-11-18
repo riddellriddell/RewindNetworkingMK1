@@ -74,15 +74,7 @@ public class FrameData
         m_bScore = new List<byte>(iPlayerNumber);
 
         //initalise values 
-        for (int i = 0; i < iPlayerNumber; i++)
-        {
-            m_sPlayerHealths.Add(0);
-            m_v2iPosition.Add(FixVec2.Zero);
-            m_bFaceDirection.Add(0);
-            m_bPlayerState.Add(0);
-            m_sCoolDown.Add(0);
-            m_bScore.Add(0);
-        }
+        ResetData(iPlayerNumber);
 
     }
 
@@ -97,6 +89,33 @@ public class FrameData
         m_bPlayerState = new List<byte>(source.m_bPlayerState);
         m_sCoolDown = new List<short>(source.m_sCoolDown);
         m_bScore = new List<byte>(source.m_bScore);
+    }
+
+    public void ResetData(int iPlayerNumber = 0)
+    {
+        if(iPlayerNumber == 0)
+        {
+            iPlayerNumber = m_sPlayerHealths.Count;
+        }
+
+        //clear existing values
+        m_sPlayerHealths.Clear();
+        m_v2iPosition.Clear();
+        m_bFaceDirection.Clear();
+        m_bPlayerState.Clear();
+        m_sCoolDown.Clear();
+        m_bScore.Clear();
+
+        //initalise values 
+        for (int i = 0; i < iPlayerNumber; i++)
+        {
+            m_sPlayerHealths.Add(0);
+            m_v2iPosition.Add(FixVec2.Zero);
+            m_bFaceDirection.Add(0);
+            m_bPlayerState.Add(0);
+            m_sCoolDown.Add(0);
+            m_bScore.Add(0);
+        }
     }
 
     //generate a hash of all the values 
@@ -150,7 +169,7 @@ public class FrameData
 
         MD5 md5 = MD5.Create();
 
-        byte[] bHash = md5.ComputeHash(mstMemoryStream);
+        byte[] bHash = md5.ComputeHash(mstMemoryStream.ToArray());
 
         for (int i = 0; i < bOutput.Length; i++)
         {
