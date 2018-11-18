@@ -181,7 +181,7 @@ public class GameSimulation
         //do hash checks 
         if(m_bEnableDebugHashChecks)
         {
-            if(DataHashValidation.LogDataHash(GetHashForInputs(frmFrameToSimulate.m_iTickNumber), frmFrameToSimulate.m_iTickNumber, GetHashForFrame(frmFrameToSimulate.m_iTickNumber),"") == false)
+            if(DataHashValidation.LogDataHash(GetHashForInputs(frmFrameToSimulate.m_iTickNumber), frmFrameToSimulate.m_iTickNumber, GetHashForFrame(frmFrameToSimulate.m_iTickNumber + 1),"") == false)
             {
                 Debug.LogError("Move Command Failed Hash Check");
             }

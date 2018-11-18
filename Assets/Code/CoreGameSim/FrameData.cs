@@ -93,7 +93,9 @@ public class FrameData
 
     public void ResetData(int iPlayerNumber = 0)
     {
-        if(iPlayerNumber == 0)
+        m_iTickNumber = 0;
+
+        if (iPlayerNumber == 0)
         {
             iPlayerNumber = m_sPlayerHealths.Count;
         }
