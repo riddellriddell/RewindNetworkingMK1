@@ -8,6 +8,8 @@ namespace Sim
     [CreateAssetMenu(fileName = "SimGlobalSettings", menuName = "Simulation/Settings", order = 1)]
     public class GameSettings : ScriptableObject
     {
+        public bool RunHashChecks = false;
+        
         //serialization format of variables 
         public FixValueUnityInterface TickDelta;
 

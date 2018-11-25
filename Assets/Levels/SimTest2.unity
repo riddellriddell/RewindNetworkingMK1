@@ -290,7 +290,7 @@ MonoBehaviour:
   m_uigInputGenerator: {fileID: 421822573}
   m_ntcNetworkConnection: {fileID: 421822571}
   m_ntcConnectionTarget: {fileID: 1568822424}
-  m_gstSettings: {fileID: 11400000, guid: e400905f6de704d478385473909a3fed, type: 2}
+  m_setSettings: {fileID: 11400000, guid: e400905f6de704d478385473909a3fed, type: 2}
   m_playerCount: 0
   m_fDebugScale: 1
   m_bShowDebug: 1
@@ -431,7 +431,7 @@ MonoBehaviour:
   m_uigInputGenerator: {fileID: 0}
   m_ntcNetworkConnection: {fileID: 1568822424}
   m_ntcConnectionTarget: {fileID: 0}
-  m_gstSettings: {fileID: 11400000, guid: e400905f6de704d478385473909a3fed, type: 2}
+  m_setSettings: {fileID: 11400000, guid: e400905f6de704d478385473909a3fed, type: 2}
   m_playerCount: 0
   m_fDebugScale: 1
   m_bShowDebug: 1

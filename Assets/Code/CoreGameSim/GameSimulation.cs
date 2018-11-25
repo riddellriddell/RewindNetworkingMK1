@@ -45,9 +45,8 @@ namespace Sim
         //a list of all the inputs for the current tick
         protected List<byte> m_bInputsForTick;
 
-        public GameSimulation(GameSettings setSttings, ConstData conConstantData, int iDebugNetConnectionID)
-        {
-            m_iDebugNetConnectionID = iDebugNetConnectionID;
+        public GameSimulation(GameSettings setSttings, ConstData conConstantData)
+        {           
             m_setGameSettings = setSttings;
             m_conConstantGameData = conConstantData;
 

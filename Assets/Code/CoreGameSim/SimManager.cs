@@ -24,7 +24,7 @@ namespace Sim
 
         public NetworkConnection m_ntcConnectionTarget;
 
-        public GameSettings m_gstSettings;
+        public GameSettings m_setSettings;
 
         protected ConstData m_conGameData;
 
@@ -331,7 +331,7 @@ namespace Sim
         private void SetupSimulation()
         {
             //deserialize key data 
-            m_gstSettings.Deserialize();
+            m_setSettings.Deserialize();
 
             //create list of all players
             List<byte> bPlayerCharacters = new List<byte>(m_playerCount);
@@ -344,7 +344,11 @@ namespace Sim
 
             m_conGameData = new ConstData(bPlayerCharacters);
 
-            m_simGameSim = new GameSimulation(m_gstSettings, m_conGameData,m_ntcNetworkConnection.m_bPlayerID);
+            m_simGameSim = new GameSimulation(m_setSettings, m_conGameData);
+
+            m_simGameSim.m_iDebugNetConnectionID = m_ntcNetworkConnection.m_bPlayerID;
+
+            m_simGameSim.m_bEnableDebugHashChecks = m_setSettings.RunHashChecks;
         }
     }
 }
