@@ -226,13 +226,25 @@ namespace Sim
                 }
             }
 
+            //perform collision resolution 
+            PerformCollisionDetection(setSettings, frmFrameToSimulate, frmSimulatedFrame);
+
+            //do hash checks 
+            if (m_bEnableDebugHashChecks)
+            {
+                if (DataHashValidation.LogDataHash(GetHashForInputs(frmFrameToSimulate.m_iTickNumber), 2, frmFrameToSimulate.m_iTickNumber, GetHashForFrame(frmFrameToSimulate.m_iTickNumber + 1), "") == false)
+                {
+                    Debug.LogError("Collision Resolution Failed Hash Check");
+                }
+            }
+
             //perform all attacks 
             PerformAttackActions(setSettings, conConstantGameData, bInputsForTick, frmFrameToSimulate, frmSimulatedFrame);
 
             //do hash checks 
             if (m_bEnableDebugHashChecks)
             {
-                if (DataHashValidation.LogDataHash(GetHashForInputs(frmFrameToSimulate.m_iTickNumber),2, frmFrameToSimulate.m_iTickNumber, GetHashForFrame(frmFrameToSimulate.m_iTickNumber + 1), "") == false)
+                if (DataHashValidation.LogDataHash(GetHashForInputs(frmFrameToSimulate.m_iTickNumber),3, frmFrameToSimulate.m_iTickNumber, GetHashForFrame(frmFrameToSimulate.m_iTickNumber + 1), "") == false)
                 {
                     Debug.LogError("Attack calculation Failed Hash Check");
                 }
@@ -339,31 +351,6 @@ namespace Sim
                         //apply movement to position
                         outPlayerPos[i] = inPlayerPos[i] + v2iMoveDirection;
 
-                        //check for collisions with other players 
-                        if (GetPlayersOverlappingCircle(setSettings, frmUpdatedFrame, outPlayerPos[i], setSettings.ChararcterSize.m_fValue, i, sCollisions))
-                        {
-                            FixVec2 vecOutPos = FixVec2.Zero;
-
-                            Fix fixAverageScale = Fix.One / sCollisions.Count;
-
-                            Fix fixCollisionExitDistance = setSettings.ChararcterSize.m_fValue * 2;
-
-                            //loop through all collisions and attempt to resolve them 
-                            for (int j = 0; j < sCollisions.Count; j++)
-                            {
-                                //look up hit player position 
-                                FixVec2 vecHit = inPlayerPos[sCollisions[j]];
-
-                                //get direction to player
-                                FixVec2 vecExitDir = outPlayerPos[i] - vecHit;
-
-                                //calcualte collision exit pos
-                                vecOutPos += (vecHit + vecExitDir.Normalize() * fixCollisionExitDistance) * fixAverageScale;
-                            }
-
-                            outPlayerPos[i] = vecOutPos;
-                        }
-
                         //set move state 
                         outPlayerStates[i] = (byte)FrameData.State.Moving;
                     }
@@ -374,6 +361,46 @@ namespace Sim
                     outMoveDirection[i] = inMoveDirection[i];
                 }
 
+            }
+
+            return true;
+        }
+
+        public bool PerformCollisionDetection(GameSettings setSettings, FrameData frmCurrentFrame, FrameData frmUpdatedFrame)
+        {
+            List<FixVec2> outPlayerPos = frmUpdatedFrame.m_v2iPosition;
+
+            List<FixVec2> inPlayerPos = frmCurrentFrame.m_v2iPosition;
+
+            List<short> sCollisions = new List<short>();
+
+            //loop through all the players
+            for (int i = 0; i < outPlayerPos.Count; i++)
+            {
+                //check for collisions with other players 
+                if (GetPlayersOverlappingCircle(setSettings, frmCurrentFrame, outPlayerPos[i], setSettings.ChararcterSize.m_fValue, i, sCollisions))
+                {
+                    FixVec2 vecOutPos = FixVec2.Zero;
+
+                    Fix fixAverageScale = Fix.One / sCollisions.Count;
+
+                    Fix fixCollisionExitDistance = setSettings.ChararcterSize.m_fValue * 2;
+
+                    //loop through all collisions and attempt to resolve them 
+                    for (int j = 0; j < sCollisions.Count; j++)
+                    {
+                        //look up hit player position 
+                        FixVec2 vecHit = inPlayerPos[sCollisions[j]];
+
+                        //get direction to player
+                        FixVec2 vecExitDir = outPlayerPos[i] - vecHit;
+
+                        //calcualte collision exit pos
+                        vecOutPos += (vecHit + vecExitDir.Normalize() * fixCollisionExitDistance) * fixAverageScale;
+                    }
+
+                    outPlayerPos[i] = vecOutPos;
+                }
             }
 
             return true;
