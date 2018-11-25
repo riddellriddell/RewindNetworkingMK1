@@ -3,47 +3,67 @@ using System.Collections.Generic;
 using UnityEngine;
 using FixedPointy;
 
-[CreateAssetMenu(fileName = "SimGlobalSettings", menuName = "Simulation/Settings", order = 1)]
-public class GameSettings : ScriptableObject
+namespace Sim
 {
-    //serialization format of variables 
-    public FixValueUnityInterface TickDelta;
-
-    public FixVec2ValueUnityInterface ChararcterSize;
-
-    public FixValueUnityInterface MovementSpeed;
-
-    public FixVec2ValueUnityInterface GameFieldSize;
-
-    public FixValueUnityInterface TargetQueueSize;
-
-    //the internal time step in milliseconds 
-    public Fix m_fixTickDelta;
-
-    public FixVec2 m_v2iCharacterSize;
-
-    public Fix m_fixMoveSpeed;
-
-    public FixVec2 m_v2iGameFieldExtents;
-
-    //the target length of the queue in seconds 
-    public Fix m_fixTargetQueueLength;
-
-
-    public void Deserialize()
+    [CreateAssetMenu(fileName = "SimGlobalSettings", menuName = "Simulation/Settings", order = 1)]
+    public class GameSettings : ScriptableObject
     {
-        Debug.Log("Awake");
+        //serialization format of variables 
+        public FixValueUnityInterface TickDelta;
 
-        //deserialize values into fixed point values 
+        public FixValueUnityInterface ChararcterSize;
 
-        m_fixTickDelta = TickDelta.FixValue;
+        public FixValueUnityInterface QuickAttackRange;
 
-        m_v2iCharacterSize = ChararcterSize.FixValue;
+        public FixValueUnityInterface QuickAttackAOE;
 
-        m_fixMoveSpeed = MovementSpeed.FixValue;
+        public FixValueUnityInterface QuickAttackWarmUp;
 
-        m_v2iGameFieldExtents = GameFieldSize.FixValue;
+        public FixValueUnityInterface QuickAttackCoolDown;
 
-        m_fixTargetQueueLength = TargetQueueSize.FixValue;
+        public short QuickAttackDamage;
+
+        public FixValueUnityInterface SlowAttackRange;
+
+        public FixValueUnityInterface SlowAttackAOE;
+
+        public FixValueUnityInterface SlowAttackWarmUp;
+
+        public FixValueUnityInterface SlowAttackCoolDown;
+
+        public short SlowAttackDammage;
+
+        public FixValueUnityInterface BlockingCoolDown;
+        
+        public FixValueUnityInterface MovementSpeed;
+
+        public FixVec2ValueUnityInterface GameFieldSize;
+
+        public FixValueUnityInterface TargetQueueSize;
+
+        public short PlayerHealth = 100;
+
+        public void Deserialize()
+        {
+            Debug.Log("Awake");
+
+            //serialization format of variables 
+            TickDelta.CalculateValue();
+            ChararcterSize.CalculateValue();
+
+            QuickAttackRange.CalculateValue();
+            QuickAttackAOE.CalculateValue();
+            QuickAttackWarmUp.CalculateValue();
+            QuickAttackCoolDown.CalculateValue();
+ 
+            SlowAttackRange.CalculateValue();
+            SlowAttackAOE.CalculateValue();
+            SlowAttackWarmUp.CalculateValue();
+            SlowAttackCoolDown.CalculateValue();
+ 
+            MovementSpeed.CalculateValue();
+            GameFieldSize.CalculateValue();
+            TargetQueueSize.CalculateValue();
+        }
     }
 }

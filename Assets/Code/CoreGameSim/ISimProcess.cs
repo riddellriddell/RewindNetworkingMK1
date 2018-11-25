@@ -2,7 +2,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public interface ISimProcess
+namespace Sim
 {
-    bool PerformProcess(ConstData conConstantGameData, FrameData frmCurrentFrame, FrameData frmUpdatedFrame,int iTick);
+    public interface ISimProcess
+    {
+        bool PerformProcess(ConstData conConstantGameData, FrameData frmCurrentFrame, FrameData frmUpdatedFrame, int iTick);
+    }
 }

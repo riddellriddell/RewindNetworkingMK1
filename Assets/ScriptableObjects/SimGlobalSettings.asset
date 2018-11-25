@@ -15,8 +15,37 @@ MonoBehaviour:
     IntValue: 1
     DecimalOffset: 60
   ChararcterSize:
-    IntValue: {x: 1, y: 1}
+    IntValue: 1
     DecimalOffset: 1
+  QuickAttackRange:
+    IntValue: 2
+    DecimalOffset: 2
+  QuickAttackAOE:
+    IntValue: 1
+    DecimalOffset: 1
+  QuickAttackWarmUp:
+    IntValue: 1
+    DecimalOffset: 2
+  QuickAttackCoolDown:
+    IntValue: 1
+    DecimalOffset: 2
+  QuickAttackDamage: 10
+  SlowAttackRange:
+    IntValue: 2
+    DecimalOffset: 1
+  SlowAttackAOE:
+    IntValue: 2
+    DecimalOffset: 1
+  SlowAttackWarmUp:
+    IntValue: 1
+    DecimalOffset: 1
+  SlowAttackCoolDown:
+    IntValue: 1
+    DecimalOffset: 1
+  SlowAttackDammage: 35
+  BlockingCoolDown:
+    IntValue: 1
+    DecimalOffset: 2
   MovementSpeed:
     IntValue: 3
     DecimalOffset: 1
@@ -24,5 +53,6 @@ MonoBehaviour:
     IntValue: {x: 100, y: 100}
     DecimalOffset: 1
   TargetQueueSize:
-    IntValue: 1
+    IntValue: 10
     DecimalOffset: 1
+  PlayerHealth: 100

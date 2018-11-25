@@ -99,6 +99,16 @@ namespace FixedPointy {
             return new Fix((int)(FixMath.SqrtULong(N << 2) + 1) >> 1);
 		}
 
+        public Fix GetMagnitudeSqr()
+        {
+            return (_x * _x) + (_y * _y);
+        }
+
+        public bool IsZero()
+        {
+            return (_x.Raw | _y.Raw) > 0;
+        }
+
 		public FixVec2 Normalize () {
 			if (_x == 0 && _y == 0)
 				return FixVec2.Zero;

@@ -286,15 +286,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aad5b031cf66087489d8c7c0dcb7ae6b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_fCountDownTime: 5
+  m_fCountDownTime: 3
   m_uigInputGenerator: {fileID: 421822573}
   m_ntcNetworkConnection: {fileID: 421822571}
   m_ntcConnectionTarget: {fileID: 1568822424}
   m_gstSettings: {fileID: 11400000, guid: e400905f6de704d478385473909a3fed, type: 2}
   m_playerCount: 0
-  m_fDebugScale: 0.5
+  m_fDebugScale: 1
   m_bShowDebug: 1
-  m_colDebugCollour: {r: 0.13501246, g: 0.27009866, b: 0.7735849, a: 0.6627451}
+  m_colSimDebugTint: {r: 0.94614273, g: 0.6745283, b: 1, a: 1}
+  m_colMovingState: {r: 0.40409473, g: 1, b: 0.3726415, a: 1}
+  m_colStandingState: {r: 0.4575472, g: 1, b: 0.9910325, a: 1}
+  m_colQuickAttack: {r: 1, g: 0.9605352, b: 0.504717, a: 1}
+  m_colSlowAttack: {r: 1, g: 0.4481132, b: 0.4481132, a: 1}
+  m_colBlocking: {r: 0.4481132, g: 0.4481132, b: 1, a: 1}
+  m_colDead: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &421822571
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -328,15 +334,20 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 421822569}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a5ed225148cba6846ae8ddcd11f72b62, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   m_strVertical: Vertical
   m_strHorizontal: Horizontal
+  m_strQuickAttack: q
+  m_strSlowAttack: e
+  m_strBlock: f
   m_strStartGameShortcut: b
   m_bStartGame: 0
+  m_bGenerateRandomInput: 0
+  m_fInputChangeRate: 0.2
 --- !u!1 &1375160708
 GameObject:
   m_ObjectHideFlags: 0
@@ -367,12 +378,12 @@ MonoBehaviour:
   m_bEnableLag: 1
   m_fMinLag: 0.4
   m_fMaxLag: 0.5
-  m_bEnableOutages: 1
+  m_bEnableOutages: 0
   m_fMinOutage: 0
   m_fMaxOutage: 3
   m_fMinTimeBetweenOutages: 5
   m_fMaxTimeBetweenOutages: 20
-  m_bEnablePacketLoss: 1
+  m_bEnablePacketLoss: 0
   m_fPacketLoss: 0.3
 --- !u!4 &1375160710
 Transform:
@@ -397,6 +408,7 @@ GameObject:
   - component: {fileID: 1568822425}
   - component: {fileID: 1568822424}
   - component: {fileID: 1568822423}
+  - component: {fileID: 1568822426}
   m_Layer: 0
   m_Name: Player2
   m_TagString: Untagged
@@ -415,15 +427,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aad5b031cf66087489d8c7c0dcb7ae6b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_fCountDownTime: 5
+  m_fCountDownTime: 3
   m_uigInputGenerator: {fileID: 0}
   m_ntcNetworkConnection: {fileID: 1568822424}
   m_ntcConnectionTarget: {fileID: 0}
   m_gstSettings: {fileID: 11400000, guid: e400905f6de704d478385473909a3fed, type: 2}
   m_playerCount: 0
-  m_fDebugScale: 0.5
+  m_fDebugScale: 1
   m_bShowDebug: 1
-  m_colDebugCollour: {r: 0.8301887, g: 0.2217605, b: 0.16838734, a: 0.62352943}
+  m_colSimDebugTint: {r: 0.81450695, g: 1, b: 0.6556604, a: 1}
+  m_colMovingState: {r: 0.40409473, g: 1, b: 0.3726415, a: 1}
+  m_colStandingState: {r: 0.4575472, g: 1, b: 0.9910325, a: 1}
+  m_colQuickAttack: {r: 1, g: 0.9605352, b: 0.504717, a: 1}
+  m_colSlowAttack: {r: 1, g: 0.4481132, b: 0.4481132, a: 1}
+  m_colBlocking: {r: 0.4481132, g: 0.4481132, b: 1, a: 1}
+  m_colDead: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &1568822424
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -451,6 +469,26 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1568822426
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1568822422}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5ed225148cba6846ae8ddcd11f72b62, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_strVertical: Vertical
+  m_strHorizontal: Horizontal
+  m_strQuickAttack: q
+  m_strSlowAttack: e
+  m_strBlock: f
+  m_strStartGameShortcut: b
+  m_bStartGame: 0
+  m_bGenerateRandomInput: 0
+  m_fInputChangeRate: 0.2
 --- !u!1 &1908052993
 GameObject:
   m_ObjectHideFlags: 0

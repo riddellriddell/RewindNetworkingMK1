@@ -1,21 +1,25 @@
-﻿using System.Collections;
+﻿using FixedPointy;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ConstData
+namespace Sim
 {
-    public List<byte> m_bPlayerCharacters;
-      
-    public int PlayerCount
+    public class ConstData
     {
-        get
+        public List<byte> m_bPlayerCharacters;
+               
+        public int PlayerCount
         {
-            return m_bPlayerCharacters.Count;
+            get
+            {
+                return m_bPlayerCharacters.Count;
+            }
         }
-    }
 
-    public ConstData(List<byte> bPlayerCharacters)
-    {
-        m_bPlayerCharacters = bPlayerCharacters;
+        public ConstData(List<byte> bPlayerCharacters)
+        {
+            m_bPlayerCharacters = bPlayerCharacters;
+        }
     }
 }

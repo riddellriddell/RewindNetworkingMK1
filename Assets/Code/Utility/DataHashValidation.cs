@@ -9,7 +9,7 @@ using UnityEngine;
 /// </summary>
 public class DataHashValidation : MonoBehaviour
 {
-    public static bool LogDataHash(byte[] bInputHash,int iTick,byte[] tupCalculationResults, string strTagData = "")
+    public static bool LogDataHash(byte[] bInputHash,byte bExecutionPoint ,int iTick,  byte[] tupCalculationResults, string strTagData = "")
     {
         byte[] iTickBytes = BitConverter.GetBytes(iTick);
 
@@ -17,13 +17,17 @@ public class DataHashValidation : MonoBehaviour
 
         for (int i = 0; i < bHashBase.Length; i++)
         {
-            if(i < 2)
+            if(i == 0)
             {
-                bHashBase[i] = iTickBytes[i];
+                bHashBase[i] = bExecutionPoint;
+            }
+            else if(i < 3)
+            {
+                bHashBase[i] = iTickBytes[i -1];
             }
             else if (bInputHash.Length > i -2)
             {
-                bHashBase[i] = bInputHash[i - 2];
+                bHashBase[i] = bInputHash[i - 3];
             }
             else
             {

@@ -2,73 +2,139 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class UserInputGenerator : MonoBehaviour
+namespace Sim
 {
-    public string m_strVertical;
-    public string m_strHorizontal;
-    public string m_strStartGameShortcut;
-
-    public bool m_bStartGame;
-
-    public byte m_bOldInput
+    public class UserInputGenerator : MonoBehaviour
     {
-        get; private set;
-    }
+        public string m_strVertical;
+        public string m_strHorizontal;
+        public string m_strQuickAttack;
+        public string m_strSlowAttack;
+        public string m_strBlock;
 
-    public byte m_bCurrentInput
-    {
-        get; private set;
-    }
+        public string m_strStartGameShortcut;
 
-    //has there been a change in inputs 
-    public bool HasNewInputs
-    {
-        get
+        public bool m_bStartGame;
+
+        public bool m_bGenerateRandomInput;
+
+        public float m_fInputChangeRate = 0.2f;
+
+        public byte m_bOldInput
         {
-            return (m_bCurrentInput != m_bOldInput);
-        }
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        byte bNewInput = (byte)InputKeyFrame.Input.None;
-
-        m_bStartGame = Input.GetKey(m_strStartGameShortcut);
-
-        float fInput = Input.GetAxisRaw(m_strVertical);
-
-        if (fInput > 0.5f)
-        {
-            bNewInput = (byte)(bNewInput | (byte)InputKeyFrame.Input.Up);
+            get; private set;
         }
 
-        if (fInput < -0.5f)
+        public byte m_bCurrentInput
         {
-            bNewInput = (byte)(bNewInput | (byte)InputKeyFrame.Input.Down);
+            get; private set;
         }
 
-        fInput = Input.GetAxisRaw(m_strHorizontal);
-
-
-        if (fInput > 0.5)
+        //has there been a change in inputs 
+        public bool HasNewInputs
         {
-            bNewInput = (byte)(bNewInput | (byte)InputKeyFrame.Input.Right);
+            get
+            {
+                return (m_bCurrentInput != m_bOldInput);
+            }
         }
 
-        if (fInput < -0.5)
+        // Update is called once per frame
+        public void Update()
         {
-            bNewInput = (byte)(bNewInput | (byte)InputKeyFrame.Input.Left);
+            if(m_bGenerateRandomInput)
+            {
+                GenerateRandomInput();
+            }
+            else
+            {
+                FetchInputs();
+            }
+
+
         }
 
-        if(bNewInput != m_bCurrentInput)
+        public void FetchInputs()
         {
-            m_bCurrentInput = bNewInput;
-        }
-    }
 
-    public void UpdateInputState()
-    {
-        m_bOldInput = m_bCurrentInput;
+            byte bNewInput = (byte)InputKeyFrame.Input.None;
+
+            m_bStartGame = Input.GetKey(m_strStartGameShortcut);
+
+            float fInput = Input.GetAxisRaw(m_strVertical);
+
+            if (fInput > 0.5f)
+            {
+                bNewInput = (byte)(bNewInput | (byte)InputKeyFrame.Input.Up);
+            }
+
+            if (fInput < -0.5f)
+            {
+                bNewInput = (byte)(bNewInput | (byte)InputKeyFrame.Input.Down);
+            }
+
+            fInput = Input.GetAxisRaw(m_strHorizontal);
+
+
+            if (fInput > 0.5)
+            {
+                bNewInput = (byte)(bNewInput | (byte)InputKeyFrame.Input.Right);
+            }
+
+            if (fInput < -0.5)
+            {
+                bNewInput = (byte)(bNewInput | (byte)InputKeyFrame.Input.Left);
+            }
+
+
+            //get attack and block commands
+            if (Input.GetKey(m_strQuickAttack))
+            {
+                bNewInput = (byte)(bNewInput | (byte)InputKeyFrame.Input.QuickAttack);
+            }
+
+
+            if (Input.GetKey(m_strSlowAttack))
+            {
+                bNewInput = (byte)(bNewInput | (byte)InputKeyFrame.Input.SlowAttack);
+            }
+
+
+            if (Input.GetKey(m_strBlock))
+            {
+                bNewInput = (byte)(bNewInput | (byte)InputKeyFrame.Input.Block);
+            }
+
+            if (bNewInput != m_bCurrentInput)
+            {
+                m_bCurrentInput = bNewInput;
+            }
+        }
+
+        public void GenerateRandomInput()
+        {
+            byte bflipper = 0;
+            
+            for(int i = 0; i < 8; i++)
+            {
+                bflipper = (byte)(bflipper << 1);
+
+                float fRandomValue = Random.Range(0.0f, 1.0f);
+
+                //check if this value should be flipped 
+                if (fRandomValue < (m_fInputChangeRate * Time.deltaTime))
+                {
+                    bflipper += 1;
+                }               
+            }
+
+            //flip the input bits 
+            m_bCurrentInput = (byte)(m_bCurrentInput ^ bflipper);
+        }
+
+        public void UpdateInputState()
+        {
+            m_bOldInput = m_bCurrentInput;
+        }
     }
 }

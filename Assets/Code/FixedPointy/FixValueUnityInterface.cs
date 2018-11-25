@@ -11,17 +11,40 @@ public struct FixValueUnityInterface
     [SerializeField]
     public int DecimalOffset;
 
+    private bool m_bCalculated;
+
+    public Fix m_fValue;
+
     public Fix FixValue
     {
         get
         {
+            if (m_bCalculated == false)
+            {
+                CalculateValue();
+            }
+
             //set the decimal value 
-            Fix outFixNumber = new Fix(IntValue << Fix.FRACTIONAL_BITS);
-
-            Fix offset = new Fix(DecimalOffset << Fix.FRACTIONAL_BITS);
-
-            return outFixNumber / offset;
+            return m_fValue;
         }
+    }
+
+    public void CalculateValue()
+    {
+        m_bCalculated = true;
+
+        Fix outFixNumber = new Fix(IntValue << Fix.FRACTIONAL_BITS);
+
+        Fix offset = new Fix(DecimalOffset << Fix.FRACTIONAL_BITS);
+
+        m_bCalculated = true;
+
+        if(offset == 0)
+        {
+            Debug.LogError("0 value set on divider for fix value setter");
+        }
+
+        m_fValue = (outFixNumber / offset);
     }
 }
 
@@ -33,17 +56,33 @@ public struct FixVec2ValueUnityInterface
     [SerializeField]
     public int DecimalOffset;
 
+    private bool m_bCalculated;
+
+    public FixVec2 m_vecValue;
+
     public FixVec2 FixValue
     {
         get
         {
+            if(m_bCalculated == false)
+            {
+                CalculateValue();                
+            }
+
             //set the decimal value 
-            FixVec2 outFixNumber = new FixVec2(IntValue.x << Fix.FRACTIONAL_BITS, IntValue.y << Fix.FRACTIONAL_BITS);
-
-            Fix offset = new Fix(DecimalOffset << Fix.FRACTIONAL_BITS);
-
-            return outFixNumber / offset;
+            return m_vecValue;
         }
+    }
+
+    public void CalculateValue()
+    {
+        m_bCalculated = true;
+
+        FixVec2 outFixNumber = new FixVec2(IntValue.x << Fix.FRACTIONAL_BITS, IntValue.y << Fix.FRACTIONAL_BITS);
+
+        Fix offset = new Fix(DecimalOffset << Fix.FRACTIONAL_BITS);
+
+        m_vecValue = (outFixNumber / offset);
     }
 }
 
@@ -55,16 +94,25 @@ public struct FixVec3ValueUnityInterface
     [SerializeField]
     public int DecimalOffset;
 
+    private bool m_bCalculated;
+
+    public FixVec2 m_vecValue;
+
     public FixVec2 FixValue
     {
         get
         {
+            if (m_bCalculated == true)
+            {
+                return m_vecValue;
+            }
+
             //set the decimal value 
             FixVec2 outFixNumber = new FixVec2(IntValue.x << Fix.FRACTIONAL_BITS, IntValue.y << Fix.FRACTIONAL_BITS);
 
             Fix offset = new Fix(DecimalOffset << Fix.FRACTIONAL_BITS);
 
-            return outFixNumber / offset;
+            return m_vecValue = outFixNumber / offset;
         }
     }
 }
