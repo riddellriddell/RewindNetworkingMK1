@@ -251,7 +251,7 @@ namespace Sim
             }
 
             //check for death
-            CheckForDeath(frmSimulatedFrame);
+            CheckForDeath(setSettings, frmSimulatedFrame);
 
             //increment frame tick
             frmSimulatedFrame.m_iTickNumber = frmFrameToSimulate.m_iTickNumber + 1;
@@ -376,7 +376,8 @@ namespace Sim
 
             //loop through all the players
             for (int i = 0; i < outPlayerPos.Count; i++)
-            {
+            {              
+
                 //check for collisions with other players 
                 if (GetPlayersOverlappingCircle(setSettings, frmCurrentFrame, outPlayerPos[i], setSettings.ChararcterSize.m_fValue, i, sCollisions))
                 {
@@ -400,6 +401,9 @@ namespace Sim
                     }
 
                     outPlayerPos[i] = vecOutPos;
+
+                    //remove any collisions detected 
+                    sCollisions.Clear();
                 }
             }
 
@@ -604,8 +608,13 @@ namespace Sim
             return true;
         }
 
-        public bool CheckForDeath(FrameData frmUpdatedFrame)
+        public bool CheckForDeath(GameSettings setSettings, FrameData frmUpdatedFrame)
         {
+            if(setSettings.Invincibility)
+            {
+                return true;
+            }
+
             byte bDeadState = (byte)FrameData.State.Dead;
 
             for(int i = 0; i < frmUpdatedFrame.m_sPlayerHealths.Count; i++)

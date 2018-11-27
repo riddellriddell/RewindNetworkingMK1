@@ -9,6 +9,8 @@ namespace Sim
     public class GameSettings : ScriptableObject
     {
         public bool RunHashChecks = false;
+
+        public bool Invincibility = true;
         
         //serialization format of variables 
         public FixValueUnityInterface TickDelta;

@@ -334,7 +334,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 421822569}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a5ed225148cba6846ae8ddcd11f72b62, type: 3}
   m_Name: 
@@ -345,8 +345,8 @@ MonoBehaviour:
   m_strSlowAttack: e
   m_strBlock: f
   m_strStartGameShortcut: b
-  m_bStartGame: 0
-  m_bGenerateRandomInput: 0
+  m_bStartGame: 1
+  m_bGenerateRandomInput: 1
   m_fInputChangeRate: 0.2
 --- !u!1 &1375160708
 GameObject:
@@ -375,7 +375,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ccc095eb5b2172f429f42eee2b2d8d4e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_bEnableLag: 1
+  m_bEnableLag: 0
   m_fMinLag: 0.4
   m_fMaxLag: 0.5
   m_bEnableOutages: 0
@@ -487,7 +487,7 @@ MonoBehaviour:
   m_strBlock: f
   m_strStartGameShortcut: b
   m_bStartGame: 0
-  m_bGenerateRandomInput: 0
+  m_bGenerateRandomInput: 1
   m_fInputChangeRate: 0.2
 --- !u!1 &1908052993
 GameObject:
