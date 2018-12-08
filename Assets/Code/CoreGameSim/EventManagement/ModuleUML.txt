@@ -1,0 +1,97 @@
+@startuml
+class Sim
+{
+- EventManager eventManager 
+void SetupEventManager(int FrameBuffer)
+}
+
+class EventManager 
+{
+- FrameEventManager currentFrame
+- FraneEventManager[] EventsForFrame
+- int ReadHead
+
+
+
+}
+
+class FrameEventManager
+{
+int iTick
+
++ EventTrackingHandler globalEvent
++ EventTrackingHandler [] perObjectEvent  
++ void Clear()
+
+}
+
+
+interface EventTracking 
+{
++ Event EventFire
++ void QueueEventFire(Args args)
++ void CallEvents(byte RecallCount)
++ void Clear()
+}
+
+class CallAlwaysEventTracking<<Args>>
+{
++ Event EventFire
+-Args[] EventsThisFrame
+
++ void QueueEventFire(Args args)
++ void CallEvents(byte RecallCount)
++ void Clear()
+- void FireEvents(Args[] NewEvents)
+}
+
+class CallOnceEventTracking<<Args>>
+{
++ Event EventFire
+-Args[] EventsThisFrame
+- Dictionary<ArgHash,byte> callHistory
+
++ void QueueEventFire(Args args)
++ void CallEvents(byte RecallCount)
++ void Clear()
+- bool CheckForReCall(Args[] args,byte RecallCount,Args[] out NewEvents)
+- void FireEvents(Args[] NewEvents)
+- void StoreEventHistory(Args[] NewEvents) 
+}
+
+class CancelableEventTrackingHandler<<Args>>
+{
++ Event EventFire 
+-Args[] EventsThisFrame
+- Dictionary<ArgHash,EventSubscriber> EventTrackers
+
++ void QueueEventFire(Args args)
++ void CallEvents(byte RecallCount)
++ void Clear()
+- bool CheckForReCall(Args[] args,byte RecallCount,Args[] out NewEvents)
+- void CleanUpSubs(byte RecallCount)
+- void FireEvents(Args[] NewEvents,EventSubscriber[] out EventSubscriptions)
+- void StoreEventTrackers(Args[] NewEvents, EventSubscriptions[] NewEventSubscriptions) 
+
+} 
+
+class EventSubscriber 
+{
+- byte RecallCount
+- list Listeners 
++ void UpdateRecallCount(byte)
++ void Subscribe(Listener listener)
++ void UnSubscribe(Listener listener)
++ bool HasSubs()
++ bool IsValid(byte RecallCount)
++ void Cancel()
+}
+
+CallAlwaysEventTracking --> EventTracking
+CallOnceEventTracking --> EventTracking
+CancelableEventTrackingHandler -->EventTracking
+EventSubscriber --> CancelableEventTrackingHandler
+EventTracking --> FrameEventManager
+FrameEventManager --> EventManager
+EventManager --> Sim
+@enduml

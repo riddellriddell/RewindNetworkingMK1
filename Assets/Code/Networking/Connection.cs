@@ -197,7 +197,6 @@ namespace Networking
             //update the most recent packet number
             m_iTotalPacketsReceived = iPacketNumber;
 
-
             //process the tick offset
             ProcessReceivedTickStampedPackets(pktPacket);
 
@@ -283,12 +282,7 @@ namespace Networking
         //checks if this packet is just a connection maintanance packet 
         //or should be passed on to the rest of the game for processing
         private bool ShouldPacketBePassedOn(Packet pktPacket)
-        {
-            //if (pktPacket is PingPacket)
-            //{
-            //    return false;
-            //}
-
+        {            
             return true;
         }
     }

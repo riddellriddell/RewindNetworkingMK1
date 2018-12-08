@@ -1,0 +1,11 @@
+{
+    "name": "Main",
+    "references": [
+        "FixedPointy",
+        "Utility"
+    ],
+    "optionalUnityReferences": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false
+}

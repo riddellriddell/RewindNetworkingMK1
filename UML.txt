@@ -1,0 +1,27 @@
+@startuml
+Class Connection 
+{
++int connectionID
++int UniqueID 
++int MaxPacketSize 
++queue RecievedPackets
++CircularBuffer PacketsInFlight 
+
+-int m_iLastPacketTickQueuedToSend;
+-int m_iLastAckPacketNumberSent;
+-int m_iTotalPacketsReceived;
+-int m_iLastTickReceived;
+
++Connection(byte bConnectionID)
++void UpdateConnection(int iTick)       
++void ReceivePacket(PacketWrapper packetWrapper)
++void QueuePacketToSend(Packet packet)
++void SendPackets()
+-Packet DecodePacket(PacketWrapper packetWrapper, ref int iReadHead)
+-void QueueReceivedPacket(Packet pktPacket, int iPacketNumber)
+-void ProcessReceivedTickStampedPackets(Packet pktPacket)
+-void ProcessSendingTickStampedPackets(Packet pktPacket)
+-bool ShouldPacketBePassedOn(Packet pktPacket)
+
+}
+@enduml
