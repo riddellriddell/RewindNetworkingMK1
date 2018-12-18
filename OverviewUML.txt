@@ -1,0 +1,57 @@
+@startuml
+class UserInput 
+{
+
+}
+
+class SimulationManager
+{
+Sim sim
+}
+
+class InputBuffer 
+{
+
+}
+
+class Sim
+{
+InputBuffer inputs 
+FrameData[] data
+}
+
+class FrameData
+{
+GameState 
+}
+
+class NetworkConnection
+{
+Connection[] connections 
+}
+
+class Connection 
+{
+
+}
+
+class Packet 
+{
+Connection Details 
+Data 
+}
+
+class Internet 
+{
+
+}
+
+UserInput -> SimulationManager: Inputs
+SimulationManager -> Sim: Inputs 
+Sim <- FrameData : Processes 
+InputBuffer <--> Sim : inputs 
+SimulationManager <--> NetworkConnection: inputs 
+NetworkConnection <-> Connection
+Connection <-> Packet 
+Packet <-> Internet
+@enduml

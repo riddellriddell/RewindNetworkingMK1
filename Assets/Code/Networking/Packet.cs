@@ -39,6 +39,7 @@ namespace Networking
             StartCountdown,
             ResetTickCount,
             Ping,
+            ConnectionTest,
             Input
         }
 
@@ -198,6 +199,40 @@ namespace Networking
             BaseEncodePacket(pkwPacketWrapper);
         }
 
+    }
+
+    /// <summary>
+    /// this class is used to test the RTT time of the network 
+    /// </summary>
+    public class NetTestPacket : Packet
+    {
+        //the value to echo back 
+        public byte m_bEcho;
+
+        public override PacketType m_ptyPacketType
+        {
+            get
+            {
+                return PacketType.ConnectionTest;
+            }
+        }
+
+        public override int DecodePacket(PacketWrapper pkwPacketWrapper, int iDataReadHead)
+        {
+            iDataReadHead = base.BaseDecodePacket(pkwPacketWrapper, iDataReadHead);
+
+            //decode tick offset
+            m_bEcho = (pkwPacketWrapper.m_Payload[iDataReadHead] as NetTestPacket).m_bEcho;
+            
+            iDataReadHead += 1;
+
+            return iDataReadHead;
+        }
+
+        public override void EncodePacket(PacketWrapper pkwPacketWrapper)
+        {
+            BaseEncodePacket(pkwPacketWrapper);
+        }
     }
 
     public class InputPacket : TickStampedPacket
