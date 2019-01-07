@@ -27,11 +27,22 @@ namespace Sim
             }
         }
 
+        public int m_iOldestTickInBuffer
+        {
+            get
+            {
+                return m_frmDenseFrameQueue[m_iDenseQueueTail].m_iTickNumber;
+            }
+        }
+
         //the last tick that has not been invalidated by new inputs 
         public int m_iLastResolvedTick;
 
-        //the head of the queue 
+        //the start of the queue 
         public int m_iDenseQueueHead;
+
+        //the end of the queue
+        public int m_iDenseQueueTail;
 
         //the queue of frames
         public List<FrameData> m_frmDenseFrameQueue;
@@ -172,6 +183,13 @@ namespace Sim
                 //set head of simulation
                 m_iDenseQueueHead = iOutputIndex;
                 m_iLastResolvedTick = frmFrameToSimulate.m_iTickNumber;
+
+                //chech if buffer head is overwriting tail of simulation 
+                if(m_iDenseQueueHead == m_iDenseQueueTail)
+                {
+                    //Shift tail one frame forwards in buffer
+                    m_iDenseQueueTail = HelperFunctions.mod(m_iDenseQueueHead + 1, m_frmDenseFrameQueue.Count);
+                }
             }
         }
 
@@ -262,6 +280,7 @@ namespace Sim
         public void InitaliseDenseQueue(int tickDelta, int bufferTimeSpan, byte playerCount)
         {
             m_iDenseQueueHead = 0;
+            m_iDenseQueueTail = 0;
 
             int numberOfFrames = bufferTimeSpan / tickDelta;
 

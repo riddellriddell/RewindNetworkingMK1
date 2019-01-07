@@ -130,6 +130,13 @@ namespace Sim
 
             //flip the input bits 
             m_bCurrentInput = (byte)(m_bCurrentInput ^ bflipper);
+
+            //turn off attacks 
+            byte bAttackMask = ((byte)InputKeyFrame.Input.Block | (byte)InputKeyFrame.Input.SlowAttack | (byte)InputKeyFrame.Input.QuickAttack);
+
+            bAttackMask = (byte)~bAttackMask;
+
+            m_bCurrentInput = (byte)(m_bCurrentInput & bAttackMask);
         }
 
         public void UpdateInputState()

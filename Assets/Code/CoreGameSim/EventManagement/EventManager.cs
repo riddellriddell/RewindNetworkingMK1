@@ -144,7 +144,7 @@ namespace Sim
             //increment buffer tail
             m_iBufferTail = ++m_iBufferTail % m_bFrameReSimCount.Count;
 
-            //reset resim vount 
+            //reset resim count 
             m_bFrameReSimCount[iIndex] = 0;
 
             //reset all frame event managers 

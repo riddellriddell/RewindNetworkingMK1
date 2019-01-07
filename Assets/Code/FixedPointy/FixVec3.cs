@@ -22,6 +22,7 @@
  */
 
 using System;
+using UnityEngine;
 
 namespace FixedPointy {
 	public struct FixVec3 {
@@ -35,7 +36,12 @@ namespace FixedPointy {
 			return new FixVec3(value.X, value.Y, 0);
 		}
 
-		public static FixVec3 operator + (FixVec3 rhs) {
+        public static explicit operator Vector3(FixVec3 value)
+        {
+            return new Vector3((float)value.X, (float)value.Y, (float)value.Z);
+        }
+        
+        public static FixVec3 operator + (FixVec3 rhs) {
 			return rhs;
 		}
 		public static FixVec3 operator - (FixVec3 rhs) {
@@ -67,6 +73,10 @@ namespace FixedPointy {
 		public static FixVec3 operator / (FixVec3 lhs, Fix rhs) {
 			return new FixVec3(lhs._x / rhs, lhs._y / rhs, lhs._z / rhs);
 		}
+        public static FixVec3 Lerp(FixVec3 from,FixVec3 to, Fix lerp)
+        {
+            return (from * lerp) + (to * (1 - lerp));
+        }
 
 		Fix _x, _y, _z;
 

@@ -1,0 +1,81 @@
+<#@ template language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="Sim" #>
+<#@ import namespace="System.Reflection" #>
+<#@ import namespace="System.Collections" #>
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+
+<# Type typFrameDataType = typeof(FrameData); 
+		PropertyInfo [] prpPropertyInfo = typFrameDataType.GetProperties();
+	
+		FieldInfo [] fldFieldInfo = typFrameDataType.GetFields();
+#>
+
+namespace Sim
+{
+	 [CreateAssetMenu(fileName = "GraphicsInterpolationSettings", menuName = "Graphics/Settings", order = 2)]
+    public class InterpolationErrorCorrectionSettings : ScriptableObject
+    {
+		//struct that represents how errors in the data due to networking are resolved 
+		[System.Serializable]
+		public struct ErrorCorrectionSetting
+		{
+			[Range(0,20)]
+			[SerializeField]
+			public float m_fSnapDistance ;
+
+			[Range(0,20)]
+			[SerializeField]
+			public float m_fMinLinearInterpSpeed ;
+
+			[Range(0,20)]
+			[SerializeField]
+			public float m_fMaxLinearInterpSpeed ;
+
+			[Range(0,10)]
+			[SerializeField]
+			public float m_fQuadraticInterpRate ;
+
+		}
+
+<#
+	
+		foreach(FieldInfo fldField in fldFieldInfo)
+	    {
+			//try and get atttributes of target
+			FrameDataInterpilationTypeAttribute fiaAttribute = fldField.GetCustomAttribute<FrameDataInterpilationTypeAttribute>();
+	
+			//check if this is to be interpolated / tracked
+			if(fiaAttribute != null)
+	        {
+				Type typErrorType = typeof(float);
+
+				//check if value is an integer value that will require a float offset 
+				if(fiaAttribute.m_tType !=  typeof(long) && fiaAttribute.m_tType !=  typeof(int) && fiaAttribute.m_tType !=  typeof(short) && fiaAttribute.m_tType !=  typeof(byte))
+                {
+					typErrorType = fiaAttribute.m_tType;
+                }
+
+				//check if an error is needed 
+				if(fiaAttribute.m_itpInterpolation == FrameDataInterpilationTypeAttribute.InterpolationType.None)
+                {
+					typErrorType = null;
+                }
+	
+				if(typErrorType != null)
+                {
+#>		
+		public ErrorCorrectionSetting <#= fldField.Name #>ErrorCorrectionSetting; 
+<#
+	            }
+	        }
+	
+	    }
+		
+		#>
+	}
+}

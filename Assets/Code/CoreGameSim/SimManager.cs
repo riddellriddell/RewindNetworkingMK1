@@ -26,9 +26,15 @@ namespace Sim
 
         public GameSettings m_setSettings;
 
-        protected ConstData m_conGameData;
+        //the settings to use when correcting posittion errors caused by networking
+        public InterpolationErrorCorrectionSettings m_ecsErrorCorrectionSettings;
+
+        //the class that manages the interpolation of the game state held in the sim manager
+        public FrameDataInterpolator m_fdiFrameDataInterpolator = null;
 
         public int m_playerCount;
+
+        protected ConstData m_conGameData;       
 
         protected GameSimulation m_simGameSim;
 
@@ -36,6 +42,15 @@ namespace Sim
 
         protected int m_iSimTick;
 
+        protected float TotalGameTime
+        {
+            get
+            {
+                return (m_iSimTick * (float)m_setSettings.TickDelta.FixValue) + m_fTimeSinceLastSim;
+            }
+        }
+        
+        #region Debug
         public float m_fDebugScale;
 
         public bool m_bShowDebug;
@@ -53,6 +68,7 @@ namespace Sim
         public Color m_colBlocking = Color.blue;
 
         public Color m_colDead = Color.white;
+        #endregion
 
         protected GameLoopState m_glsGameState;
 
@@ -133,11 +149,17 @@ namespace Sim
             }
 
             //get the latest frame 
-            FrameData frmLatestFrame = m_simGameSim.m_frmDenseFrameQueue[m_simGameSim.m_iDenseQueueHead];
+            //FrameData frmLatestFrame = m_simGameSim.m_frmDenseFrameQueue[m_simGameSim.m_iDenseQueueHead];
+
+            //update the interpolated data 
+            m_fdiFrameDataInterpolator.UpdateInterpolatedDataForTime(TotalGameTime - (float)m_setSettings.TickDelta.FixValue, Time.deltaTime);
+
+            InterpolatedFrameDataGen frmLatestFrame = m_fdiFrameDataInterpolator.m_ifdInterpolatedFrameData;
+
 
             for (int i = 0; i < frmLatestFrame.PlayerCount; i++)
             {
-                Vector3 vecDrawPos = new Vector3((float)frmLatestFrame.m_v2iPosition[i].X * m_fDebugScale, 0, (float)frmLatestFrame.m_v2iPosition[i].Y * m_fDebugScale);
+                Vector3 vecDrawPos = new Vector3((float)frmLatestFrame.m_v2iPositionErrorAdjusted[i].x * m_fDebugScale, 0, (float)frmLatestFrame.m_v2iPositionErrorAdjusted[i].y * m_fDebugScale);
 
                 Color colDefaultColor = Gizmos.color;
 
@@ -193,7 +215,7 @@ namespace Sim
                     //send input to other connections 
                     m_ntcNetworkConnection.TransmitPacketToAll(new InputPacket(m_uigInputGenerator.m_bCurrentInput, m_simGameSim.m_iLatestTick));
 
-                    m_simGameSim.AddInput(m_ntcNetworkConnection.m_bPlayerID, new InputKeyFrame() { m_iInput = m_uigInputGenerator.m_bCurrentInput, m_iTick = m_simGameSim.m_iLatestTick });
+                    AddInputToSim(m_ntcNetworkConnection.m_bPlayerID, new InputKeyFrame() { m_iInput = m_uigInputGenerator.m_bCurrentInput, m_iTick = m_simGameSim.m_iLatestTick });
                 }
             }
 
@@ -211,7 +233,7 @@ namespace Sim
             {
                 InputKeyFrame ikfInput = (pktPacket as InputPacket).ConvertToKeyFrame();
 
-                m_simGameSim.AddInput(bPlayerID, ikfInput);
+                AddInputToSim(bPlayerID, ikfInput);
             }
 
             if (pktPacket is StartCountDownPacket)
@@ -349,6 +371,21 @@ namespace Sim
             m_simGameSim.m_iDebugNetConnectionID = m_ntcNetworkConnection.m_bPlayerID;
 
             m_simGameSim.m_bEnableDebugHashChecks = m_setSettings.RunHashChecks;
+
+            //setup data interpolator 
+            m_fdiFrameDataInterpolator = new FrameDataInterpolator(m_simGameSim,m_ecsErrorCorrectionSettings);
+        }
+
+        private void AddInputToSim(byte bPlayerID, InputKeyFrame ikfInput)
+        {
+            //add input into the sim
+            m_simGameSim.AddInput(bPlayerID, ikfInput);
+
+            //check to see if the input might cause a simulation recalculation 
+            if(m_simGameSim.m_iLastResolvedTick != m_simGameSim.m_iLatestTick)
+            {
+                m_fdiFrameDataInterpolator.m_bCalculatePredictionError = true;
+            }
         }
     }
 }

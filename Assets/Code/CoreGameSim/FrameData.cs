@@ -31,9 +31,7 @@ namespace Sim
             Left = 4,
             Right = 8
         }
-
-
-
+               
         public int PlayerCount
         {
             get
@@ -46,21 +44,27 @@ namespace Sim
         public int m_iTickNumber;
 
         //list of all the player healths
+        [FrameDataInterpilationTypeAttribute(typeof(int))]
         public List<short> m_sPlayerHealths;
 
         //list of all the player positions 
+        [FrameDataInterpilationTypeAttribute(typeof(Vector2))]
         public List<FixVec2> m_v2iPosition;
 
         //list of all the player directions 
+        [FrameDataInterpilationTypeAttribute(typeof(byte), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
         public List<byte> m_bFaceDirection;
 
         //list of all the player states
+        [FrameDataInterpilationTypeAttribute(typeof(byte), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
         public List<byte> m_bPlayerState;
 
         //list of all action cooldowns
+        [FrameDataInterpilationTypeAttribute(typeof(float), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
         public List<short> m_sStateEventTick;
 
         //list of all the player scores 
+        [FrameDataInterpilationTypeAttribute(typeof(int), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
         public List<byte> m_bScore;
 
         public FrameData(int iPlayerNumber)
