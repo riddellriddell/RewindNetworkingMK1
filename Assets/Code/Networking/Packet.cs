@@ -50,6 +50,8 @@ namespace Networking
 
         public abstract PacketType m_ptyPacketType { get; }
 
+        public abstract int PacketSize { get; }
+
         public abstract int DecodePacket(PacketWrapper pkwPacketWrapper, int iDataReadHead);
 
         public abstract void EncodePacket(PacketWrapper pkwPacketWrapper);

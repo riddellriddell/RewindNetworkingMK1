@@ -32,6 +32,9 @@ namespace Networking
         // list of all the packets to send that have not yet acknowledged  
         public RandomAccessQueue<Packet> m_PacketsInFlight;
 
+        // list of all the packet processors 
+        protected SortedList<ConnectionPacketProcessor> m_cppOrderedPacketProcessorList;
+
         // the packet number of the last packet sent
         protected int m_iPacketsQueuedToSendCount;
 
@@ -53,6 +56,7 @@ namespace Networking
 
             m_pakReceivedPackets = new Queue<Packet>();
             m_PacketsInFlight = new RandomAccessQueue<Packet>();
+            m_cppOrderedPacketProcessorList = new List<ConnectionPacketProcessor>();
 
             m_iPacketsQueuedToSendCount = 0;
             m_iLastAckPacketNumberSent = 0;
@@ -109,6 +113,8 @@ namespace Networking
             m_PacketsInFlight.Enqueue(packet);
         }
 
+
+
         private void SendPackets()
         {
             //check if there is anything to send
@@ -141,10 +147,26 @@ namespace Networking
             //create packet wrapper 
             PacketWrapper pkwPacketWrappepr = new PacketWrapper(m_iTotalPacketsReceived, m_iPacketsQueuedToSendCount - m_PacketsInFlight.Count, m_PacketsInFlight.Count);
 
+            int iBytesRemining = m_iMaxBytesToSend;
+
             //add as many packets as possible without hitting the max send data limit
             for (int i = 0; i < m_PacketsInFlight.Count; i++)
             {
-                pkwPacketWrappepr.AddDataPacket(m_PacketsInFlight[i]);
+                Packet pktPacketToSend = m_PacketsInFlight[i];
+
+                int iPacketSize = pktPacketToSend.PacketSize;
+
+                iBytesRemining -= iPacketSize;
+
+                if (iBytesRemining > 0)
+                {
+
+                    pkwPacketWrappepr.AddDataPacket(pktPacketToSend);
+                }
+                else
+                {
+                    break;
+                }
             }
 
             //send packet through coms 
@@ -285,5 +307,6 @@ namespace Networking
         {            
             return true;
         }
+
     }
 }
