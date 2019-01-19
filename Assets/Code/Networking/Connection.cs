@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,6 +12,31 @@ namespace Networking
             New,
             Connected,
             Disconnected
+        }
+
+        // Defines a comparer to create a sorted set
+        // that is sorted by the file extensions.
+        private class PacketProcessorComparer : IComparer<ConnectionPacketProcessor>
+        {
+            public int Compare(ConnectionPacketProcessor x, ConnectionPacketProcessor y)
+            {
+                if(x == null && y == null)
+                {
+                    return 0;
+                }
+
+                if(x == null)
+                {
+                    return -1;
+                }
+
+                if(y == null)
+                {
+                    return 1;
+                }
+
+                return x.Priority - y.Priority;
+            }
         }
 
         //values used for testing
@@ -33,7 +59,7 @@ namespace Networking
         public RandomAccessQueue<Packet> m_PacketsInFlight;
 
         // list of all the packet processors 
-        protected SortedList<ConnectionPacketProcessor> m_cppOrderedPacketProcessorList;
+        public SortedSet<ConnectionPacketProcessor> m_cppOrderedPacketProcessorList;
 
         // the packet number of the last packet sent
         protected int m_iPacketsQueuedToSendCount;
@@ -56,7 +82,7 @@ namespace Networking
 
             m_pakReceivedPackets = new Queue<Packet>();
             m_PacketsInFlight = new RandomAccessQueue<Packet>();
-            m_cppOrderedPacketProcessorList = new List<ConnectionPacketProcessor>();
+            m_cppOrderedPacketProcessorList = new SortedSet<ConnectionPacketProcessor>(new PacketProcessorComparer());
 
             m_iPacketsQueuedToSendCount = 0;
             m_iLastAckPacketNumberSent = 0;
@@ -64,14 +90,10 @@ namespace Networking
         }
 
         //check if a ping packet is needed to keep the connection alive
-        public void UpdateConnection(int iTick)
+        public void UpdateConnection()
         {
-            //check if a ping packet is needed
-            if (iTick - m_iLastPacketTickQueuedToSend >= TickStampedPacket.MaxTicksBetweenTickStampedPackets)
-            {
-                //add a ping packet to send list to maintain connection
-                QueuePacketToSend(new PingPacket());
-            }
+            //update all packet processors 
+            UpdatePacketProcessors();
 
             //send packets to target
             SendPackets();
@@ -104,16 +126,58 @@ namespace Networking
             }
         }
 
-        public void QueuePacketToSend(Packet packet)
+        public bool QueuePacketToSend(Packet pktPacket)
         {
             m_iPacketsQueuedToSendCount++;
 
-            ProcessSendingTickStampedPackets(packet);
+            pktPacket = ProccessPacketForSending(pktPacket);
 
-            m_PacketsInFlight.Enqueue(packet);
+            //check if packet should be sent
+            if(pktPacket != null)
+            {
+                m_PacketsInFlight.Enqueue(pktPacket);
+
+                return true;
+            }           
+
+            return false;
         }
 
+        private Packet ProccessPacketForSending(Packet pktPacket)
+        {
+            //loop through all the packet processors 
+            foreach(ConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
+            {
+                //process packet 
+                pktPacket = cppProcessor.ProcessPacketForSending(pktPacket);
 
+                //check if packet is still going to get sent 
+                if(pktPacket == null)
+                {
+                    return null;
+                }
+            }
+
+            return pktPacket;
+        }
+
+        private Packet ProccessReceivedPacket(Packet pktPacket)
+        {
+            //loop through all the packet processors 
+            foreach (ConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
+            {
+                //process packet 
+                pktPacket = cppProcessor.ProcessReceivedPacket(pktPacket);
+
+                //check if packet is still going to get sent 
+                if (pktPacket == null)
+                {
+                    return null;
+                }
+            }
+
+            return pktPacket;
+        }
 
         private void SendPackets()
         {
@@ -219,11 +283,10 @@ namespace Networking
             //update the most recent packet number
             m_iTotalPacketsReceived = iPacketNumber;
 
-            //process the tick offset
-            ProcessReceivedTickStampedPackets(pktPacket);
+            pktPacket = ProccessReceivedPacket(pktPacket);
 
             //check if this packet should be passed on to be processed by the rest of the game 
-            if (ShouldPacketBePassedOn(pktPacket))
+            if (pktPacket != null)
             {
                 //queue up the packet 
                 m_pakReceivedPackets.Enqueue(pktPacket);
@@ -301,11 +364,12 @@ namespace Networking
             }
         }
 
-        //checks if this packet is just a connection maintanance packet 
-        //or should be passed on to the rest of the game for processing
-        private bool ShouldPacketBePassedOn(Packet pktPacket)
-        {            
-            return true;
+        private void UpdatePacketProcessors()
+        {
+            foreach(ConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
+            {
+                cppProcessor.Update(this);
+            }
         }
 
     }

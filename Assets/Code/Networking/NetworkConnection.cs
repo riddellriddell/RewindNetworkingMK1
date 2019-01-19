@@ -8,7 +8,35 @@ namespace Networking
     public class NetworkConnection : MonoBehaviour
     {
 
+        // Defines a comparer to create a sorted set
+        // that is sorted by the file extensions.
+        private class PacketProcessorComparer : IComparer<NetworkPacketProcessor>
+        {
+            public int Compare(NetworkPacketProcessor x, NetworkPacketProcessor y)
+            {
+                if (x == null && y == null)
+                {
+                    return 0;
+                }
+
+                if (x == null)
+                {
+                    return -1;
+                }
+
+                if (y == null)
+                {
+                    return 1;
+                }
+
+                return x.Priority - y.Priority;
+            }
+        }
+
         public InternetConnectionSimulator m_icwConnectionSimulation;
+
+        //list of all the network connection PacketManagers 
+        public SortedSet<NetworkPacketProcessor> m_nppNetworkPacketProcessors;
 
         //all the connections 
         public List<Connection> m_conConnectionList = new List<Connection>();
@@ -19,10 +47,20 @@ namespace Networking
         //the unique id for this play
         public long m_lPlayerUniqueID;
 
-
-
         public delegate void PacketDataIn(byte bPlayerID, Packet pktInput);
         public event PacketDataIn m_evtPacketDataIn;
+
+        public void Start()
+        {
+            m_nppNetworkPacketProcessors = new SortedSet<NetworkPacketProcessor>(new PacketProcessorComparer());
+        }
+
+        public void AddPacketProcessor(NetworkPacketProcessor nppProcessor)
+        {
+            m_nppNetworkPacketProcessors.Add(nppProcessor);
+
+            nppProcessor.OnAddToNetwork(this);
+        }
 
         //when connection is first made default to the connection Tick 
         public void MakeFirstConnection(int startTick)
@@ -39,6 +77,9 @@ namespace Networking
         {
             //add connection to connection list
             m_conConnectionList.Add(conDebugConnection);
+
+            //process new connection 
+            ProcessNewConnection(conDebugConnection);
         }
 
         public void MakeTestingConnection(NetworkConnection nwcConnectionTarget)
@@ -58,24 +99,40 @@ namespace Networking
 
         }
 
-        public void UpdateConnections(int iCurrentTick)
+        public void UpdateConnectionsAndProcessors()
         {
+            //update all processors 
+            foreach (NetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
+            {
+                nppProcessor.Update();
+            }
+
             //update connections with current tick
             for(int i = 0; i < m_conConnectionList.Count; i++)
             {
-                m_conConnectionList[i].UpdateConnection(iCurrentTick);
+                m_conConnectionList[i].UpdateConnection();
             }
         }
 
         //send packet to all connected players 
-        public void TransmitPacketToAll(Packet pktPacket)
+        public bool TransmitPacketToAll(Packet pktPacket)
         {
+            //process packet for sending 
+            pktPacket = ProcessPacketForSending(pktPacket);
+
+            if(pktPacket == null)
+            {
+                return false;
+            }
+
             for (int i = 0; i < m_conConnectionList.Count; i++)
             {
                 m_conConnectionList[i].QueuePacketToSend(pktPacket);
             }
-        }
 
+            return true;
+        }
+        
         //get the number of conenctions that are functioning correctly 
         public int ActiveConnectionCount()
         {
@@ -157,6 +214,45 @@ namespace Networking
                     //fire event 
                     m_evtPacketDataIn?.Invoke(bPlayerConnection, pktPacket);
                     break;
+            }
+        }
+
+        protected Packet ProcessPacketForSending(Packet pktPacket)
+        {
+            foreach (NetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
+            {
+                pktPacket = nppProcessor.ProcessPacketForSending(pktPacket);
+
+                if(pktPacket == null)
+                {
+                    return null;
+                }
+            }
+
+            return pktPacket;
+        }
+
+        protected Packet ProcessReceivedPacket(Packet pktPacket)
+        {
+            foreach (NetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
+            {
+                pktPacket = nppProcessor.ProcessReceivedPacket(pktPacket);
+
+                if (pktPacket == null)
+                {
+                    return null;
+                }
+            }
+
+            return pktPacket;
+        }
+
+        protected void ProcessNewConnection(Connection conConnection)
+        {
+            //process the new connection 
+            foreach (NetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
+            {
+                nppProcessor.OnNewConnection(conConnection);
             }
         }
 

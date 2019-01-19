@@ -1,0 +1,17 @@
+<#@ template language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="Sim" #>
+<#@ import namespace="System.Reflection" #>
+<#@ import namespace="System.Collections" #>
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace Networking 
+{ 
+    public class Packet 
+    {
+
+	}
+}

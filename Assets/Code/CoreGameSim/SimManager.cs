@@ -20,9 +20,9 @@ namespace Sim
 
         public UserInputGenerator m_uigInputGenerator;
 
-        public NetworkConnection m_ntcNetworkConnection;
+        public Networking.NetworkConnection m_ntcNetworkConnection;
 
-        public NetworkConnection m_ntcConnectionTarget;
+        public Networking.NetworkConnection m_ntcConnectionTarget;
 
         public GameSettings m_setSettings;
 
@@ -86,7 +86,7 @@ namespace Sim
 
             if (m_ntcNetworkConnection == null)
             {
-                m_ntcNetworkConnection = GetComponent<NetworkConnection>();
+                m_ntcNetworkConnection = GetComponent<Networking.NetworkConnection>();
             }
 
             if (m_ntcConnectionTarget != null)
@@ -292,7 +292,7 @@ namespace Sim
 
         private void UpdateLobyState()
         {
-            m_ntcNetworkConnection.UpdateConnections(0);
+            m_ntcNetworkConnection.UpdateConnectionsAndProcessors();
 
             //check if the player wants to start the game 
             if (m_uigInputGenerator?.m_bStartGame ?? false)
@@ -318,7 +318,7 @@ namespace Sim
                 SwitchToActiveState();
             }
 
-            m_ntcNetworkConnection.UpdateConnections(0);
+            m_ntcNetworkConnection.UpdateConnectionsAndProcessors();
         }
 
         private void UpdateActiveState()

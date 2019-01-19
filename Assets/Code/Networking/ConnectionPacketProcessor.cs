@@ -7,20 +7,22 @@ using UnityEngine;
 /// </summary>
 namespace Networking
 {
-    public abstract class ConnectionPacketProcessor
+    public abstract class ConnectionPacketProcessor 
     {
         //defines the order that packet processors process a packet if it is processed by multiple packet processors 
         public virtual int Priority { get; }
 
-        //constructor
-        public virtual ConnectionPacketProcessor();
+        public virtual void Update(Connection conConnection)
+        {
 
-        public virtual Packet ProcessReceivedPacket(Packet pktInputPacket)
+        }
+
+        public virtual Packet ProcessReceivedPacket(Connection conConnection,Packet pktInputPacket)
         {
             return pktInputPacket;
         }
 
-        public virtual Packet ProcessPaketForSending(Packet pktOutputPacket)
+        public virtual Packet ProcessPacketForSending(Connection conConnection,Packet pktOutputPacket)
         {
             return pktOutputPacket;
         }
