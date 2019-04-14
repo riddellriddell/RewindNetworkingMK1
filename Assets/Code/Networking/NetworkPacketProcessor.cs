@@ -30,12 +30,12 @@ namespace Networking
 
         }               
 
-        public virtual Packet ProcessReceivedPacket(  Packet pktInputPacket)
+        public virtual DataPacket ProcessReceivedPacket(  DataPacket pktInputPacket)
         {
             return pktInputPacket;
         }
 
-        public virtual Packet ProcessPacketForSending(  Packet pktOutputPacket)
+        public virtual DataPacket ProcessPacketForSending(  DataPacket pktOutputPacket)
         {
             return pktOutputPacket;
         }

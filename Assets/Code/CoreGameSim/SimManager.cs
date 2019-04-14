@@ -20,8 +20,10 @@ namespace Sim
 
         public UserInputGenerator m_uigInputGenerator;
 
+        public NetworkConnectionComponent m_nccNetworkConnection;
         public Networking.NetworkConnection m_ntcNetworkConnection;
 
+        public NetworkConnectionComponent m_nccConnectionTarget;
         public Networking.NetworkConnection m_ntcConnectionTarget;
 
         public GameSettings m_setSettings;
@@ -84,13 +86,17 @@ namespace Sim
                 m_uigInputGenerator = GetComponent<UserInputGenerator>();
             }
 
-            if (m_ntcNetworkConnection == null)
+            if (m_nccNetworkConnection == null)
             {
-                m_ntcNetworkConnection = GetComponent<Networking.NetworkConnection>();
+                m_nccNetworkConnection = GetComponent<NetworkConnectionComponent>();
             }
+            m_nccNetworkConnection.Init();
+            m_ntcNetworkConnection = m_nccNetworkConnection.m_ncnNetworkConnection;
 
-            if (m_ntcConnectionTarget != null)
+            if (m_nccConnectionTarget != null)
             {
+                m_nccConnectionTarget.Init();
+                m_ntcConnectionTarget = m_nccConnectionTarget.m_ncnNetworkConnection;
                 m_ntcNetworkConnection.MakeTestingConnection(m_ntcConnectionTarget);
             }
 
@@ -227,7 +233,7 @@ namespace Sim
             m_ntcNetworkConnection.DestributeReceivedPackets();
         }
 
-        public void HandleInputFromNetwork(byte bPlayerID, Packet pktPacket)
+        public void HandleInputFromNetwork(byte bPlayerID, DataPacket pktPacket)
         {
             if (pktPacket is InputPacket)
             {
@@ -337,7 +343,7 @@ namespace Sim
                 m_iSimTick++;
 
                 //update the networking 
-                m_ntcNetworkConnection.UpdateConnections(m_iSimTick);
+                m_ntcNetworkConnection.UpdateConnectionsAndProcessors();
 
                 //do one frame of simulation
                 m_simGameSim.UpdateSimulation(m_iSimTick);
@@ -347,7 +353,7 @@ namespace Sim
 
         private void UpdateEndState()
         {
-            m_ntcNetworkConnection.UpdateConnections(0);
+            m_ntcNetworkConnection.UpdateConnectionsAndProcessors();
         }
 
         private void SetupSimulation()

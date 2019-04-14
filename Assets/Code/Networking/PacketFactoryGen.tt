@@ -1,11 +1,13 @@
-<#@ template language="C#"#>
+<#@ template language="C#" #>
 <#@ assembly name="System.Core" #>
 <#@ import namespace="System" #> 
 <#@ import namespace="System.Reflection" #>
 <#@ import namespace="System.Collections" #>
 <#@ import namespace="System.Collections.Generic" #>
 <#@ import namespace="System.Linq" #> 
-
+//#@ import namespace="Networking"  
+//#@ import namespace="UnityEngine" 
+//#@ import namespace="Sim" 
 
 
 <# //get all the classes in the packet that extend Packet
@@ -14,7 +16,7 @@
 
 	 var assembly1=Assembly.GetExecutingAssembly();
 
-	string localAddress =  "test"; // this.Host.ResolvePath("");
+	string localAddress = "test"; // this..ResolvePath("");
 
 	 var assembly2=Assembly.LoadFile("D:/Game Dev/RollBackNetworking/RollBackNetworkingUnityPrototype/Library/ScriptAssemblies/Main.dll");
 
@@ -53,15 +55,35 @@ using UnityEngine;
 
 namespace Networking 
 { 
-    public partial class Packet 
+	
+
+    public partial class PacketFactoryGen
     {
+		public enum PacketTypes()
+		{
 <#
 for(int i = 0 ; i < packetTypeList.Count; i++)
 {
+	//check if the type is a packet
+	//if(packetTypeList[i] is Packet )
+    //{
+		//if(packetTypeList[i].GetTypeInfo().IsAbstract == false)
+        //{
+
 #>
-	//<#= packetTypeList[i].ToString() #>
+		<#= packetTypeList[i].ToString() #>,
 <#
+		//}
+    //}
 }
 #>
+		}
+
+		public Packet DecodePacket()
+		{
+			
+		}
+
+
 	}
 }

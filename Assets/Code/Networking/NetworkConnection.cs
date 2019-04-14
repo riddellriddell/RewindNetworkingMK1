@@ -1,13 +1,13 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace Networking
 {
 
-    public class NetworkConnection : MonoBehaviour
+    public class NetworkConnection 
     {
-
         // Defines a comparer to create a sorted set
         // that is sorted by the file extensions.
         private class PacketProcessorComparer : IComparer<NetworkPacketProcessor>
@@ -33,6 +33,7 @@ namespace Networking
             }
         }
 
+        //the link through the internet to other clients
         public InternetConnectionSimulator m_icwConnectionSimulation;
 
         //list of all the network connection PacketManagers 
@@ -44,17 +45,26 @@ namespace Networking
         //the local id of the player
         public byte m_bPlayerID;
 
-        //the unique id for this play
-        public long m_lPlayerUniqueID;
+        //the unique id for this player
+        public int m_lPlayerUniqueID;
 
-        public delegate void PacketDataIn(byte bPlayerID, Packet pktInput);
+        public delegate void PacketDataIn(byte bPlayerID, DataPacket pktInput);
         public event PacketDataIn m_evtPacketDataIn;
 
-        public void Start()
+        //used to create packets 
+        protected ClassWithIDFactory m_cifPacketFactory;
+
+        public NetworkConnection(ClassWithIDFactory cifPacketFactory, InternetConnectionSimulator igaInternetGateway)
         {
+            //generate a unique ID
+            // m_lPlayerUniqueID = SystemInfo.deviceUniqueIdentifier.GetHashCode();
+            m_lPlayerUniqueID = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+
+            m_cifPacketFactory = cifPacketFactory;
+            m_icwConnectionSimulation = igaInternetGateway;
             m_nppNetworkPacketProcessors = new SortedSet<NetworkPacketProcessor>(new PacketProcessorComparer());
         }
-
+              
         public void AddPacketProcessor(NetworkPacketProcessor nppProcessor)
         {
             m_nppNetworkPacketProcessors.Add(nppProcessor);
@@ -80,15 +90,18 @@ namespace Networking
 
             //process new connection 
             ProcessNewConnection(conDebugConnection);
+
+            //set connection values 
+            conDebugConnection.m_iMaxBytesToSend = 500;
         }
 
         public void MakeTestingConnection(NetworkConnection nwcConnectionTarget)
         {
             //create new connection 
-            Connection m_conLocalConnection = new Connection(nwcConnectionTarget.m_bPlayerID);
+            Connection m_conLocalConnection = new Connection(nwcConnectionTarget.m_bPlayerID, m_cifPacketFactory);
             m_conLocalConnection.m_icsConnectionSim = m_icwConnectionSimulation;
 
-            Connection m_conTargetConnection = new Connection(m_bPlayerID);
+            Connection m_conTargetConnection = new Connection(m_bPlayerID, nwcConnectionTarget.m_cifPacketFactory);
             m_conTargetConnection.m_icsConnectionSim = m_icwConnectionSimulation;
 
             m_conLocalConnection.m_conConnectionTarget = m_conTargetConnection;
@@ -115,7 +128,7 @@ namespace Networking
         }
 
         //send packet to all connected players 
-        public bool TransmitPacketToAll(Packet pktPacket)
+        public bool TransmitPacketToAll(DataPacket pktPacket)
         {
             //process packet for sending 
             pktPacket = ProcessPacketForSending(pktPacket);
@@ -155,7 +168,7 @@ namespace Networking
             return Time.timeSinceLevelLoad;
         } 
 
-        public void SendPackage(byte bPlayerConnection, Packet pktPacket)
+        public void SendPackage(byte bPlayerConnection, DataPacket pktPacket)
         {
             for(int i = 0; i < m_conConnectionList.Count; i++)
             {
@@ -175,7 +188,7 @@ namespace Networking
             {
                 while (m_conConnectionList[i].m_pakReceivedPackets.Count > 0)
                 {
-                    Packet pktPacket = m_conConnectionList[i].m_pakReceivedPackets.Dequeue();
+                    DataPacket pktPacket = m_conConnectionList[i].m_pakReceivedPackets.Dequeue();
 
                     ProcessPacket(m_conConnectionList[i].m_bConnectionID, pktPacket);
                 }
@@ -184,7 +197,7 @@ namespace Networking
 
         public Connection MakeConnectionOffer()
         {
-            Connection conOffer = new Connection(m_bPlayerID);
+            Connection conOffer = new Connection(m_bPlayerID,m_cifPacketFactory);
 
             return conOffer;
         }
@@ -193,8 +206,7 @@ namespace Networking
         {
             MakeConnection(conConnectionOffer);
 
-
-            Connection conOffer = new Connection(m_bPlayerID);
+            Connection conOffer = new Connection(m_bPlayerID,m_cifPacketFactory);
 
             return conOffer;
         }
@@ -204,10 +216,10 @@ namespace Networking
             MakeConnection(conConnectionReply);
         }
 
-        protected void ProcessPacket(byte bPlayerConnection, Packet pktPacket)
+        protected void ProcessPacket(byte bPlayerConnection, DataPacket pktPacket)
         {
             //check if packet was for networking only
-            switch (pktPacket.m_ptyPacketType)
+            switch (pktPacket.GetTypeID)
             {
  
                 default:
@@ -217,7 +229,7 @@ namespace Networking
             }
         }
 
-        protected Packet ProcessPacketForSending(Packet pktPacket)
+        protected DataPacket ProcessPacketForSending(DataPacket pktPacket)
         {
             foreach (NetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
             {
@@ -232,7 +244,7 @@ namespace Networking
             return pktPacket;
         }
 
-        protected Packet ProcessReceivedPacket(Packet pktPacket)
+        protected DataPacket ProcessReceivedPacket(DataPacket pktPacket)
         {
             foreach (NetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
             {

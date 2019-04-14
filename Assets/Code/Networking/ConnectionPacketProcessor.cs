@@ -17,12 +17,12 @@ namespace Networking
 
         }
 
-        public virtual Packet ProcessReceivedPacket(Connection conConnection,Packet pktInputPacket)
+        public virtual DataPacket ProcessReceivedPacket(Connection conConnection,DataPacket pktInputPacket)
         {
             return pktInputPacket;
         }
 
-        public virtual Packet ProcessPacketForSending(Connection conConnection,Packet pktOutputPacket)
+        public virtual DataPacket ProcessPacketForSending(Connection conConnection,DataPacket pktOutputPacket)
         {
             return pktOutputPacket;
         }

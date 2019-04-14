@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Sim
 {
 
-    public abstract class TickStampedPacket : Packet
+    public abstract class TickStampedPacket : DataPacket
     {
         public static int MaxTicksBetweenTickStampedPackets
         {
@@ -86,13 +86,21 @@ namespace Sim
     }
 
     // this packet resets the connection Tick To Zero and it used to start a game 
-    public class ResetTickCountPacket : Packet
+    public class ResetTickCountPacket : DataPacket
     {
-        public override PacketType m_ptyPacketType
+        public static int TypeID
         {
             get
             {
-                return PacketType.ResetTickCount;
+                return 0;
+            }
+        }
+
+        public override int GetTypeID
+        {
+            get
+            {
+                return TypeID;
             }
         }
 
@@ -117,14 +125,21 @@ namespace Sim
 
     //this is just used to keep the connection alive / add enough padding for the next input 
     //this packet is sent if 255 ticks / TickStamp.MaxTicksBetweenPackets have passed since the last packet and their have been no updates 
-    public class PingPacket : Packet
+    public class PingPacket : DataPacket
     {
-
-        public override PacketType m_ptyPacketType
+        public static int TypeID
         {
             get
             {
-                return PacketType.Ping;
+                return 1;
+            }
+        }
+
+        public override int GetTypeID
+        {
+            get
+            {
+                return TypeID;
             }
         }
 
@@ -151,16 +166,27 @@ namespace Sim
     /// <summary>
     /// this class is used to test the RTT time of the network 
     /// </summary>
-    public class NetTestPacket : Packet
+    public class NetTestPacket : DataPacket
     {
-        //the value to echo back 
-        public byte m_bEcho;
-
-        public override PacketType m_ptyPacketType
+        public static int TypeID
         {
             get
             {
-                return PacketType.ConnectionTest;
+                return 2;
+            }
+        }
+
+        //is this a reply to a previouse echo message 
+        public bool m_bIsReply;
+
+        //the value to echo back 
+        public byte m_bEcho;
+
+        public override int GetTypeID
+        {
+            get
+            {
+                return TypeID;
             }
         }
 
@@ -192,13 +218,21 @@ namespace Sim
 
     public class InputPacket : TickStampedPacket
     {
-        public byte m_bInput;
-
-        public override PacketType m_ptyPacketType
+        public static int TypeID
         {
             get
             {
-                return PacketType.Input;
+                return 3;
+            }
+        }
+
+        public byte m_bInput;
+
+        public override int GetTypeID
+        {
+            get
+            {
+                return TypeID;
             }
         }
 
@@ -253,8 +287,15 @@ namespace Sim
         }
     }
 
-    public class StartCountDownPacket : Packet
+    public class StartCountDownPacket : DataPacket
     {
+        public static int TypeID
+        {
+            get
+            {
+                return 4;
+            }
+        }
 
         public long m_lGameStartTime;
 
@@ -266,11 +307,11 @@ namespace Sim
             }
         }
 
-        public override PacketType m_ptyPacketType
+        public override int GetTypeID
         {
             get
             {
-                return PacketType.StartCountdown;
+                return TypeID;
             }
         }
 
@@ -291,7 +332,6 @@ namespace Sim
         {
             m_lGameStartTime = lTime;
         }
-
 
         public override int DecodePacket(PacketWrapper pkwPacketWrapper, int iDataReadHead)
         {

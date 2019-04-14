@@ -13,7 +13,7 @@ namespace Networking
 
         public int m_iStartPacketNumber;
 
-        public List<Packet> m_Payload;
+        public List<DataPacket> m_Payload;
 
         public PacketWrapper(int lastAck, int iPacketStartFrame, int iPacketCount)
         {
@@ -21,33 +21,25 @@ namespace Networking
 
             m_iStartPacketNumber = iPacketStartFrame;
 
-            m_Payload = new List<Packet>(iPacketCount);
+            m_Payload = new List<DataPacket>(iPacketCount);
         }
 
-        public void AddDataPacket(Packet pakPacket)
+        public void AddDataPacket(DataPacket pakPacket)
         {
             m_Payload.Add(pakPacket);
         }
 
     }
 
-    public abstract partial class Packet
-    {
-        public enum PacketType : byte
+    public abstract partial class DataPacket
+    {        
+
+        public static int GetPacketType(PacketWrapper pkwPacketWrapper, int iDataReadHead)
         {
-            StartCountdown,
-            ResetTickCount,
-            Ping,
-            ConnectionTest,
-            Input
+            return 1;
         }
 
-        public static PacketType GetPacketType(PacketWrapper pkwPacketWrapper, int iDataReadHead)
-        {
-            return (PacketType)pkwPacketWrapper.m_Payload[iDataReadHead].m_ptyPacketType;
-        }
-
-        public abstract PacketType m_ptyPacketType { get; }
+        public abstract int GetTypeID { get; }
 
         public abstract int PacketSize { get; }
 
@@ -74,8 +66,5 @@ namespace Networking
             //encode packet type
             //pkwPacketWrapper.AddDataPacket((byte)m_ptyPacketType);
         }
-
-    }
-
-    
+    }    
 }
