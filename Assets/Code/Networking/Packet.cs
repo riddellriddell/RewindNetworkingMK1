@@ -36,7 +36,7 @@ namespace Networking
 
         public static int GetPacketType(PacketWrapper pkwPacketWrapper, int iDataReadHead)
         {
-            return 1;
+            return pkwPacketWrapper.m_Payload[iDataReadHead].GetTypeID;
         }
 
         public abstract int GetTypeID { get; }

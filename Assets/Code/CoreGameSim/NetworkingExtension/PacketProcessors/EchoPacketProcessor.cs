@@ -40,11 +40,11 @@ namespace Sim
 
         protected void AddProcessorToConnection(Connection conConnection)
         {
-            EchoConnectionProcessor tcpTickStampedProcessor = new EchoConnectionProcessor(m_fEchoUpdateRate);
+            EchoConnectionProcessor ecpEchoProcessor = new EchoConnectionProcessor(m_fEchoUpdateRate);
 
-            m_tcpTickStampProcessors.Add(tcpTickStampedProcessor);
+            m_tcpTickStampProcessors.Add(ecpEchoProcessor);
 
-            conConnection.m_cppOrderedPacketProcessorList.Add(tcpTickStampedProcessor);
+            conConnection.m_cppOrderedPacketProcessorList.Add(ecpEchoProcessor);
         }
     }
 

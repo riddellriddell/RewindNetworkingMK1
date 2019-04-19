@@ -201,6 +201,9 @@ namespace Sim
             {
                 //clear frame data 
                 frmSimulatedFrame.ResetData();
+
+                //clear old hash checks older than 
+                DataHashValidation.ClearData(frmFrameToSimulate.m_iTickNumber - (int)(Fix.One / setSettings.TickDelta.FixValue) * 1 );
             }
 
             //was simulation successfull

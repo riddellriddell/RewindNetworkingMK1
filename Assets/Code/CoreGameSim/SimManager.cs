@@ -117,7 +117,7 @@ namespace Sim
         public void Update()
         {
             //destribute inputs
-            m_ntcNetworkConnection.DestributeReceivedPackets();
+            RefreshServerInput();
 
             switch (m_glsGameState)
             {
@@ -157,8 +157,7 @@ namespace Sim
             //get the latest frame 
             //FrameData frmLatestFrame = m_simGameSim.m_frmDenseFrameQueue[m_simGameSim.m_iDenseQueueHead];
 
-            //update the interpolated data 
-            m_fdiFrameDataInterpolator.UpdateInterpolatedDataForTime(TotalGameTime - (float)m_setSettings.TickDelta.FixValue, Time.deltaTime);
+
 
             InterpolatedFrameDataGen frmLatestFrame = m_fdiFrameDataInterpolator.m_ifdInterpolatedFrameData;
 
@@ -345,10 +344,16 @@ namespace Sim
                 //update the networking 
                 m_ntcNetworkConnection.UpdateConnectionsAndProcessors();
 
+                m_ntcNetworkConnection.GetPacketProcessor<TickStampedDataNetworkProcessor>().UpdateTick(m_iSimTick);
+
                 //do one frame of simulation
                 m_simGameSim.UpdateSimulation(m_iSimTick);
 
             }
+
+            //update the interpolated data 
+            m_fdiFrameDataInterpolator.UpdateInterpolatedDataForTime(TotalGameTime - (float)m_setSettings.TickDelta.FixValue, Time.deltaTime);
+
         }
 
         private void UpdateEndState()
@@ -390,7 +395,7 @@ namespace Sim
             //check to see if the input might cause a simulation recalculation 
             if(m_simGameSim.m_iLastResolvedTick != m_simGameSim.m_iLatestTick)
             {
-                m_fdiFrameDataInterpolator.m_bCalculatePredictionError = true;
+              m_fdiFrameDataInterpolator.m_bCalculatePredictionError = true;
             }
         }
     }

@@ -72,6 +72,19 @@ namespace Networking
             nppProcessor.OnAddToNetwork(this);
         }
 
+        public T GetPacketProcessor<T>() where T : NetworkPacketProcessor
+        {
+            foreach(NetworkPacketProcessor processor in m_nppNetworkPacketProcessors)
+            {
+                if(processor is  T )
+                {
+                    return processor as T;
+                }
+            }
+
+            return default(T);
+        }
+
         //when connection is first made default to the connection Tick 
         public void MakeFirstConnection(int startTick)
         {
@@ -97,6 +110,9 @@ namespace Networking
 
         public void MakeTestingConnection(NetworkConnection nwcConnectionTarget)
         {
+            this.m_bPlayerID = 0;
+            nwcConnectionTarget.m_bPlayerID = 1;
+
             //create new connection 
             Connection m_conLocalConnection = new Connection(nwcConnectionTarget.m_bPlayerID, m_cifPacketFactory);
             m_conLocalConnection.m_icsConnectionSim = m_icwConnectionSimulation;
@@ -109,6 +125,8 @@ namespace Networking
 
             MakeConnection(m_conLocalConnection);
             nwcConnectionTarget.MakeConnection(m_conTargetConnection);
+
+            
 
         }
 

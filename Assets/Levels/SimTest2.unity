@@ -355,7 +355,7 @@ MonoBehaviour:
   m_strStartGameShortcut: b
   m_bStartGame: 1
   m_bGenerateRandomInput: 1
-  m_fInputChangeRate: 0.2
+  m_fInputChangeRate: 0.5
 --- !u!1 &1375160708
 GameObject:
   m_ObjectHideFlags: 0
@@ -443,7 +443,7 @@ MonoBehaviour:
   m_fCountDownTime: 3
   m_uigInputGenerator: {fileID: 0}
   m_nccNetworkConnection: {fileID: 1568822424}
-  m_nccConnectionTarget: {fileID: 421822571}
+  m_nccConnectionTarget: {fileID: 0}
   m_setSettings: {fileID: 11400000, guid: e400905f6de704d478385473909a3fed, type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: d7a84516ef70d0d4996a141863a4de1a,
     type: 2}
@@ -503,7 +503,7 @@ MonoBehaviour:
   m_strBlock: f
   m_strStartGameShortcut: b
   m_bStartGame: 0
-  m_bGenerateRandomInput: 1
+  m_bGenerateRandomInput: 0
   m_fInputChangeRate: 0.2
 --- !u!1 &1908052993
 GameObject:

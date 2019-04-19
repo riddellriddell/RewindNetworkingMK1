@@ -32,6 +32,8 @@ namespace Sim
 
 		}
 
+		public bool m_bEnableInterpolation = false;
+
 		
 		public ErrorCorrectionSetting m_sPlayerHealthsErrorCorrectionSetting; 
 		

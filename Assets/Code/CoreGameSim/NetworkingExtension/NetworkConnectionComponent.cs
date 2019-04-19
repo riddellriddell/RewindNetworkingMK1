@@ -23,6 +23,9 @@ namespace Sim
 
             m_ncnNetworkConnection = new NetworkConnection(new GamePacketFactory(), m_icwConnectionSimulation);
 
+            m_ncnNetworkConnection.AddPacketProcessor(new TickStampedDataNetworkProcessor());
+            m_ncnNetworkConnection.AddPacketProcessor(new EchoNetworkProcessor());
+
         }
         
         private void Update()
