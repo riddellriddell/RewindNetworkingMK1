@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,6 +12,31 @@ namespace Networking
             New,
             Connected,
             Disconnected
+        }
+
+        // Defines a comparer to create a sorted set
+        // this allows control over what order the packet processing is done 
+        private class PacketProcessorComparer : IComparer<ConnectionPacketProcessor>
+        {
+            public int Compare(ConnectionPacketProcessor x, ConnectionPacketProcessor y)
+            {
+                if(x == null && y == null)
+                {
+                    return 0;
+                }
+
+                if(x == null)
+                {
+                    return -1;
+                }
+
+                if(y == null)
+                {
+                    return 1;
+                }
+
+                return x.Priority - y.Priority;
+            }
         }
 
         //values used for testing
@@ -27,10 +53,16 @@ namespace Networking
         public int m_iMaxBytesToSend;
 
         // list of all the packets that have been received but not yet processed 
-        public Queue<Packet> m_pakReceivedPackets;
+        public Queue<DataPacket> m_pakReceivedPackets;
 
         // list of all the packets to send that have not yet acknowledged  
-        public RandomAccessQueue<Packet> m_PacketsInFlight;
+        public RandomAccessQueue<DataPacket> m_PacketsInFlight;
+
+        // list of all the packet processors 
+        public SortedSet<ConnectionPacketProcessor> m_cppOrderedPacketProcessorList;
+
+        //used to create packets 
+        public ClassWithIDFactory m_cifPacketFactory;
 
         // the packet number of the last packet sent
         protected int m_iPacketsQueuedToSendCount;
@@ -47,12 +79,15 @@ namespace Networking
         //the tick of the last packet recieved
         protected int m_iLastTickReceived;
 
-        public Connection(byte bConnectionID)
+        public Connection(byte bConnectionID, ClassWithIDFactory cifPacketFactory)
         {
             m_bConnectionID = bConnectionID;
 
-            m_pakReceivedPackets = new Queue<Packet>();
-            m_PacketsInFlight = new RandomAccessQueue<Packet>();
+            m_cifPacketFactory = cifPacketFactory;
+
+            m_pakReceivedPackets = new Queue<DataPacket>();
+            m_PacketsInFlight = new RandomAccessQueue<DataPacket>();
+            m_cppOrderedPacketProcessorList = new SortedSet<ConnectionPacketProcessor>(new PacketProcessorComparer());
 
             m_iPacketsQueuedToSendCount = 0;
             m_iLastAckPacketNumberSent = 0;
@@ -60,14 +95,10 @@ namespace Networking
         }
 
         //check if a ping packet is needed to keep the connection alive
-        public void UpdateConnection(int iTick)
+        public void UpdateConnection()
         {
-            //check if a ping packet is needed
-            if (iTick - m_iLastPacketTickQueuedToSend >= TickStampedPacket.MaxTicksBetweenTickStampedPackets)
-            {
-                //add a ping packet to send list to maintain connection
-                QueuePacketToSend(new PingPacket());
-            }
+            //update all packet processors 
+            UpdatePacketProcessors();
 
             //send packets to target
             SendPackets();
@@ -91,7 +122,7 @@ namespace Networking
             while (iPacketReadHead < iPacketReadTail)
             {
                 //decode packet
-                Packet pktDecodedPacket = DecodePacket(packetWrapper, ref iPacketReadHead);
+                DataPacket pktDecodedPacket = DecodePacket(packetWrapper, ref iPacketReadHead);
 
                 iPacketNumberHead++;
 
@@ -100,13 +131,57 @@ namespace Networking
             }
         }
 
-        public void QueuePacketToSend(Packet packet)
+        public bool QueuePacketToSend(DataPacket pktPacket)
         {
             m_iPacketsQueuedToSendCount++;
 
-            ProcessSendingTickStampedPackets(packet);
+            pktPacket = ProccessPacketForSending(pktPacket);
 
-            m_PacketsInFlight.Enqueue(packet);
+            //check if packet should be sent
+            if(pktPacket != null)
+            {
+                m_PacketsInFlight.Enqueue(pktPacket);
+
+                return true;
+            }           
+
+            return false;
+        }
+
+        private DataPacket ProccessPacketForSending(DataPacket pktPacket)
+        {
+            //loop through all the packet processors 
+            foreach(ConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
+            {
+                //process packet 
+                pktPacket = cppProcessor.ProcessPacketForSending(this,pktPacket);
+
+                //check if packet is still going to get sent 
+                if(pktPacket == null)
+                {
+                    return null;
+                }
+            }
+
+            return pktPacket;
+        }
+
+        private DataPacket ProccessReceivedPacket(DataPacket pktPacket)
+        {
+            //loop through all the packet processors 
+            foreach (ConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
+            {
+                //process packet 
+                pktPacket = cppProcessor.ProcessReceivedPacket(this,pktPacket);
+
+                //check if packet is still going to get sent 
+                if (pktPacket == null)
+                {
+                    return null;
+                }
+            }
+
+            return pktPacket;
         }
 
         private void SendPackets()
@@ -141,10 +216,26 @@ namespace Networking
             //create packet wrapper 
             PacketWrapper pkwPacketWrappepr = new PacketWrapper(m_iTotalPacketsReceived, m_iPacketsQueuedToSendCount - m_PacketsInFlight.Count, m_PacketsInFlight.Count);
 
+            int iBytesRemining = m_iMaxBytesToSend;
+
             //add as many packets as possible without hitting the max send data limit
             for (int i = 0; i < m_PacketsInFlight.Count; i++)
             {
-                pkwPacketWrappepr.AddDataPacket(m_PacketsInFlight[i]);
+                DataPacket pktPacketToSend = m_PacketsInFlight[i];
+
+                int iPacketSize = pktPacketToSend.PacketSize;
+
+                iBytesRemining -= iPacketSize;
+
+                if (iBytesRemining > 0)
+                {
+
+                    pkwPacketWrappepr.AddDataPacket(pktPacketToSend);
+                }
+                else
+                {
+                    break;
+                }
             }
 
             //send packet through coms 
@@ -154,39 +245,22 @@ namespace Networking
             }
         }
 
-        private Packet DecodePacket(PacketWrapper packetWrapper, ref int iReadHead)
+        //takes the binary data in the packet wrapper and converts it to a data packet
+        private DataPacket DecodePacket(PacketWrapper packetWrapper, ref int iReadHead)
         {
-
             //get packet type 
-            Packet.PacketType ptyPacketType = Packet.GetPacketType(packetWrapper, iReadHead);
+            int iPacketType = DataPacket.GetPacketType(packetWrapper, iReadHead);
 
-            Packet pktOutput = null;
-
-            //create Packet 
-            switch (ptyPacketType)
-            {
-                case Packet.PacketType.Ping:
-                    pktOutput = new PingPacket();
-                    break;
-                case Packet.PacketType.Input:
-                    pktOutput = new InputPacket();
-                    break;
-                case Packet.PacketType.ResetTickCount:
-                    pktOutput = new ResetTickCountPacket();
-                    break;
-                case Packet.PacketType.StartCountdown:
-                    pktOutput = new StartCountDownPacket();
-                    break;
-
-            }
-
+            //create the packet class that will be instantiated 
+            DataPacket pktOutput = m_cifPacketFactory.CreateType<DataPacket>(iPacketType);
+                        
             //decode packet
             iReadHead = pktOutput.DecodePacket(packetWrapper, iReadHead);
 
             return pktOutput;
         }
 
-        private void QueueReceivedPacket(Packet pktPacket, int iPacketNumber)
+        private void QueueReceivedPacket(DataPacket pktPacket, int iPacketNumber)
         {
             //check if packet has already been queued 
             if (iPacketNumber <= m_iTotalPacketsReceived)
@@ -197,93 +271,94 @@ namespace Networking
             //update the most recent packet number
             m_iTotalPacketsReceived = iPacketNumber;
 
-            //process the tick offset
-            ProcessReceivedTickStampedPackets(pktPacket);
+            pktPacket = ProccessReceivedPacket(pktPacket);
 
             //check if this packet should be passed on to be processed by the rest of the game 
-            if (ShouldPacketBePassedOn(pktPacket))
+            if (pktPacket != null)
             {
                 //queue up the packet 
                 m_pakReceivedPackets.Enqueue(pktPacket);
             }
         }
 
-        //process packets that have a tick stamp
-        private void ProcessReceivedTickStampedPackets(Packet pktPacket)
+        ////process packets that have a tick stamp
+        //private void ProcessReceivedTickStampedPackets(Packet pktPacket)
+        //{
+        //    //check if packet is ping packet 
+        //    if (pktPacket is PingPacket)
+        //    {
+        //        m_iLastTickReceived += TickStampedPacket.MaxTicksBetweenTickStampedPackets;
+        //
+        //        return;
+        //    }
+        //
+        //    if (pktPacket is TickStampedPacket)
+        //    {
+        //        TickStampedPacket tspPacket = pktPacket as TickStampedPacket;
+        //
+        //        //update the tick of the connection target 
+        //        m_iLastTickReceived += tspPacket.Offset;
+        //
+        //        //set the tick of the packet 
+        //        tspPacket.m_iTick = m_iLastTickReceived;
+        //
+        //        return;
+        //    }
+        //
+        //    if(pktPacket is ResetTickCountPacket)
+        //    {
+        //        m_iLastTickReceived = 0;
+        //
+        //        return;
+        //    }
+        //}
+
+       // private void ProcessSendingTickStampedPackets(Packet pktPacket)
+       // {
+       //     //reset the tick for game start events 
+       //     if(pktPacket is ResetTickCountPacket)
+       //     {
+       //         //reset connection tick
+       //         m_iLastPacketTickQueuedToSend = 0;
+       //     }
+       //
+       //     if(pktPacket is PingPacket)
+       //     {
+       //         m_iLastPacketTickQueuedToSend += TickStampedPacket.MaxTicksBetweenTickStampedPackets;
+       //     }
+       //
+       //     //set the offset for tick stamped packets
+       //     if (pktPacket is TickStampedPacket)
+       //     {
+       //         TickStampedPacket tspPacket = pktPacket as TickStampedPacket;
+       //
+       //         //check if the target tick between this packet and the next is too big
+       //         while (tspPacket.m_iTick - m_iLastPacketTickQueuedToSend > TickStampedPacket.MaxTicksBetweenTickStampedPackets)
+       //         {
+       //             //queue a ping packet 
+       //             QueuePacketToSend(new PingPacket());
+       //
+       //             //shift the tick forward 
+       //             m_iLastPacketTickQueuedToSend += TickStampedPacket.MaxTicksBetweenTickStampedPackets;
+       //         }
+       //
+       //         //set the packets offset from the previouse packet 
+       //         tspPacket.SetOffset(m_iLastPacketTickQueuedToSend);
+       //
+       //         //update the current tick
+       //         m_iLastPacketTickQueuedToSend = tspPacket.m_iTick;
+       //
+       //         return;
+       //     }
+       // }
+
+        private void UpdatePacketProcessors()
         {
-            //check if packet is ping packet 
-            if (pktPacket is PingPacket)
+            foreach(ConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
             {
-                m_iLastTickReceived += TickStampedPacket.MaxTicksBetweenTickStampedPackets;
-
-                return;
-            }
-
-            if (pktPacket is TickStampedPacket)
-            {
-                TickStampedPacket tspPacket = pktPacket as TickStampedPacket;
-
-                //update the tick of the connection target 
-                m_iLastTickReceived += tspPacket.Offset;
-
-                //set the tick of the packet 
-                tspPacket.m_iTick = m_iLastTickReceived;
-
-                return;
-            }
-
-            if(pktPacket is ResetTickCountPacket)
-            {
-                m_iLastTickReceived = 0;
-
-                return;
+                cppProcessor.Update(this);
             }
         }
 
-        private void ProcessSendingTickStampedPackets(Packet pktPacket)
-        {
-            //reset the tick for game start events 
-            if(pktPacket is ResetTickCountPacket)
-            {
-                //reset connection tick
-                m_iLastPacketTickQueuedToSend = 0;
-            }
-
-            if(pktPacket is PingPacket)
-            {
-                m_iLastPacketTickQueuedToSend += TickStampedPacket.MaxTicksBetweenTickStampedPackets;
-            }
-
-            //set the offset for tick stamped packets
-            if (pktPacket is TickStampedPacket)
-            {
-                TickStampedPacket tspPacket = pktPacket as TickStampedPacket;
-
-                //check if the target tick between this packet and the next is too big
-                while (tspPacket.m_iTick - m_iLastPacketTickQueuedToSend > TickStampedPacket.MaxTicksBetweenTickStampedPackets)
-                {
-                    //queue a ping packet 
-                    QueuePacketToSend(new PingPacket());
-
-                    //shift the tick forward 
-                    m_iLastPacketTickQueuedToSend += TickStampedPacket.MaxTicksBetweenTickStampedPackets;
-                }
-
-                //set the packets offset from the previouse packet 
-                tspPacket.SetOffset(m_iLastPacketTickQueuedToSend);
-
-                //update the current tick
-                m_iLastPacketTickQueuedToSend = tspPacket.m_iTick;
-
-                return;
-            }
-        }
-
-        //checks if this packet is just a connection maintanance packet 
-        //or should be passed on to the rest of the game for processing
-        private bool ShouldPacketBePassedOn(Packet pktPacket)
-        {            
-            return true;
-        }
     }
 }

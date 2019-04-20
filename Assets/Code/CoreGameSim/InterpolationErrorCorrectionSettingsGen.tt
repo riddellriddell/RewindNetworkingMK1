@@ -42,6 +42,8 @@ namespace Sim
 
 		}
 
+		public bool m_bEnableInterpolation = false;
+
 <#
 	
 		foreach(FieldInfo fldField in fldFieldInfo)

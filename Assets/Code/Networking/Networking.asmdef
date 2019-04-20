@@ -1,14 +1,12 @@
 {
-    "name": "Main",
+    "name": "Networking",
     "references": [
-        "FixedPointy",
-        "Utility",
-        "Networking"
+        "Utility"
     ],
     "optionalUnityReferences": [],
     "includePlatforms": [],
     "excludePlatforms": [],
-    "allowUnsafeCode": true,
+    "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,

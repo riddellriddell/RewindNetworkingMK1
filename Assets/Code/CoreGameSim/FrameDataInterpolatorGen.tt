@@ -34,6 +34,11 @@ namespace Sim
 				return ifdOldFrameData;
 			}
 
+			if(m_ecsErrorCorrectionSettings.m_bEnableInterpolation == false)
+			{
+				return ifdNewFrameData;
+			}
+
 			//loop throuhg all variables and calculate the difference 
 <# 	
 	foreach(FieldInfo fldField in fldFieldInfo)

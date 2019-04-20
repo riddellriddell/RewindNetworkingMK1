@@ -20,9 +20,11 @@ namespace Sim
 
         public UserInputGenerator m_uigInputGenerator;
 
-        public NetworkConnection m_ntcNetworkConnection;
+        public NetworkConnectionComponent m_nccNetworkConnection;
+        public Networking.NetworkConnection m_ntcNetworkConnection;
 
-        public NetworkConnection m_ntcConnectionTarget;
+        public NetworkConnectionComponent m_nccConnectionTarget;
+        public Networking.NetworkConnection m_ntcConnectionTarget;
 
         public GameSettings m_setSettings;
 
@@ -84,13 +86,17 @@ namespace Sim
                 m_uigInputGenerator = GetComponent<UserInputGenerator>();
             }
 
-            if (m_ntcNetworkConnection == null)
+            if (m_nccNetworkConnection == null)
             {
-                m_ntcNetworkConnection = GetComponent<NetworkConnection>();
+                m_nccNetworkConnection = GetComponent<NetworkConnectionComponent>();
             }
+            m_nccNetworkConnection.Init();
+            m_ntcNetworkConnection = m_nccNetworkConnection.m_ncnNetworkConnection;
 
-            if (m_ntcConnectionTarget != null)
+            if (m_nccConnectionTarget != null)
             {
+                m_nccConnectionTarget.Init();
+                m_ntcConnectionTarget = m_nccConnectionTarget.m_ncnNetworkConnection;
                 m_ntcNetworkConnection.MakeTestingConnection(m_ntcConnectionTarget);
             }
 
@@ -111,7 +117,7 @@ namespace Sim
         public void Update()
         {
             //destribute inputs
-            m_ntcNetworkConnection.DestributeReceivedPackets();
+            RefreshServerInput();
 
             switch (m_glsGameState)
             {
@@ -151,8 +157,7 @@ namespace Sim
             //get the latest frame 
             //FrameData frmLatestFrame = m_simGameSim.m_frmDenseFrameQueue[m_simGameSim.m_iDenseQueueHead];
 
-            //update the interpolated data 
-            m_fdiFrameDataInterpolator.UpdateInterpolatedDataForTime(TotalGameTime - (float)m_setSettings.TickDelta.FixValue, Time.deltaTime);
+
 
             InterpolatedFrameDataGen frmLatestFrame = m_fdiFrameDataInterpolator.m_ifdInterpolatedFrameData;
 
@@ -227,7 +232,7 @@ namespace Sim
             m_ntcNetworkConnection.DestributeReceivedPackets();
         }
 
-        public void HandleInputFromNetwork(byte bPlayerID, Packet pktPacket)
+        public void HandleInputFromNetwork(byte bPlayerID, DataPacket pktPacket)
         {
             if (pktPacket is InputPacket)
             {
@@ -292,7 +297,7 @@ namespace Sim
 
         private void UpdateLobyState()
         {
-            m_ntcNetworkConnection.UpdateConnections(0);
+            m_ntcNetworkConnection.UpdateConnectionsAndProcessors();
 
             //check if the player wants to start the game 
             if (m_uigInputGenerator?.m_bStartGame ?? false)
@@ -318,7 +323,7 @@ namespace Sim
                 SwitchToActiveState();
             }
 
-            m_ntcNetworkConnection.UpdateConnections(0);
+            m_ntcNetworkConnection.UpdateConnectionsAndProcessors();
         }
 
         private void UpdateActiveState()
@@ -337,17 +342,23 @@ namespace Sim
                 m_iSimTick++;
 
                 //update the networking 
-                m_ntcNetworkConnection.UpdateConnections(m_iSimTick);
+                m_ntcNetworkConnection.UpdateConnectionsAndProcessors();
+
+                m_ntcNetworkConnection.GetPacketProcessor<TickStampedDataNetworkProcessor>().UpdateTick(m_iSimTick);
 
                 //do one frame of simulation
                 m_simGameSim.UpdateSimulation(m_iSimTick);
 
             }
+
+            //update the interpolated data 
+            m_fdiFrameDataInterpolator.UpdateInterpolatedDataForTime(TotalGameTime - (float)m_setSettings.TickDelta.FixValue, Time.deltaTime);
+
         }
 
         private void UpdateEndState()
         {
-            m_ntcNetworkConnection.UpdateConnections(0);
+            m_ntcNetworkConnection.UpdateConnectionsAndProcessors();
         }
 
         private void SetupSimulation()
@@ -384,7 +395,7 @@ namespace Sim
             //check to see if the input might cause a simulation recalculation 
             if(m_simGameSim.m_iLastResolvedTick != m_simGameSim.m_iLatestTick)
             {
-                m_fdiFrameDataInterpolator.m_bCalculatePredictionError = true;
+              m_fdiFrameDataInterpolator.m_bCalculatePredictionError = true;
             }
         }
     }

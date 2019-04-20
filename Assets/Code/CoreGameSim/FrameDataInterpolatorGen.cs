@@ -22,6 +22,11 @@ namespace Sim
 				return ifdOldFrameData;
 			}
 
+			if(m_ecsErrorCorrectionSettings.m_bEnableInterpolation == false)
+			{
+				return ifdNewFrameData;
+			}
+
 			//loop throuhg all variables and calculate the difference 
 			for(int i = 0 ; i < ifdOldFrameData.m_sPlayerHealths.Count; i++)
 			{

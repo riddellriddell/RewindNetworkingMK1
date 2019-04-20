@@ -1,6 +1,7 @@
 {
     "name": "Tests",
     "references": [
+        "Networking",
         "Main",
         "TimelineEventManager"
     ],
@@ -11,5 +12,9 @@
         "Editor"
     ],
     "excludePlatforms": [],
-    "allowUnsafeCode": false
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": []
 }

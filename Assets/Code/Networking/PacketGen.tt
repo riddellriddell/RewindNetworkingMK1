@@ -1,0 +1,67 @@
+<#@ template language="C#"#>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System" #> 
+<#@ import namespace="System.Reflection" #>
+<#@ import namespace="System.Collections" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Linq" #> 
+
+
+
+<# //get all the classes in the packet that extend Packet
+
+	List<Type> packetTypeList = new List<Type>();
+
+	 var assembly1=Assembly.GetExecutingAssembly();
+
+	string localAddress =  "test"; // this.Host.ResolvePath("");
+
+	 var assembly2=Assembly.LoadFile("D:/Game Dev/RollBackNetworking/RollBackNetworkingUnityPrototype/Library/ScriptAssemblies/Main.dll");
+
+	var assembly3=Assembly.LoadFile("obj/Debug/Assembly-CSharp.dll");
+
+	#>
+		//<#= localAddress#>
+
+		//<#= assembly1.ToString()#>
+
+		//<#= assembly1.GetExportedTypes().Length#>
+
+		//<#= assembly2.ToString()#>
+
+		//<#= assembly2.GetExportedTypes().Length#>
+
+		//<#= assembly3.ToString()#>
+
+		//<#= assembly3.GetExportedTypes().Length#>
+		
+		
+
+	<#
+
+	foreach(var assType in assembly3.GetExportedTypes())
+    {
+		WriteLine("//" + assType.ToString());
+    }
+
+
+#>
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace Networking 
+{ 
+    public partial class Packet 
+    {
+<#
+for(int i = 0 ; i < packetTypeList.Count; i++)
+{
+#>
+	//<#= packetTypeList[i].ToString() #>
+<#
+}
+#>
+	}
+}

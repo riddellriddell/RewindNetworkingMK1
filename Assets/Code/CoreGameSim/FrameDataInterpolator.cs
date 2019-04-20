@@ -11,7 +11,7 @@ namespace Sim
     {
         //has a new input caused an error in prediction 
         public bool m_bCalculatePredictionError;
-
+ 
         public List<float> m_fTargetInterpTimeOffsetForPlayer;
 
         //the time of the last interpolated data calculation
@@ -39,7 +39,7 @@ namespace Sim
 
             //setup time offset list
             m_fTargetInterpTimeOffsetForPlayer = new List<float>();
-            for(int i = 0; i < iPlayerCount; i++)
+            for (int i = 0; i < iPlayerCount; i++)
             {
                 m_fTargetInterpTimeOffsetForPlayer.Add(0f);
             }
@@ -86,16 +86,23 @@ namespace Sim
             return fdaOutput;
         }
 
-        public float CalculateErrorScalingAmount(float fMagnitudeOfError,float fDeltaTime, InterpolationErrorCorrectionSettings.ErrorCorrectionSetting ecsErrorCorrectionSetting)
+        public float CalculateErrorScalingAmount(float fMagnitudeOfError, float fDeltaTime, InterpolationErrorCorrectionSettings.ErrorCorrectionSetting ecsErrorCorrectionSetting)
         {
-
+            //check if there is no error
             if (fMagnitudeOfError == 0)
             {
-                return Mathf.Clamp01( 1 - (ecsErrorCorrectionSetting.m_fQuadraticInterpRate * fDeltaTime));
+                return 0;
             }
 
+            //check if error bigger than snap distance 
+            if (fMagnitudeOfError > ecsErrorCorrectionSetting.m_fSnapDistance)
+            {
+                return 0;
+            }
+
+
             //scale down error magnitude
-            float fReductionAmount = fMagnitudeOfError - ( fMagnitudeOfError * ( 1 - ecsErrorCorrectionSetting.m_fQuadraticInterpRate));
+            float fReductionAmount = fMagnitudeOfError - (fMagnitudeOfError * (1 - ecsErrorCorrectionSetting.m_fQuadraticInterpRate));
 
             //apply linear clamping
             fReductionAmount = Mathf.Clamp(fReductionAmount, ecsErrorCorrectionSetting.m_fMinLinearInterpSpeed, ecsErrorCorrectionSetting.m_fMaxLinearInterpSpeed);
@@ -106,10 +113,10 @@ namespace Sim
             return fScalePercent;
         }
 
-        public void UpdateInterpolatedDataForTime(float fBaseTime , float fDeltaTime)
+        public void UpdateInterpolatedDataForTime(float fBaseTime, float fDeltaTime)
         {
-            //check if errors neet to be recalculated 
-            if(m_bCalculatePredictionError)
+            //check if errors need to be recalculated 
+            if (m_bCalculatePredictionError || m_bCalculatePredictionError2)
             {
                 //recalculate new interpolation data for the same time as the last interpolated data calculation 
                 InterpolatedFrameDataGen ifdNewInterpData = CreateInterpolatedFrameData(m_gsmSourceSimulation, m_fTimeOfLastInterpolatedDataCalculation, m_fTargetInterpTimeOffsetForPlayer);
@@ -119,11 +126,6 @@ namespace Sim
 
                 //indicate that offsets have been calculated 
                 m_bCalculatePredictionError = false;
-            }
-            else if(fBaseTime == m_fTimeOfLastInterpolatedDataCalculation)
-            {
-                //no time has passed since the last update so the game state has not changed 
-                return;
             }
 
             //calculate latest interpolated position
