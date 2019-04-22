@@ -1,16 +1,22 @@
-﻿using Networking;
-using Sim;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// this class adds a tick stamped data processor to all connections
 /// </summary>
-namespace Sim
+namespace Networking
 {
     public class TickStampedDataNetworkProcessor : NetworkPacketProcessor
     {
+        public override int Priority
+        {
+            get
+            {
+                return 1;
+            }
+        }
+
         protected int m_iTick;
 
         protected NetworkConnection m_ncnNetwork;
@@ -56,7 +62,7 @@ namespace Sim
 
             m_tcpTickStampProcessors.Add(tcpTickStampedProcessor);
 
-            conConnection.m_cppOrderedPacketProcessorList.Add(tcpTickStampedProcessor);
+            conConnection.AddPacketProcessor(tcpTickStampedProcessor);
         }
     }
 

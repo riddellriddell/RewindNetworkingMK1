@@ -13,7 +13,8 @@ namespace Sim
         {
             AddType<ResetTickCountPacket>(ResetTickCountPacket.TypeID);
             AddType<PingPacket>(PingPacket.TypeID);
-            AddType<NetTestPacket>(NetTestPacket.TypeID);
+            AddType<NetTestSendPacket>(NetTestSendPacket.TypeID);
+            AddType<NetTestReplyPacket>(NetTestReplyPacket.TypeID);
             AddType<InputPacket>(InputPacket.TypeID);
             AddType<StartCountDownPacket>(StartCountDownPacket.TypeID);
         }

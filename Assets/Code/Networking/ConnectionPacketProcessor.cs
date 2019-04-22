@@ -27,5 +27,12 @@ namespace Networking
             return pktOutputPacket;
         }
 
+        public void SetConnection(Connection conConnection)
+        {
+            m_conConnection = conConnection;
+        }
+
+        protected Connection m_conConnection = null;
+
     }
 }

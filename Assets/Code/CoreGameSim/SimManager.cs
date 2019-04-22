@@ -36,7 +36,7 @@ namespace Sim
 
         public int m_playerCount;
 
-        protected ConstData m_conGameData;       
+        protected ConstData m_conGameData;
 
         protected GameSimulation m_simGameSim;
 
@@ -51,7 +51,7 @@ namespace Sim
                 return (m_iSimTick * (float)m_setSettings.TickDelta.FixValue) + m_fTimeSinceLastSim;
             }
         }
-        
+
         #region Debug
         public float m_fDebugScale;
 
@@ -170,14 +170,14 @@ namespace Sim
 
                 Color colPlayerColour = Color.white;
 
-                switch((FrameData.State)frmLatestFrame.m_bPlayerState[i])
+                switch ((FrameData.State)frmLatestFrame.m_bPlayerState[i])
                 {
                     case FrameData.State.Dead:
                         colPlayerColour = m_colDead;
                         break;
                     case FrameData.State.FastAttack:
                         colPlayerColour = m_colQuickAttack;
-                            break;
+                        break;
                     case FrameData.State.SlowAttack:
                         colPlayerColour = m_colSlowAttack;
                         break;
@@ -193,7 +193,7 @@ namespace Sim
                 }
 
                 colPlayerColour *= m_colSimDebugTint;
-                
+
                 Gizmos.color = colPlayerColour;
 
                 Gizmos.DrawSphere(vecDrawPos, 1);
@@ -303,7 +303,7 @@ namespace Sim
             if (m_uigInputGenerator?.m_bStartGame ?? false)
             {
                 //calculate game start time 
-                m_dtmTimeToStartGame = DateTime.UtcNow + TimeSpan.FromSeconds(m_fCountDownTime);
+                m_dtmTimeToStartGame = m_ntcNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>().NetworkTime + TimeSpan.FromSeconds(m_fCountDownTime);
 
                 //send out message to other players to start game
                 m_ntcNetworkConnection.TransmitPacketToAll(new StartCountDownPacket(m_dtmTimeToStartGame.Ticks));
@@ -318,7 +318,7 @@ namespace Sim
         private void UpdateCountDownState()
         {
 
-            if (DateTime.UtcNow.Ticks > m_dtmTimeToStartGame.Ticks)
+            if (m_ntcNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>().NetworkTime.Ticks > m_dtmTimeToStartGame.Ticks)
             {
                 SwitchToActiveState();
             }
@@ -328,28 +328,32 @@ namespace Sim
 
         private void UpdateActiveState()
         {
-            //update time since last frame
-            m_fTimeSinceLastSim += Time.deltaTime;
+            //calculate time since game start
+            TimeSpan tspGameTime = m_ntcNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>().NetworkTime - m_dtmTimeToStartGame;
 
-            //check if it is time to update the simulaiton 
-            while ((m_fTimeSinceLastSim) > (float)m_simGameSim.m_setGameSettings.TickDelta.m_fValue)
+            //calculate the target tick number
+            int iTargetTickNumber = (int)((float)tspGameTime.TotalSeconds / (float)m_simGameSim.m_setGameSettings.TickDelta.m_fValue);
+
+            //update time since last frame
+            m_fTimeSinceLastSim = (float)(tspGameTime - TimeSpan.FromTicks(TimeSpan.FromSeconds((float)m_simGameSim.m_setGameSettings.TickDelta.m_fValue).Ticks * iTargetTickNumber)).TotalSeconds;
+
+            //check if it is time to update inputs 
+            if (m_iSimTick != iTargetTickNumber)
             {
+                m_iSimTick = iTargetTickNumber;
+
                 //add debug inputs 
                 AddInput();
 
-                m_fTimeSinceLastSim -= ((float)m_simGameSim.m_setGameSettings.TickDelta.m_fValue);
-
-                m_iSimTick++;
-
-                //update the networking 
-                m_ntcNetworkConnection.UpdateConnectionsAndProcessors();
-
                 m_ntcNetworkConnection.GetPacketProcessor<TickStampedDataNetworkProcessor>().UpdateTick(m_iSimTick);
 
-                //do one frame of simulation
-                m_simGameSim.UpdateSimulation(m_iSimTick);
-
             }
+
+            //update the networking 
+            m_ntcNetworkConnection.UpdateConnectionsAndProcessors();
+
+            //update simulation
+            m_simGameSim.UpdateSimulation(m_iSimTick);
 
             //update the interpolated data 
             m_fdiFrameDataInterpolator.UpdateInterpolatedDataForTime(TotalGameTime - (float)m_setSettings.TickDelta.FixValue, Time.deltaTime);
@@ -384,7 +388,7 @@ namespace Sim
             m_simGameSim.m_bEnableDebugHashChecks = m_setSettings.RunHashChecks;
 
             //setup data interpolator 
-            m_fdiFrameDataInterpolator = new FrameDataInterpolator(m_simGameSim,m_ecsErrorCorrectionSettings);
+            m_fdiFrameDataInterpolator = new FrameDataInterpolator(m_simGameSim, m_ecsErrorCorrectionSettings);
         }
 
         private void AddInputToSim(byte bPlayerID, InputKeyFrame ikfInput)
@@ -393,9 +397,9 @@ namespace Sim
             m_simGameSim.AddInput(bPlayerID, ikfInput);
 
             //check to see if the input might cause a simulation recalculation 
-            if(m_simGameSim.m_iLastResolvedTick != m_simGameSim.m_iLatestTick)
+            if (m_simGameSim.m_iLastResolvedTick != m_simGameSim.m_iLatestTick)
             {
-              m_fdiFrameDataInterpolator.m_bCalculatePredictionError = true;
+                m_fdiFrameDataInterpolator.m_bCalculatePredictionError = true;
             }
         }
     }

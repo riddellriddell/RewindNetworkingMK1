@@ -57,12 +57,12 @@ namespace Networking
 
         // list of all the packets to send that have not yet acknowledged  
         public RandomAccessQueue<DataPacket> m_PacketsInFlight;
-
-        // list of all the packet processors 
-        public SortedSet<ConnectionPacketProcessor> m_cppOrderedPacketProcessorList;
-
+             
         //used to create packets 
         public ClassWithIDFactory m_cifPacketFactory;
+
+        // list of all the packet processors 
+        protected SortedSet<ConnectionPacketProcessor> m_cppOrderedPacketProcessorList;
 
         // the packet number of the last packet sent
         protected int m_iPacketsQueuedToSendCount;
@@ -146,6 +146,24 @@ namespace Networking
             }           
 
             return false;
+        }
+
+        public void AddPacketProcessor(ConnectionPacketProcessor cppProcessor)
+        {
+            m_cppOrderedPacketProcessorList.Add(cppProcessor);
+        }
+
+        public T GetPacketProcessor<T>() where T : ConnectionPacketProcessor
+        {
+            foreach(ConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
+            {
+                if(cppProcessor is T)
+                {
+                    return cppProcessor as T;
+                }
+            }
+
+            return null;
         }
 
         private DataPacket ProccessPacketForSending(DataPacket pktPacket)

@@ -116,7 +116,7 @@ namespace Sim
         public void UpdateInterpolatedDataForTime(float fBaseTime, float fDeltaTime)
         {
             //check if errors need to be recalculated 
-            if (m_bCalculatePredictionError || m_bCalculatePredictionError2)
+            if (m_bCalculatePredictionError)
             {
                 //recalculate new interpolation data for the same time as the last interpolated data calculation 
                 InterpolatedFrameDataGen ifdNewInterpData = CreateInterpolatedFrameData(m_gsmSourceSimulation, m_fTimeOfLastInterpolatedDataCalculation, m_fTargetInterpTimeOffsetForPlayer);
