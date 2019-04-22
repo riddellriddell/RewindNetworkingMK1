@@ -15,11 +15,11 @@ namespace Networking
             get
             {
                 //for testing and debug
-                long lTicks = ((DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay) * TimeSpan.TicksPerDay) + (long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad);
+                //long lTicks = ((DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay) * TimeSpan.TicksPerDay) + (long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad);
 
-                return new DateTime(lTicks, DateTimeKind.Utc);
+                //return new DateTime(lTicks, DateTimeKind.Utc);
 
-                //return DateTime.UtcNow;
+                return DateTime.UtcNow;
             }
         }
 
@@ -55,7 +55,9 @@ namespace Networking
         //this gets called when a new connection is added
         public override void OnAddToNetwork(NetworkConnection ncnNetwork)
         {
-            for(int i = 0; i < ncnNetwork.m_conConnectionList.Count; i++)
+            m_ncnNetworkConnection = ncnNetwork;
+
+            for (int i = 0; i < ncnNetwork.m_conConnectionList.Count; i++)
             {
                 OnNewConnection(ncnNetwork.m_conConnectionList[i]);
             }
@@ -144,6 +146,14 @@ namespace Networking
 
     public class TimeConnectionProcessor : ConnectionPacketProcessor
     {
+        public override int Priority
+        {
+            get
+            {
+                return 0;
+            }
+        }
+
         public DateTime Time
         {
             get
@@ -181,7 +191,7 @@ namespace Networking
         public override void Update(Connection conConnection)
         {
             //check if it is time for another update 
-            if (m_tnpTimeNetworkProcessor.BaseTime - m_dtmTimeOfLastUpdate > m_fEchoUpdateRate && m_bEchoSent != byte.MinValue)
+            if (m_tnpTimeNetworkProcessor.BaseTime - m_dtmTimeOfLastUpdate > m_fEchoUpdateRate && m_bEchoSent == byte.MinValue)
             {
                 //get echo value 
                 m_bEchoSent = (byte)UnityEngine.Random.Range(byte.MinValue + 1, byte.MaxValue);

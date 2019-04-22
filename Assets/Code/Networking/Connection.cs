@@ -150,7 +150,10 @@ namespace Networking
 
         public void AddPacketProcessor(ConnectionPacketProcessor cppProcessor)
         {
-            m_cppOrderedPacketProcessorList.Add(cppProcessor);
+            if(m_cppOrderedPacketProcessorList.Add(cppProcessor) == false)
+            {
+                Debug.LogError("Packet Processor Failed To Add to connection");
+            }
         }
 
         public T GetPacketProcessor<T>() where T : ConnectionPacketProcessor

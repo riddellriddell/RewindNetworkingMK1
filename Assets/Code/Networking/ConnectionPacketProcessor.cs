@@ -10,7 +10,7 @@ namespace Networking
     public abstract class ConnectionPacketProcessor 
     {
         //defines the order that packet processors process a packet if it is processed by multiple packet processors 
-        public virtual int Priority { get; }
+        public abstract int Priority { get; }
 
         public virtual void Update(Connection conConnection)
         {

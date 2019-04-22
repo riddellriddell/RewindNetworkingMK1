@@ -94,6 +94,7 @@ namespace Networking
 
             //decode tick offset
             m_bEcho = (pkwPacketWrapper.m_Payload[iDataReadHead] as NetTestReplyPacket).m_bEcho;
+            m_lTicks = (pkwPacketWrapper.m_Payload[iDataReadHead] as NetTestReplyPacket).m_lTicks;
 
             iDataReadHead += 1;
 

@@ -71,6 +71,14 @@ namespace Networking
     /// </summary>
     public class TickStampedDataConnectionProcessor : ConnectionPacketProcessor
     {
+        public override int Priority
+        {
+            get
+            {
+                return 1;
+            }
+        }
+
         protected int m_iTick;
 
         protected int m_iLastPacketTickQueuedToSend;

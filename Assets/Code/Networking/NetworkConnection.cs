@@ -67,7 +67,10 @@ namespace Networking
               
         public void AddPacketProcessor(NetworkPacketProcessor nppProcessor)
         {
-            m_nppNetworkPacketProcessors.Add(nppProcessor);
+            if (m_nppNetworkPacketProcessors.Add(nppProcessor) == false)
+            {
+                Debug.LogError("Packet Processor Failed To Add to connection");
+            }
 
             nppProcessor.OnAddToNetwork(this);
         }
