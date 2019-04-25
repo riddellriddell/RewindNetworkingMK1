@@ -385,14 +385,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ccc095eb5b2172f429f42eee2b2d8d4e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_bEnableLag: 1
-  m_fMinLag: 1
-  m_fMaxLag: 1
-  m_bEnableOutages: 0
-  m_fMinOutage: 0
-  m_fMaxOutage: 3
-  m_fMinTimeBetweenOutages: 5
-  m_fMaxTimeBetweenOutages: 20
+  m_bEnableLag: 0
+  m_fMinLag: 0.15
+  m_fMaxLag: 0.2
+  m_bEnableOutages: 1
+  m_fMinOutage: 5
+  m_fMaxOutage: 5
+  m_fMinTimeBetweenOutages: 6
+  m_fMaxTimeBetweenOutages: 6
   m_bEnablePacketLoss: 0
   m_fPacketLoss: 0.3
 --- !u!4 &1375160710

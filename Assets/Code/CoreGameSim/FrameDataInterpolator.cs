@@ -100,6 +100,11 @@ namespace Sim
                 return 0;
             }
 
+            //check if the error is within the min error adjustment amount
+            if(fMagnitudeOfError < ecsErrorCorrectionSetting.m_fMinInterpDistance)
+            {
+                return 1;
+            }
 
             //scale down error magnitude
             float fReductionAmount = fMagnitudeOfError - (fMagnitudeOfError * (1 - ecsErrorCorrectionSetting.m_fQuadraticInterpRate));

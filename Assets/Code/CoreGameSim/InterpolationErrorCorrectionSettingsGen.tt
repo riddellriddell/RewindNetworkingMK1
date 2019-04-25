@@ -30,6 +30,10 @@ namespace Sim
 
 			[Range(0,20)]
 			[SerializeField]
+			public float m_fMinInterpDistance;
+
+			[Range(0,20)]
+			[SerializeField]
 			public float m_fMinLinearInterpSpeed ;
 
 			[Range(0,20)]

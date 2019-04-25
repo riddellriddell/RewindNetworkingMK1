@@ -175,6 +175,9 @@ namespace Networking
         //rate of update
         protected TimeSpan m_fEchoUpdateRate = TimeSpan.FromSeconds(1);
 
+        //the maximum rtt of a message before it is discarded 
+        protected TimeSpan m_tspMaxRTT = TimeSpan.FromSeconds(2);
+
         //time since last update
         protected DateTime m_dtmTimeOfLastUpdate;
 
@@ -190,8 +193,10 @@ namespace Networking
 
         public override void Update(Connection conConnection)
         {
+            TimeSpan tspTimeSinceLastUpdate = m_tnpTimeNetworkProcessor.BaseTime - m_dtmTimeOfLastUpdate;
+
             //check if it is time for another update 
-            if (m_tnpTimeNetworkProcessor.BaseTime - m_dtmTimeOfLastUpdate > m_fEchoUpdateRate && m_bEchoSent == byte.MinValue)
+            if (tspTimeSinceLastUpdate > m_fEchoUpdateRate && (m_bEchoSent == byte.MinValue || tspTimeSinceLastUpdate > m_tspMaxRTT))
             {
                 //get echo value 
                 m_bEchoSent = (byte)UnityEngine.Random.Range(byte.MinValue + 1, byte.MaxValue);
@@ -237,15 +242,17 @@ namespace Networking
                 //get packet 
                 NetTestReplyPacket ntpEcho = pktInputPacket as NetTestReplyPacket;
 
+                TimeSpan tspTimeSinceTestStart = m_tnpTimeNetworkProcessor.BaseTime - m_dtmTimeOfEchoSend;
+
                 //check if echo matches 
-                if (ntpEcho.m_bEcho != m_bEchoSent || m_bEchoSent == byte.MinValue)
+                if (ntpEcho.m_bEcho != m_bEchoSent || m_bEchoSent == byte.MinValue || tspTimeSinceTestStart > m_tspMaxRTT)
                 {
-                    //bad echo reply probably error or hack? 
+                    //bad echo reply probably connection error or hack? 
                 }
                 else
-                {
+                {                
                     //update the time difference
-                    RTT = m_tnpTimeNetworkProcessor.BaseTime - m_dtmTimeOfEchoSend;
+                    RTT = tspTimeSinceTestStart;
                     m_dtmTimeOfEchoSend = m_tnpTimeNetworkProcessor.BaseTime;
                     
                     //the time on the other end of this connection when this message was sent

@@ -69,10 +69,7 @@ namespace Networking
             iDataReadHead = BaseDecodePacket(pkwPacketWrapper, iDataReadHead);
 
             //decode tick offset
-            m_bOffset = (pkwPacketWrapper.m_Payload[iDataReadHead] as TickStampedPacket).m_bOffset;
-
-            //offset data read point for offset byte
-            //iDataReadHead += sizeof(byte);
+            m_bOffset = pkwPacketWrapper.m_Payload[iDataReadHead++];
 
             return iDataReadHead;
         }
@@ -81,7 +78,7 @@ namespace Networking
         {
             BaseEncodePacket(pkwPacketWrapper);
 
-            //pkwPacketWrapper.add(m_bOffset);
+            pkwPacketWrapper.m_Payload.Add(m_bOffset);
         }
     }
 
@@ -114,7 +111,7 @@ namespace Networking
 
         public override int DecodePacket(PacketWrapper pkwPacketWrapper, int iDataReadHead)
         {
-            return BaseDecodePacket(pkwPacketWrapper, iDataReadHead) + 1;
+            return BaseDecodePacket(pkwPacketWrapper, iDataReadHead);
         }
 
         public override void EncodePacket(PacketWrapper pkwPacketWrapper)
@@ -153,13 +150,12 @@ namespace Networking
 
         public override int DecodePacket(PacketWrapper pkwPacketWrapper, int iDataReadHead)
         {
-            return BaseDecodePacket(pkwPacketWrapper, iDataReadHead) + 1;
+            return BaseDecodePacket(pkwPacketWrapper, iDataReadHead);
         }
 
         public override void EncodePacket(PacketWrapper pkwPacketWrapper)
         {
             BaseEncodePacket(pkwPacketWrapper);
         }
-
     }
 }

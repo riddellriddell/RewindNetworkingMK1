@@ -16,7 +16,7 @@ MonoBehaviour:
   Invincibility: 1
   TickDelta:
     IntValue: 1
-    DecimalOffset: 2
+    DecimalOffset: 20
   ChararcterSize:
     IntValue: 1
     DecimalOffset: 1

@@ -334,6 +334,12 @@ namespace Sim
             //calculate the target tick number
             int iTargetTickNumber = (int)((float)tspGameTime.TotalSeconds / (float)m_simGameSim.m_setGameSettings.TickDelta.m_fValue);
 
+            //check if target tick is older than sim tick
+            if(m_iSimTick > iTargetTickNumber)
+            {
+                Debug.LogError("Wat?");
+            }
+
             //update time since last frame
             m_fTimeSinceLastSim = (float)(tspGameTime - TimeSpan.FromTicks(TimeSpan.FromSeconds((float)m_simGameSim.m_setGameSettings.TickDelta.m_fValue).Ticks * iTargetTickNumber)).TotalSeconds;
 

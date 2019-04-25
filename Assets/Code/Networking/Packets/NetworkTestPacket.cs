@@ -43,9 +43,7 @@ namespace Networking
             iDataReadHead = base.BaseDecodePacket(pkwPacketWrapper, iDataReadHead);
 
             //decode tick offset
-            m_bEcho = (pkwPacketWrapper.m_Payload[iDataReadHead] as NetTestSendPacket).m_bEcho;
-
-            iDataReadHead += 1;
+            m_bEcho = pkwPacketWrapper.m_Payload[iDataReadHead++];
 
             return iDataReadHead;
         }
@@ -53,6 +51,8 @@ namespace Networking
         public override void EncodePacket(PacketWrapper pkwPacketWrapper)
         {
             BaseEncodePacket(pkwPacketWrapper);
+            pkwPacketWrapper.m_Payload.Add(m_bEcho);
+
         }
     }
 
@@ -93,8 +93,8 @@ namespace Networking
             iDataReadHead = base.BaseDecodePacket(pkwPacketWrapper, iDataReadHead);
 
             //decode tick offset
-            m_bEcho = (pkwPacketWrapper.m_Payload[iDataReadHead] as NetTestReplyPacket).m_bEcho;
-            m_lTicks = (pkwPacketWrapper.m_Payload[iDataReadHead] as NetTestReplyPacket).m_lTicks;
+            m_bEcho = pkwPacketWrapper.m_Payload[iDataReadHead++]  ;
+            m_lTicks = BitConverter.ToInt64(pkwPacketWrapper.m_Payload.ToArray(),iDataReadHead) ;
 
             iDataReadHead += 1;
 

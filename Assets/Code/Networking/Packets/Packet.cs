@@ -13,20 +13,20 @@ namespace Networking
 
         public int m_iStartPacketNumber;
 
-        public List<DataPacket> m_Payload;
+        public byte[] m_Payload;
 
-        public PacketWrapper(int lastAck, int iPacketStartFrame, int iPacketCount)
+        public PacketWrapper(int lastAck, int iPacketStartFrame, int iMaxBytes)
         {
             m_iLastAckPackageFromPerson = lastAck;
 
             m_iStartPacketNumber = iPacketStartFrame;
 
-            m_Payload = new List<DataPacket>(iPacketCount);
+            m_Payload = new byte[iMaxBytes];
         }
 
         public void AddDataPacket(DataPacket pakPacket)
         {
-            m_Payload.Add(pakPacket);
+            pakPacket.EncodePacket(this);
         }
 
     }
@@ -36,7 +36,8 @@ namespace Networking
 
         public static int GetPacketType(PacketWrapper pkwPacketWrapper, int iDataReadHead)
         {
-            return pkwPacketWrapper.m_Payload[iDataReadHead].GetTypeID;
+            //get the next packet type
+            return pkwPacketWrapper.m_Payload[iDataReadHead];
         }
 
         public abstract int GetTypeID { get; }
@@ -56,15 +57,15 @@ namespace Networking
         protected int BaseDecodePacket(PacketWrapper pkwPacketWrapper, int iDataReadHead)
         {
             //add read offset for packet type
-            //iDataReadHead += sizeof(PacketType);
+            iDataReadHead += sizeof(byte);
 
             return iDataReadHead;
         }
 
-        protected void BaseEncodePacket(PacketWrapper pkwPacketWrapper)
+        protected int BaseEncodePacket(PacketWrapper pkwPacketWrapper, int iDataWriteHead)
         {
             //encode packet type
-            //pkwPacketWrapper.AddDataPacket((byte)m_ptyPacketType);
+            pkwPacketWrapper.m_Payload.Add((byte)GetTypeID);
         }
     }    
 }
