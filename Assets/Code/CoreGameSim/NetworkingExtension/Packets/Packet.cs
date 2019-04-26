@@ -58,7 +58,7 @@ namespace Sim
             iDataReadHead = base.DecodePacket(pkwPacketWrapper, iDataReadHead);
 
             //decode tick offset
-            m_bInput = (pkwPacketWrapper.m_Payload[iDataReadHead] as InputPacket).m_bInput;
+            m_bInput = (pkwPacketWrapper.m_btsPayload[iDataReadHead] as InputPacket).m_bInput;
 
             //move the read head
             //iDataReadHead += sizeof(byte);
@@ -128,7 +128,7 @@ namespace Sim
             iDataReadHead = base.BaseDecodePacket(pkwPacketWrapper, iDataReadHead);
 
             //decode tick offset
-            m_lGameStartTime = (pkwPacketWrapper.m_Payload[iDataReadHead] as StartCountDownPacket).m_lGameStartTime;
+            m_lGameStartTime = (pkwPacketWrapper.m_btsPayload[iDataReadHead] as StartCountDownPacket).m_lGameStartTime;
 
 
             iDataReadHead += 1;

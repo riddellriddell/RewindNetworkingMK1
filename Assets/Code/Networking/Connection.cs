@@ -116,7 +116,7 @@ namespace Networking
             int iPacketReadHead = 0;
 
             //the length of the data 
-            int iPacketReadTail = packetWrapper.m_Payload.Count;
+            int iPacketReadTail = packetWrapper.m_btsPayload.Count;
 
             //decode the remaining packets 
             while (iPacketReadHead < iPacketReadTail)

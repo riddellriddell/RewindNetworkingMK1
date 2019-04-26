@@ -69,7 +69,7 @@ namespace Networking
             iDataReadHead = BaseDecodePacket(pkwPacketWrapper, iDataReadHead);
 
             //decode tick offset
-            m_bOffset = pkwPacketWrapper.m_Payload[iDataReadHead++];
+            m_bOffset = pkwPacketWrapper.m_btsPayload[iDataReadHead++];
 
             return iDataReadHead;
         }
@@ -78,7 +78,7 @@ namespace Networking
         {
             BaseEncodePacket(pkwPacketWrapper);
 
-            pkwPacketWrapper.m_Payload.Add(m_bOffset);
+            pkwPacketWrapper.m_btsPayload.Add(m_bOffset);
         }
     }
 

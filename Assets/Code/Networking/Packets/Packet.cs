@@ -13,15 +13,20 @@ namespace Networking
 
         public int m_iStartPacketNumber;
 
-        public byte[] m_Payload;
+        public ByteStream m_btsPayload;
 
         public PacketWrapper(int lastAck, int iPacketStartFrame, int iMaxBytes)
         {
+            m_btsPayload = new WriteByteStream(iMaxBytes);
+
             m_iLastAckPackageFromPerson = lastAck;
 
-            m_iStartPacketNumber = iPacketStartFrame;
+            m_iStartPacketNumber = iPacketStartFrame;            
+        }
 
-            m_Payload = new byte[iMaxBytes];
+        public PacketWrapper(Byte[] bData)
+        {        
+            m_btsPayload = new ReadByteStream(bData);
         }
 
         public void AddDataPacket(DataPacket pakPacket)
@@ -37,7 +42,7 @@ namespace Networking
         public static int GetPacketType(PacketWrapper pkwPacketWrapper, int iDataReadHead)
         {
             //get the next packet type
-            return pkwPacketWrapper.m_Payload[iDataReadHead];
+            return pkwPacketWrapper.m_btsPayload[iDataReadHead];
         }
 
         public abstract int GetTypeID { get; }
@@ -65,7 +70,7 @@ namespace Networking
         protected int BaseEncodePacket(PacketWrapper pkwPacketWrapper, int iDataWriteHead)
         {
             //encode packet type
-            pkwPacketWrapper.m_Payload.Add((byte)GetTypeID);
+            pkwPacketWrapper.m_btsPayload.Add((byte)GetTypeID);
         }
     }    
 }
