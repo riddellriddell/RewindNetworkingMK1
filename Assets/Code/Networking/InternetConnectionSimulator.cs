@@ -11,6 +11,7 @@ namespace Networking
         private struct TimeStampedWrapper
         {
             public PacketWrapper m_tWrappedData;
+            public byte[] m_bData;
             public Connection m_conTarget;
             public float m_fTimeOfDelivery;
         }
@@ -47,6 +48,7 @@ namespace Networking
                     m_lstDataInFlight[i] = new TimeStampedWrapper()
                     {
                         m_tWrappedData = packetToSend,
+                        m_bData = packetToSend.WriteStream.GetData(),
                         m_conTarget = conTarget,
                         m_fTimeOfDelivery = CalcuateDeliveryTime()
                     };
@@ -59,6 +61,7 @@ namespace Networking
             m_lstDataInFlight.Add(new TimeStampedWrapper()
             {
                 m_tWrappedData = packetToSend,
+                m_bData = packetToSend.WriteStream.GetData(),
                 m_conTarget = conTarget,
                 m_fTimeOfDelivery = CalcuateDeliveryTime()
             });
@@ -82,7 +85,7 @@ namespace Networking
                 if (m_lstDataInFlight[i].m_fTimeOfDelivery < Time.timeSinceLevelLoad && m_lstDataInFlight[i].m_tWrappedData != null)
                 {
                     //deliver packet 
-                    m_lstDataInFlight[i].m_conTarget.ReceivePacket(m_lstDataInFlight[i].m_tWrappedData);
+                    m_lstDataInFlight[i].m_conTarget.ReceivePacket(m_lstDataInFlight[i].m_bData);
 
                     m_lstDataInFlight[i] = new TimeStampedWrapper();
                 }

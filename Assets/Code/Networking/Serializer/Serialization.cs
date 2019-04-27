@@ -8,44 +8,44 @@ namespace Networking
     public partial class ByteStream
     {
         //read and write a byte
-        public static void Serialize(ReadByteStream rbsStream ,out Byte bOutput)
+        public static void Serialize(ReadByteStream rbsStream ,ref Byte bOutput)
         {
-            bOutput = rbsStream.m_bData[rbsStream.m_iReadWriteHead];
+            bOutput = rbsStream.m_bData[rbsStream.ReadWriteHead];
 
-            rbsStream.m_iReadWriteHead++;
+            rbsStream.ReadWriteHead++;
         }
 
-        public static void Serialize(WriteByteStream wbsStream, Byte bInput)
+        public static void Serialize(WriteByteStream wbsStream,ref Byte bInput)
         {
-            wbsStream.m_bData[wbsStream.m_iReadWriteHead] = bInput;
+            wbsStream.m_bData[wbsStream.ReadWriteHead] = bInput;
 
-            wbsStream.m_iReadWriteHead++;
+            wbsStream.ReadWriteHead++;
         }
 
         // read and write int
-        public static void Serialize(ReadByteStream rbsStream, out Int32 iOutput)
+        public static void Serialize(ReadByteStream rbsStream, ref Int32 iOutput)
         {
-            iOutput = BitConverter.ToInt32(rbsStream.m_bData, rbsStream.m_iReadWriteHead);
-            rbsStream.m_iReadWriteHead += sizeof(Int32);
+            iOutput = BitConverter.ToInt32(rbsStream.m_bData, rbsStream.ReadWriteHead);
+            rbsStream.ReadWriteHead += sizeof(Int32);
         }
 
-        public static void Serialize(WriteByteStream wbsStream,Int32 iInput)
+        public static void Serialize(WriteByteStream wbsStream,ref Int32 iInput)
         {
-            Array.Copy(BitConverter.GetBytes(iInput), 0, wbsStream.m_bData, wbsStream.m_iReadWriteHead, sizeof(Int32));
-            wbsStream.m_iReadWriteHead += sizeof(Int32);
+            Array.Copy(BitConverter.GetBytes(iInput), 0, wbsStream.m_bData, wbsStream.ReadWriteHead, sizeof(Int32));
+            wbsStream.ReadWriteHead += sizeof(Int32);
         }
 
         // read and write long
-        public static void Serialize(ReadByteStream rbsStream, out Int64 iOutput)
+        public static void Serialize(ReadByteStream rbsStream, ref Int64 iOutput)
         {
-            iOutput = BitConverter.ToInt32(rbsStream.m_bData, rbsStream.m_iReadWriteHead);
-            rbsStream.m_iReadWriteHead += sizeof(Int64);
+            iOutput = BitConverter.ToInt64(rbsStream.m_bData, rbsStream.ReadWriteHead);
+            rbsStream.ReadWriteHead += sizeof(Int64);
         }
 
-        public static void Serialize(WriteByteStream wbsStream, Int64 iInput)
+        public static void Serialize(WriteByteStream wbsStream,ref Int64 iInput)
         {
-            Array.Copy(BitConverter.GetBytes(iInput), 0, wbsStream.m_bData, wbsStream.m_iReadWriteHead, sizeof(Int32));
-            wbsStream.m_iReadWriteHead += sizeof(Int64);
+            Array.Copy(BitConverter.GetBytes(iInput), 0, wbsStream.m_bData, wbsStream.ReadWriteHead, sizeof(Int64));
+            wbsStream.ReadWriteHead += sizeof(Int64);
         }
     }
 }

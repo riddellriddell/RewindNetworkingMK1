@@ -38,21 +38,14 @@ namespace Networking
             }
         }
 
-        public override int DecodePacket(PacketWrapper pkwPacketWrapper, int iDataReadHead)
+        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
         {
-            iDataReadHead = base.BaseDecodePacket(pkwPacketWrapper, iDataReadHead);
-
-            //decode tick offset
-            m_bEcho = pkwPacketWrapper.m_btsPayload[iDataReadHead++];
-
-            return iDataReadHead;
+            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_bEcho);
         }
 
         public override void EncodePacket(PacketWrapper pkwPacketWrapper)
         {
-            BaseEncodePacket(pkwPacketWrapper);
-            pkwPacketWrapper.m_btsPayload.Add(m_bEcho);
-
+            ByteStream.Serialize(pkwPacketWrapper.WriteStream,ref m_bEcho);
         }
     }
 
@@ -88,22 +81,20 @@ namespace Networking
             }
         }
 
-        public override int DecodePacket(PacketWrapper pkwPacketWrapper, int iDataReadHead)
+        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
         {
-            iDataReadHead = base.BaseDecodePacket(pkwPacketWrapper, iDataReadHead);
 
             //decode tick offset
-            m_bEcho = pkwPacketWrapper.m_btsPayload[iDataReadHead++]  ;
-            m_lTicks = BitConverter.ToInt64(pkwPacketWrapper.m_btsPayload.ToArray(),iDataReadHead) ;
+            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_bEcho);
+            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_lTicks);
 
-            iDataReadHead += 1;
-
-            return iDataReadHead;
         }
 
         public override void EncodePacket(PacketWrapper pkwPacketWrapper)
         {
-            BaseEncodePacket(pkwPacketWrapper);
+            //encode tick offset
+            ByteStream.Serialize(pkwPacketWrapper.WriteStream,ref m_bEcho);
+            ByteStream.Serialize(pkwPacketWrapper.WriteStream,ref m_lTicks);
         }
     }
 }

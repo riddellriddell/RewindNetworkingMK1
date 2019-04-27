@@ -17,11 +17,6 @@ namespace Networking
             }
         }
 
-        public static int ApplyPacketHeaderOffset(int iDataReadHead)
-        {
-            return iDataReadHead + 0;
-        }
-
         //the number of ticks between this and the previouse packet
         public int Offset
         {
@@ -56,29 +51,15 @@ namespace Networking
             m_bOffset = (byte)(m_iTick - iCurrentTick);
         }
 
-        public override int ApplyDataReadOffset(int iDataReadHead)
+
+        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
         {
-            //add a byte for the offset
-            //iDataReadHead += 1;
-
-            return base.ApplyDataReadOffset(iDataReadHead);
-        }
-
-        public override int DecodePacket(PacketWrapper pkwPacketWrapper, int iDataReadHead)
-        {
-            iDataReadHead = BaseDecodePacket(pkwPacketWrapper, iDataReadHead);
-
-            //decode tick offset
-            m_bOffset = pkwPacketWrapper.m_btsPayload[iDataReadHead++];
-
-            return iDataReadHead;
+            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_bOffset);
         }
 
         public override void EncodePacket(PacketWrapper pkwPacketWrapper)
         {
-            BaseEncodePacket(pkwPacketWrapper);
-
-            pkwPacketWrapper.m_btsPayload.Add(m_bOffset);
+            ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref m_bOffset);
         }
     }
 
@@ -109,14 +90,12 @@ namespace Networking
             }
         }
 
-        public override int DecodePacket(PacketWrapper pkwPacketWrapper, int iDataReadHead)
+        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
         {
-            return BaseDecodePacket(pkwPacketWrapper, iDataReadHead);
         }
 
         public override void EncodePacket(PacketWrapper pkwPacketWrapper)
         {
-            BaseEncodePacket(pkwPacketWrapper);
         }
     }
 
@@ -148,14 +127,12 @@ namespace Networking
             }
         }
 
-        public override int DecodePacket(PacketWrapper pkwPacketWrapper, int iDataReadHead)
+        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
         {
-            return BaseDecodePacket(pkwPacketWrapper, iDataReadHead);
         }
 
         public override void EncodePacket(PacketWrapper pkwPacketWrapper)
         {
-            BaseEncodePacket(pkwPacketWrapper);
         }
     }
 }

@@ -104,25 +104,22 @@ namespace Networking
             SendPackets();
         }
         
-        public void ReceivePacket(PacketWrapper packetWrapper)
+        public void ReceivePacket(byte[] bData)
         {
+            //convert raw data to packet wrapper 
+            PacketWrapper packetWrapper = new PacketWrapper(bData);
+
             //update the last ack packet sent from this client to the connection target clamped to not be more than the total number of packets sent
-            m_iLastAckPacketNumberSent = Mathf.Min(Mathf.Max(m_iLastAckPacketNumberSent, packetWrapper.m_iLastAckPackageFromPerson), m_iPacketsQueuedToSendCount);
+            m_iLastAckPacketNumberSent = Mathf.Min(Mathf.Max(m_iLastAckPacketNumberSent, packetWrapper.LastAckPackageFromPerson), m_iPacketsQueuedToSendCount);
 
             //get the tick of the oldest packet in the packet wrapper 
-            int iPacketNumberHead = packetWrapper.m_iStartPacketNumber;
-
-            //the packet read head 
-            int iPacketReadHead = 0;
-
-            //the length of the data 
-            int iPacketReadTail = packetWrapper.m_btsPayload.Count;
+            int iPacketNumberHead = packetWrapper.StartPacketNumber;
 
             //decode the remaining packets 
-            while (iPacketReadHead < iPacketReadTail)
+            while (packetWrapper.ReadStream.EndOfStream() == false)
             {
                 //decode packet
-                DataPacket pktDecodedPacket = DecodePacket(packetWrapper, ref iPacketReadHead);
+                DataPacket pktDecodedPacket = DecodePacket(packetWrapper);
 
                 iPacketNumberHead++;
 
@@ -235,22 +232,15 @@ namespace Networking
             }
 
             //create packet wrapper 
-            PacketWrapper pkwPacketWrappepr = new PacketWrapper(m_iTotalPacketsReceived, m_iPacketsQueuedToSendCount - m_PacketsInFlight.Count, m_PacketsInFlight.Count);
-
-            int iBytesRemining = m_iMaxBytesToSend;
-
+            PacketWrapper pkwPacketWrappepr = new PacketWrapper(m_iTotalPacketsReceived, m_iPacketsQueuedToSendCount - m_PacketsInFlight.Count, m_iMaxBytesToSend);
+     
             //add as many packets as possible without hitting the max send data limit
             for (int i = 0; i < m_PacketsInFlight.Count; i++)
             {
                 DataPacket pktPacketToSend = m_PacketsInFlight[i];
 
-                int iPacketSize = pktPacketToSend.PacketSize;
-
-                iBytesRemining -= iPacketSize;
-
-                if (iBytesRemining > 0)
+                if (pkwPacketWrappepr.WriteStream.BytesRemaining - pktPacketToSend.PacketSize > 0)
                 {
-
                     pkwPacketWrappepr.AddDataPacket(pktPacketToSend);
                 }
                 else
@@ -267,16 +257,16 @@ namespace Networking
         }
 
         //takes the binary data in the packet wrapper and converts it to a data packet
-        private DataPacket DecodePacket(PacketWrapper packetWrapper, ref int iReadHead)
+        private DataPacket DecodePacket(PacketWrapper packetWrapper)
         {
             //get packet type 
-            int iPacketType = DataPacket.GetPacketType(packetWrapper, iReadHead);
+            int iPacketType = DataPacket.GetPacketType(packetWrapper);
 
             //create the packet class that will be instantiated 
             DataPacket pktOutput = m_cifPacketFactory.CreateType<DataPacket>(iPacketType);
                         
             //decode packet
-            iReadHead = pktOutput.DecodePacket(packetWrapper, iReadHead);
+            pktOutput.DecodePacket(packetWrapper);
 
             return pktOutput;
         }

@@ -15,11 +15,11 @@ namespace Networking
             get
             {
                 //for testing and debug
-                //long lTicks = ((DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay) * TimeSpan.TicksPerDay) + (long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad);
+                long lTicks = ((DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay) * TimeSpan.TicksPerDay) + (long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad);
 
-                //return new DateTime(lTicks, DateTimeKind.Utc);
+                return new DateTime(lTicks, DateTimeKind.Utc);
 
-                return DateTime.UtcNow;
+                //return DateTime.UtcNow;
             }
         }
 
@@ -178,6 +178,8 @@ namespace Networking
         //the maximum rtt of a message before it is discarded 
         protected TimeSpan m_tspMaxRTT = TimeSpan.FromSeconds(2);
 
+        protected TimeSpan m_tspMaxRTTChange = TimeSpan.FromSeconds(0.200);
+
         //time since last update
         protected DateTime m_dtmTimeOfLastUpdate;
 
@@ -244,8 +246,10 @@ namespace Networking
 
                 TimeSpan tspTimeSinceTestStart = m_tnpTimeNetworkProcessor.BaseTime - m_dtmTimeOfEchoSend;
 
+                long tspChangeInRTT =  Math.Abs( RTT.Ticks - tspTimeSinceTestStart.Ticks);
+
                 //check if echo matches 
-                if (ntpEcho.m_bEcho != m_bEchoSent || m_bEchoSent == byte.MinValue || tspTimeSinceTestStart > m_tspMaxRTT)
+                if (ntpEcho.m_bEcho != m_bEchoSent || m_bEchoSent == byte.MinValue || tspTimeSinceTestStart > m_tspMaxRTT || tspChangeInRTT > m_tspMaxRTTChange.Ticks)
                 {
                     //bad echo reply probably connection error or hack? 
                 }
@@ -253,7 +257,6 @@ namespace Networking
                 {                
                     //update the time difference
                     RTT = tspTimeSinceTestStart;
-                    m_dtmTimeOfEchoSend = m_tnpTimeNetworkProcessor.BaseTime;
                     
                     //the time on the other end of this connection when this message was sent
                     DateTime dtmTimeOfReplySend = new DateTime(ntpEcho.m_lTicks, DateTimeKind.Utc);
@@ -265,7 +268,7 @@ namespace Networking
                     Offset = m_tnpTimeNetworkProcessor.BaseTime - dtmPredictedTime;
 
                     //reset echo value
-                    m_bEchoSent = 0;
+                    m_bEchoSent = byte.MinValue;
 
                     //trigger recalculation of network time 
                     m_tnpTimeNetworkProcessor.RecalculateTimeOffset();

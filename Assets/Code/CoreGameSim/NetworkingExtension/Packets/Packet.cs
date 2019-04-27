@@ -53,27 +53,22 @@ namespace Sim
             };
         }
 
-        public override int DecodePacket(PacketWrapper pkwPacketWrapper, int iDataReadHead)
+        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
         {
-            iDataReadHead = base.DecodePacket(pkwPacketWrapper, iDataReadHead);
+            base.DecodePacket(pkwPacketWrapper);
 
             //decode tick offset
-            m_bInput = (pkwPacketWrapper.m_btsPayload[iDataReadHead] as InputPacket).m_bInput;
+            ByteStream.Serialize(pkwPacketWrapper.ReadStream,ref m_bInput);
 
-            //move the read head
-            //iDataReadHead += sizeof(byte);
-
-            iDataReadHead++;
-
-            return iDataReadHead;
         }
 
         public override void EncodePacket(PacketWrapper pkwPacketWrapper)
         {
-            BaseEncodePacket(pkwPacketWrapper);
 
-            //add input byte
-            //pkwPacketWrapper.add(m_bInput)
+            base.EncodePacket(pkwPacketWrapper);
+
+            //decode tick offset
+            ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref m_bInput);
         }
     }
 
@@ -123,24 +118,16 @@ namespace Sim
             m_lGameStartTime = lTime;
         }
 
-        public override int DecodePacket(PacketWrapper pkwPacketWrapper, int iDataReadHead)
+        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
         {
-            iDataReadHead = base.BaseDecodePacket(pkwPacketWrapper, iDataReadHead);
-
-            //decode tick offset
-            m_lGameStartTime = (pkwPacketWrapper.m_btsPayload[iDataReadHead] as StartCountDownPacket).m_lGameStartTime;
-
-
-            iDataReadHead += 1;
-
-
-
-            return iDataReadHead;
+            //decode game start time 
+            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_lGameStartTime);
         }
 
         public override void EncodePacket(PacketWrapper pkwPacketWrapper)
         {
-            //pkwPacketWrapper.add(tobyte(m_lGameStartTime));
+            //encode game start time 
+            ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref m_lGameStartTime);
         }
     }
 }
