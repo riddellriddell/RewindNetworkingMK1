@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Networking
@@ -246,7 +243,9 @@ namespace Networking
 
                 TimeSpan tspTimeSinceTestStart = m_tnpTimeNetworkProcessor.BaseTime - m_dtmTimeOfEchoSend;
 
-                long tspChangeInRTT =  Math.Abs( RTT.Ticks - tspTimeSinceTestStart.Ticks);
+                long tspChangeInRTT = (RTT.Ticks > 0) ? Math.Abs(RTT.Ticks - tspTimeSinceTestStart.Ticks) : 0;
+
+
 
                 //check if echo matches 
                 if (ntpEcho.m_bEcho != m_bEchoSent || m_bEchoSent == byte.MinValue || tspTimeSinceTestStart > m_tspMaxRTT || tspChangeInRTT > m_tspMaxRTTChange.Ticks)
@@ -254,15 +253,15 @@ namespace Networking
                     //bad echo reply probably connection error or hack? 
                 }
                 else
-                {                
+                {
                     //update the time difference
                     RTT = tspTimeSinceTestStart;
-                    
+
                     //the time on the other end of this connection when this message was sent
                     DateTime dtmTimeOfReplySend = new DateTime(ntpEcho.m_lTicks, DateTimeKind.Utc);
 
                     //time adjusted for transmittion time
-                    DateTime dtmPredictedTime = dtmTimeOfReplySend + (TimeSpan.FromTicks(RTT.Ticks /2));
+                    DateTime dtmPredictedTime = dtmTimeOfReplySend + (TimeSpan.FromTicks(RTT.Ticks / 2));
 
                     //the difference relitive to the local time 
                     Offset = m_tnpTimeNetworkProcessor.BaseTime - dtmPredictedTime;
@@ -272,15 +271,15 @@ namespace Networking
 
                     //trigger recalculation of network time 
                     m_tnpTimeNetworkProcessor.RecalculateTimeOffset();
-                }               
+                }
 
                 //consume echo packet as it is no longer needed 
                 return null;
-            }         
-   
+            }
+
             return pktInputPacket;
         }
 
-    private TimeNetworkProcessor m_tnpTimeNetworkProcessor;
-}
+        private TimeNetworkProcessor m_tnpTimeNetworkProcessor;
+    }
 }
