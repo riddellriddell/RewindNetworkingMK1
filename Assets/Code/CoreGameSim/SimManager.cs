@@ -44,6 +44,8 @@ namespace Sim
 
         protected int m_iSimTick;
 
+        protected Queue<Tuple<byte, InputKeyFrame>> m_ikfInputBuffer = new Queue<Tuple<byte, InputKeyFrame>>();
+
         protected float TotalGameTime
         {
             get
@@ -224,6 +226,13 @@ namespace Sim
                 }
             }
 
+            //add buffered inputs from the network
+            while(m_ikfInputBuffer.Count > 0)
+            {
+                Tuple<byte, InputKeyFrame> ikfInput = m_ikfInputBuffer.Dequeue();
+
+                AddInputToSim(ikfInput.Item1, ikfInput.Item2);
+            }
         }
 
         public void RefreshServerInput()
@@ -238,7 +247,8 @@ namespace Sim
             {
                 InputKeyFrame ikfInput = (pktPacket as InputPacket).ConvertToKeyFrame();
 
-                AddInputToSim(bPlayerID, ikfInput);
+                m_ikfInputBuffer.Enqueue(new Tuple<byte, InputKeyFrame>(bPlayerID, ikfInput));
+
             }
 
             if (pktPacket is StartCountDownPacket)
@@ -264,6 +274,9 @@ namespace Sim
         private void SwitchToCountDownState()
         {
             m_glsGameState = GameLoopState.COUNT_DOWN;
+
+            //clear out input buffer of old inputs
+            m_ikfInputBuffer.Clear();
 
             //sort out who is playing and who has disconected
 
@@ -333,12 +346,6 @@ namespace Sim
 
             //calculate the target tick number
             int iTargetTickNumber = (int)((float)tspGameTime.TotalSeconds / (float)m_simGameSim.m_setGameSettings.TickDelta.m_fValue);
-
-            //check if target tick is older than sim tick
-            if(m_iSimTick > iTargetTickNumber)
-            {
-                Debug.LogError("Wat?");
-            }
 
             //update time since last frame
             m_fTimeSinceLastSim = (float)(tspGameTime - TimeSpan.FromTicks(TimeSpan.FromSeconds((float)m_simGameSim.m_setGameSettings.TickDelta.m_fValue).Ticks * iTargetTickNumber)).TotalSeconds;

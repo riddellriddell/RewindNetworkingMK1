@@ -11,13 +11,24 @@ namespace Networking
         {
             get
             {
+                return GetBaseBaseTime() + TimeSpan.FromTicks((long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad * m_fRandomDrift));
+
                 //for testing and debug
-                long lTicks = ((DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay) * TimeSpan.TicksPerDay) + (long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad);
-
-                return new DateTime(lTicks, DateTimeKind.Utc);
-
+                //long lTicks = ((DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay) * TimeSpan.TicksPerDay) + (long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad * m_fRandomDrift);
+                //
+                //return new DateTime(lTicks, DateTimeKind.Utc);
+                               
                 //return DateTime.UtcNow;
             }
+        }
+
+        public DateTime GetBaseBaseTime()
+        {
+            //for testing and debug
+            long lTicks = ((DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay) * TimeSpan.TicksPerDay) + (long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad );
+
+            return new DateTime(lTicks, DateTimeKind.Utc);
+
         }
 
         //the synchronised time accross the network
@@ -25,7 +36,15 @@ namespace Networking
         {
             get
             {
-                return BaseTime + m_dtoCurrentTimeOffset;
+                DateTime dtsOffsetTime = BaseTime - m_dtoCurrentTimeOffset;
+
+                DateTime dtsUnSMoothedOffsetTime = BaseTime - m_dtoTargetTimeOffset;
+
+                TimeSpan tspNonOffsetDif = BaseTime - GetBaseBaseTime();
+                TimeSpan tspSmoothDifCompTrueTime = dtsOffsetTime - GetBaseBaseTime();
+                TimeSpan tspRoughDifCompTrueTime = dtsUnSMoothedOffsetTime - GetBaseBaseTime();
+
+                return dtsOffsetTime;
             }
 
         }
@@ -39,7 +58,8 @@ namespace Networking
         }
 
 
-        //the time offset used when claculating 
+        //the time offset used when claculatin
+        public float m_fRandomDrift;
         private TimeSpan m_dtoTargetTimeOffset;
         private TimeSpan m_dtoCurrentTimeOffset;
         private TimeSpan m_tspOffsetChangeRate;
@@ -52,6 +72,11 @@ namespace Networking
         //this gets called when a new connection is added
         public override void OnAddToNetwork(NetworkConnection ncnNetwork)
         {
+            //for testing randomly calculate drift per second
+            //m_fRandomDrift = (UnityEngine.Random.Range(-1.0f, 1.0f) * 0.1f);
+
+           
+
             m_ncnNetworkConnection = ncnNetwork;
 
             for (int i = 0; i < ncnNetwork.m_conConnectionList.Count; i++)
@@ -62,12 +87,14 @@ namespace Networking
 
         public override void OnNewConnection(Connection conConnection)
         {
-            TimeConnectionProcessor tcpPacketProcessor = new TimeConnectionProcessor(this, m_tspUpdateRate);
+           TimeConnectionProcessor tcpPacketProcessor = new TimeConnectionProcessor(this, m_tspUpdateRate);
             conConnection.AddPacketProcessor(tcpPacketProcessor);
         }
 
         public override void Update()
         {
+            m_fRandomDrift = (m_ncnNetworkConnection.m_bPlayerID == 0) ? 0.2f : -0.2f;
+
             LerpToTargetTime(Time.deltaTime);
         }
 
@@ -90,6 +117,9 @@ namespace Networking
 
             }
 
+            //add local offset
+            m_dtoTempTimeOffsets.Add(TimeSpan.FromSeconds(0));
+
             //sort list from big to small 
             m_dtoTempTimeOffsets.Sort((x, y) => (int)(x.Ticks - y.Ticks));
 
@@ -98,9 +128,9 @@ namespace Networking
             int iOffset = ((iNumberOfConnectionToAverage - 1) / 2);
 
             //calculate the range to take values from
-            int iMin = Math.Max(0, (m_ncnNetworkConnection.m_conConnectionList.Count / 2) - (iOffset + 1));
+            int iMin = Math.Max(0, (m_dtoTempTimeOffsets.Count / 2) - (iOffset + 1));
             //calculate the range to take values from
-            int iMax = Math.Max(m_ncnNetworkConnection.m_conConnectionList.Count, (m_ncnNetworkConnection.m_conConnectionList.Count / 2) + (iOffset - 1));
+            int iMax = Math.Max(m_dtoTempTimeOffsets.Count, (m_dtoTempTimeOffsets.Count / 2) + (iOffset - 1));
 
             m_dtoTargetTimeOffset = TimeSpan.Zero;
 
@@ -175,7 +205,7 @@ namespace Networking
         //the maximum rtt of a message before it is discarded 
         protected TimeSpan m_tspMaxRTT = TimeSpan.FromSeconds(2);
 
-        protected TimeSpan m_tspMaxRTTChange = TimeSpan.FromSeconds(0.200);
+        protected TimeSpan m_tspMaxRTTChange = TimeSpan.FromSeconds(0.500);
 
         //time since last update
         protected DateTime m_dtmTimeOfLastUpdate;
@@ -245,8 +275,7 @@ namespace Networking
 
                 long tspChangeInRTT = (RTT.Ticks > 0) ? Math.Abs(RTT.Ticks - tspTimeSinceTestStart.Ticks) : 0;
 
-
-
+                
                 //check if echo matches 
                 if (ntpEcho.m_bEcho != m_bEchoSent || m_bEchoSent == byte.MinValue || tspTimeSinceTestStart > m_tspMaxRTT || tspChangeInRTT > m_tspMaxRTTChange.Ticks)
                 {
@@ -265,6 +294,8 @@ namespace Networking
 
                     //the difference relitive to the local time 
                     Offset = m_tnpTimeNetworkProcessor.BaseTime - dtmPredictedTime;
+
+                    TimeSpan tspDif = (dtmPredictedTime + Offset) - m_tnpTimeNetworkProcessor.BaseTime;
 
                     //reset echo value
                     m_bEchoSent = byte.MinValue;
