@@ -11,24 +11,13 @@ namespace Networking
         {
             get
             {
-                return GetBaseBaseTime() + TimeSpan.FromTicks((long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad * m_fRandomDrift));
-
                 //for testing and debug
-                //long lTicks = ((DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay) * TimeSpan.TicksPerDay) + (long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad * m_fRandomDrift);
-                //
-                //return new DateTime(lTicks, DateTimeKind.Utc);
+                long lTicks = ((DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay) * TimeSpan.TicksPerDay) + (long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad);
+                
+                return new DateTime(lTicks, DateTimeKind.Utc);
                                
                 //return DateTime.UtcNow;
             }
-        }
-
-        public DateTime GetBaseBaseTime()
-        {
-            //for testing and debug
-            long lTicks = ((DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay) * TimeSpan.TicksPerDay) + (long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad );
-
-            return new DateTime(lTicks, DateTimeKind.Utc);
-
         }
 
         //the synchronised time accross the network
@@ -36,15 +25,7 @@ namespace Networking
         {
             get
             {
-                DateTime dtsOffsetTime = BaseTime - m_dtoCurrentTimeOffset;
-
-                DateTime dtsUnSMoothedOffsetTime = BaseTime - m_dtoTargetTimeOffset;
-
-                TimeSpan tspNonOffsetDif = BaseTime - GetBaseBaseTime();
-                TimeSpan tspSmoothDifCompTrueTime = dtsOffsetTime - GetBaseBaseTime();
-                TimeSpan tspRoughDifCompTrueTime = dtsUnSMoothedOffsetTime - GetBaseBaseTime();
-
-                return dtsOffsetTime;
+                return BaseTime - m_dtoCurrentTimeOffset;
             }
 
         }
@@ -57,9 +38,6 @@ namespace Networking
             }
         }
 
-
-        //the time offset used when claculatin
-        public float m_fRandomDrift;
         private TimeSpan m_dtoTargetTimeOffset;
         private TimeSpan m_dtoCurrentTimeOffset;
         private TimeSpan m_tspOffsetChangeRate;
@@ -72,11 +50,6 @@ namespace Networking
         //this gets called when a new connection is added
         public override void OnAddToNetwork(NetworkConnection ncnNetwork)
         {
-            //for testing randomly calculate drift per second
-            //m_fRandomDrift = (UnityEngine.Random.Range(-1.0f, 1.0f) * 0.1f);
-
-           
-
             m_ncnNetworkConnection = ncnNetwork;
 
             for (int i = 0; i < ncnNetwork.m_conConnectionList.Count; i++)
@@ -93,8 +66,6 @@ namespace Networking
 
         public override void Update()
         {
-            m_fRandomDrift = (m_ncnNetworkConnection.m_bPlayerID == 0) ? 0.2f : -0.2f;
-
             LerpToTargetTime(Time.deltaTime);
         }
 
@@ -291,11 +262,6 @@ namespace Networking
 
                     //time adjusted for transmittion time
                     DateTime dtmPredictedTime = dtmTimeOfReplySend + (TimeSpan.FromTicks(RTT.Ticks / 2));
-
-                    //the difference relitive to the local time 
-                    Offset = m_tnpTimeNetworkProcessor.BaseTime - dtmPredictedTime;
-
-                    TimeSpan tspDif = (dtmPredictedTime + Offset) - m_tnpTimeNetworkProcessor.BaseTime;
 
                     //reset echo value
                     m_bEchoSent = byte.MinValue;

@@ -159,8 +159,6 @@ namespace Sim
             //get the latest frame 
             //FrameData frmLatestFrame = m_simGameSim.m_frmDenseFrameQueue[m_simGameSim.m_iDenseQueueHead];
 
-
-
             InterpolatedFrameDataGen frmLatestFrame = m_fdiFrameDataInterpolator.m_ifdInterpolatedFrameData;
 
 
@@ -338,6 +336,7 @@ namespace Sim
 
             m_ntcNetworkConnection.UpdateConnectionsAndProcessors();
         }
+
 
         private void UpdateActiveState()
         {
