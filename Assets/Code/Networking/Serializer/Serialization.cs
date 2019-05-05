@@ -47,5 +47,19 @@ namespace Networking
             Array.Copy(BitConverter.GetBytes(iInput), 0, wbsStream.m_bData, wbsStream.ReadWriteHead, sizeof(Int64));
             wbsStream.ReadWriteHead += sizeof(Int64);
         }
+
+        public static void Serialize(ReadByteStream rbsStream, ref DateTime iOutput)
+        {
+            Int64 lTick = BitConverter.ToInt64(rbsStream.m_bData, rbsStream.ReadWriteHead);
+            iOutput = new DateTime(lTick, DateTimeKind.Utc);
+            rbsStream.ReadWriteHead += sizeof(Int64);
+        }
+
+        public static void Serialize(WriteByteStream wbsStream, ref DateTime iInput)
+        {
+            Int64 lTick = iInput.ToUniversalTime().Ticks;
+            Array.Copy(BitConverter.GetBytes(lTick), 0, wbsStream.m_bData, wbsStream.ReadWriteHead, sizeof(Int64));
+            wbsStream.ReadWriteHead += sizeof(Int64);
+        }
     }
 }

@@ -52,7 +52,7 @@ namespace Networking
         public event PacketDataIn m_evtPacketDataIn;
 
         //used to create packets 
-        protected ClassWithIDFactory m_cifPacketFactory;
+        public ClassWithIDFactory m_cifPacketFactory;
 
         public NetworkConnection(ClassWithIDFactory cifPacketFactory, InternetConnectionSimulator igaInternetGateway)
         {
@@ -103,12 +103,12 @@ namespace Networking
         {
             //add connection to connection list
             m_conConnectionList.Add(conDebugConnection);
+            
+            //set connection values 
+            conDebugConnection.m_iMaxBytesToSend = 500;
 
             //process new connection 
             ProcessNewConnection(conDebugConnection);
-
-            //set connection values 
-            conDebugConnection.m_iMaxBytesToSend = 500;
         }
 
         public void MakeTestingConnection(NetworkConnection nwcConnectionTarget)
@@ -241,8 +241,7 @@ namespace Networking
         {
             //check if packet was for networking only
             switch (pktPacket.GetTypeID)
-            {
- 
+            { 
                 default:
                     //fire event 
                     m_evtPacketDataIn?.Invoke(bPlayerConnection, pktPacket);

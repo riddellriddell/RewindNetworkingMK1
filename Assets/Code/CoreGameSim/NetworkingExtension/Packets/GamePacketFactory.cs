@@ -17,6 +17,7 @@ namespace Sim
             AddType<NetTestReplyPacket>(NetTestReplyPacket.TypeID);
             AddType<InputPacket>(InputPacket.TypeID);
             AddType<StartCountDownPacket>(StartCountDownPacket.TypeID);
+            AddType<NetworkLayoutPacket>(NetworkLayoutPacket.TypeID);
         }
     }
 }
