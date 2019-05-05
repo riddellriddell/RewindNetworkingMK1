@@ -148,6 +148,11 @@ namespace Networking
             }
         }
 
+        public bool TryGetConnection(long lConnectionID,out Connection conConnection)
+        {
+            for(int i = 0; i < m_conConnectionList)
+        }
+
         //send packet to all connected players 
         public bool TransmitPacketToAll(DataPacket pktPacket)
         {
