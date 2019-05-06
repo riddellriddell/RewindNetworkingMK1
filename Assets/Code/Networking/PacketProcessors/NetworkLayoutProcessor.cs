@@ -130,12 +130,15 @@ namespace Networking
         //the connection layout at the other end of this connection
         public NetworkLayoutProcessor.NetworkLayout m_nlaNetworkLayout;
 
+        public Connection m_conConnection;
+
         protected NetworkLayoutProcessor m_nlpNetworkProcessor;
 
-        public ConnectionNetworkLayoutProcessor(DateTime dtmTimeOfCreation, NetworkLayoutProcessor nlpNetworkProcessor)
+        public ConnectionNetworkLayoutProcessor(DateTime dtmTimeOfCreation, NetworkLayoutProcessor nlpNetworkProcessor,Connection conConnection)
         {
             m_dtmTimeOfConnection = dtmTimeOfCreation;
             m_nlpNetworkProcessor = nlpNetworkProcessor;
+            m_conConnection = conConnection;
         }
 
         public override DataPacket ProcessReceivedPacket(Connection conConnection, DataPacket pktInputPacket)

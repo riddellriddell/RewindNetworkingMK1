@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Networking
 {
 
-    public class NetworkConnection 
+    public class NetworkConnection
     {
         // Defines a comparer to create a sorted set
         // that is sorted by the file extensions.
@@ -64,7 +64,7 @@ namespace Networking
             m_icwConnectionSimulation = igaInternetGateway;
             m_nppNetworkPacketProcessors = new SortedSet<NetworkPacketProcessor>(new PacketProcessorComparer());
         }
-              
+
         public void AddPacketProcessor(NetworkPacketProcessor nppProcessor)
         {
             if (m_nppNetworkPacketProcessors.Add(nppProcessor) == false)
@@ -77,9 +77,9 @@ namespace Networking
 
         public T GetPacketProcessor<T>() where T : NetworkPacketProcessor
         {
-            foreach(NetworkPacketProcessor processor in m_nppNetworkPacketProcessors)
+            foreach (NetworkPacketProcessor processor in m_nppNetworkPacketProcessors)
             {
-                if(processor is  T )
+                if (processor is T)
                 {
                     return processor as T;
                 }
@@ -103,7 +103,7 @@ namespace Networking
         {
             //add connection to connection list
             m_conConnectionList.Add(conDebugConnection);
-            
+
             //set connection values 
             conDebugConnection.m_iMaxBytesToSend = 500;
 
@@ -129,7 +129,7 @@ namespace Networking
             MakeConnection(m_conLocalConnection);
             nwcConnectionTarget.MakeConnection(m_conTargetConnection);
 
-            
+
 
         }
 
@@ -142,15 +142,39 @@ namespace Networking
             }
 
             //update connections with current tick
-            for(int i = 0; i < m_conConnectionList.Count; i++)
+            for (int i = 0; i < m_conConnectionList.Count; i++)
             {
                 m_conConnectionList[i].UpdateConnection();
             }
         }
 
-        public bool TryGetConnection(long lConnectionID,out Connection conConnection)
+        public bool HasConnection(long lConnectionID)
         {
-            for(int i = 0; i < m_conConnectionList)
+            for (int i = 0; i < m_conConnectionList.Count; i++)
+            {
+                if (m_conConnectionList[i].m_lUniqueID == lConnectionID)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool TryGetConnection(long lConnectionID, out Connection conConnection)
+        {
+            for (int i = 0; i < m_conConnectionList.Count; i++)
+            {
+                if (m_conConnectionList[i].m_lUniqueID == lConnectionID)
+                {
+                    conConnection = m_conConnectionList[i];
+
+                    return true;
+                }
+            }
+
+            conConnection = null;
+
+            return false;
         }
 
         //send packet to all connected players 
@@ -159,7 +183,7 @@ namespace Networking
             //process packet for sending 
             pktPacket = ProcessPacketForSending(pktPacket);
 
-            if(pktPacket == null)
+            if (pktPacket == null)
             {
                 return false;
             }
@@ -171,15 +195,15 @@ namespace Networking
 
             return true;
         }
-        
+
         //get the number of conenctions that are functioning correctly 
         public int ActiveConnectionCount()
         {
-            int iConnectionCount = 0; 
+            int iConnectionCount = 0;
 
-            for(int i = 0; i < m_conConnectionList.Count; i++)
+            for (int i = 0; i < m_conConnectionList.Count; i++)
             {
-                if(m_conConnectionList[i] != null)
+                if (m_conConnectionList[i] != null)
                 {
                     iConnectionCount++;
                 }
@@ -192,19 +216,30 @@ namespace Networking
         public float NetworkTime()
         {
             return Time.timeSinceLevelLoad;
-        } 
+        }
 
-        public void SendPackage(byte bPlayerConnection, DataPacket pktPacket)
+        //send a packet out to a specific connection 
+        public bool SendPackage(long lPlayerID, DataPacket pktPacket)
         {
-            for(int i = 0; i < m_conConnectionList.Count; i++)
+            for (int i = 0; i < m_conConnectionList.Count; i++)
             {
-                if(m_conConnectionList[i].m_bConnectionID == bPlayerConnection)
+                if (m_conConnectionList[i].m_lUniqueID == lPlayerID)
                 {
+                    //process packet for sending 
+                    pktPacket = ProcessPacketForSending(pktPacket);
+
+                    if (pktPacket == null)
+                    {
+                        return false;
+                    }
+
                     m_conConnectionList[i].QueuePacketToSend(pktPacket);
 
-                    break;
+                    return true;
                 }
             }
+
+            return false;
         }
 
         public void DestributeReceivedPackets()
@@ -223,7 +258,7 @@ namespace Networking
 
         public Connection MakeConnectionOffer()
         {
-            Connection conOffer = new Connection(m_bPlayerID,m_cifPacketFactory);
+            Connection conOffer = new Connection(m_bPlayerID, m_cifPacketFactory);
 
             return conOffer;
         }
@@ -232,7 +267,7 @@ namespace Networking
         {
             MakeConnection(conConnectionOffer);
 
-            Connection conOffer = new Connection(m_bPlayerID,m_cifPacketFactory);
+            Connection conOffer = new Connection(m_bPlayerID, m_cifPacketFactory);
 
             return conOffer;
         }
@@ -246,7 +281,7 @@ namespace Networking
         {
             //check if packet was for networking only
             switch (pktPacket.GetTypeID)
-            { 
+            {
                 default:
                     //fire event 
                     m_evtPacketDataIn?.Invoke(bPlayerConnection, pktPacket);
@@ -260,7 +295,7 @@ namespace Networking
             {
                 pktPacket = nppProcessor.ProcessPacketForSending(pktPacket);
 
-                if(pktPacket == null)
+                if (pktPacket == null)
                 {
                     return null;
                 }

@@ -48,6 +48,7 @@ namespace Networking
             wbsStream.ReadWriteHead += sizeof(Int64);
         }
 
+        //read and write utc time
         public static void Serialize(ReadByteStream rbsStream, ref DateTime iOutput)
         {
             Int64 lTick = BitConverter.ToInt64(rbsStream.m_bData, rbsStream.ReadWriteHead);
@@ -60,6 +61,137 @@ namespace Networking
             Int64 lTick = iInput.ToUniversalTime().Ticks;
             Array.Copy(BitConverter.GetBytes(lTick), 0, wbsStream.m_bData, wbsStream.ReadWriteHead, sizeof(Int64));
             wbsStream.ReadWriteHead += sizeof(Int64);
+        }
+
+
+        //read and write number arrays 
+        public static void Serialize(ReadByteStream rbsStream, ref List<Byte> iOutput)
+        {
+            Int32 iItems = 0;
+
+            if (iOutput == null)
+            {
+                iOutput = new List<Byte>();
+            }
+            else
+            {
+                iOutput.Clear();
+            }
+
+            Serialize(rbsStream, ref iItems);
+
+            for (int i = 0; i < iItems; i++)
+            {
+                Byte value = 0;
+                Serialize(rbsStream, ref value);
+                iOutput[i] = value;
+            }
+        }
+
+        public static void Serialize(WriteByteStream wbsStream, ref List<Byte> iInput)
+        {
+            Int32 iItems = 0;
+
+            if (iInput == null)
+            {
+                Serialize(wbsStream, ref iItems);
+            }
+
+            iItems = iInput.Count;
+
+            Serialize(wbsStream, ref iItems);
+
+            for (int i = 0; i < iItems; i++)
+            {
+                Byte value = iInput[i];
+                Serialize(wbsStream, ref value);
+            }
+        }
+
+        public static void Serialize(ReadByteStream rbsStream, ref List<Int32> iOutput)
+        {
+            Int32 iItems = 0;
+
+            if (iOutput == null)
+            {
+                iOutput = new List<Int32>();
+            }
+            else
+            {
+                iOutput.Clear();
+            }
+            
+            Serialize(rbsStream,ref iItems);
+            
+            for(int i = 0; i < iItems; i++)
+            {
+                Int32 value = 0;
+                Serialize(rbsStream,ref value);
+                iOutput[i] = value;
+            }
+        }
+
+        public static void Serialize(WriteByteStream wbsStream, ref List<Int32> iInput)
+        {
+            Int32 iItems = 0;
+
+            if (iInput == null)
+            {
+                Serialize(wbsStream,ref iItems);
+            }
+
+            iItems = iInput.Count;
+
+            Serialize(wbsStream, ref iItems);
+
+            for (int i = 0; i < iItems; i++)
+            {
+                Int32 value = iInput[i];
+                Serialize(wbsStream, ref value);
+            }
+        }
+
+        public static void Serialize(ReadByteStream rbsStream, ref List<Int64> iOutput)
+        {
+            Int32 iItems = 0;
+
+            if (iOutput == null)
+            {
+                iOutput = new List<Int64>();
+            }
+            else
+            {
+                iOutput.Clear();
+            }
+
+            Serialize(rbsStream, ref iItems);
+
+            for (int i = 0; i < iItems; i++)
+            {
+                Int64 value = 0;
+                Serialize(rbsStream, ref value);
+                iOutput[i] = value;
+            }
+        }
+
+        public static void Serialize(WriteByteStream wbsStream, ref List<Int64> iInput)
+        {
+            Int32 iItems = 0;
+
+            if (iInput == null)
+            {
+                Serialize(wbsStream, ref iItems);
+            }
+
+            iItems = iInput.Count;
+
+            Serialize(wbsStream, ref iItems);
+
+            for (int i = 0; i < iItems; i++)
+            {
+                Int64 value = iInput[i];
+                Serialize(wbsStream, ref value);
+            }
         }
     }
 }
