@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Networking
 {
@@ -13,12 +11,12 @@ namespace Networking
 
         public struct NetworkLayout
         {
-            public struct Connection
+            public struct ConnectionState
             {
                 public long m_lConnectionID;
                 public DateTime m_dtmTimeOfConnection;
 
-                public Connection(long lID,DateTime dtmTimeOfConnection)
+                public ConnectionState(long lID, DateTime dtmTimeOfConnection)
                 {
                     m_lConnectionID = lID;
                     m_dtmTimeOfConnection = dtmTimeOfConnection;
@@ -26,31 +24,73 @@ namespace Networking
 
             }
 
-            public List<Connection> m_conConnectionDetails;
-            
+            public List<ConnectionState> m_conConnectionDetails;
+
             public NetworkLayout(int iConnectionCount)
             {
-                m_conConnectionDetails = new List<Connection>(iConnectionCount);
+                m_conConnectionDetails = new List<ConnectionState>(iConnectionCount);
             }
 
-            public void Add(long lConnectionID,DateTime dtmTimeOfConnection)
+            public void Add(long lConnectionID, DateTime dtmTimeOfConnection)
             {
-                if(m_conConnectionDetails == null)
+                if (m_conConnectionDetails == null)
                 {
-                    m_conConnectionDetails = new List<Connection>();
+                    m_conConnectionDetails = new List<ConnectionState>();
                 }
 
                 //check if it has already been added 
-                for(int i = 0; i < m_conConnectionDetails.Count; i++)
+                for (int i = 0; i < m_conConnectionDetails.Count; i++)
                 {
-                    if(m_conConnectionDetails[i].m_lConnectionID == lConnectionID )
+                    if (m_conConnectionDetails[i].m_lConnectionID == lConnectionID)
                     {
-                        m_conConnectionDetails[i] = new Connection(lConnectionID, dtmTimeOfConnection);
+                        m_conConnectionDetails[i] = new ConnectionState(lConnectionID, dtmTimeOfConnection);
                         return;
                     }
                 }
 
-                m_conConnectionDetails.Add(new Connection(lConnectionID, dtmTimeOfConnection));
+                m_conConnectionDetails.Add(new ConnectionState(lConnectionID, dtmTimeOfConnection));
+            }
+
+            public List<ConnectionState> ConnectionsNotInList(List<Connection> nlaTargetConnections)
+            {
+                List<ConnectionState> conOutput = new List<ConnectionState>();
+
+                for (int i = 0; i < m_conConnectionDetails.Count; i++)
+                {
+                    long lconnection = m_conConnectionDetails[i].m_lConnectionID;
+
+                    bool bNotInTarget = true;
+
+                    for (int j = 0; j < nlaTargetConnections.Count; j++)
+                    {
+                        if (nlaTargetConnections[j].m_lUniqueID == lconnection)
+                        {
+                            bNotInTarget = false;
+
+                            break;
+                        }
+
+                        if (bNotInTarget)
+                        {
+                            conOutput.Add(m_conConnectionDetails[i]);
+                        }
+                    }
+                }
+
+                return conOutput;
+            }
+
+            public bool HasTarget(long lConnectionID)
+            {
+                for (int i = 0; i < m_conConnectionDetails.Count; i++)
+                {
+                    if (m_conConnectionDetails[i].m_lConnectionID == lConnectionID)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
             }
         }
 
@@ -63,12 +103,12 @@ namespace Networking
         }
 
         protected NetworkConnection m_ncnNetworkConnection;
-               
+
         public override void OnAddToNetwork(NetworkConnection ncnNetwork)
         {
             m_ncnNetworkConnection = ncnNetwork;
 
-            for(int i = 0; i < m_ncnNetworkConnection.m_conConnectionList.Count; i++)
+            for (int i = 0; i < m_ncnNetworkConnection.m_conConnectionList.Count; i++)
             {
                 OnNewConnection(m_ncnNetworkConnection.m_conConnectionList[i]);
             }
@@ -79,10 +119,10 @@ namespace Networking
             TimeNetworkProcessor tnpNetworkTime = m_ncnNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
 
             //create new network layouy tracker
-            ConnectionNetworkLayoutProcessor cnlConnectionLayout = new ConnectionNetworkLayoutProcessor(tnpNetworkTime.NetworkTime,this);
+            ConnectionNetworkLayoutProcessor cnlConnectionLayout = new ConnectionNetworkLayoutProcessor(tnpNetworkTime.NetworkTime, this, conConnection);
 
             conConnection.AddPacketProcessor(cnlConnectionLayout);
-            
+
             //send out updated network layout accross the network 
             base.OnNewConnection(conConnection);
 
@@ -97,6 +137,23 @@ namespace Networking
         public void OnPeerNetworkLayoutChange(ConnectionNetworkLayoutProcessor clpConnectionNetworkLayoutProcessor)
         {
             m_evtPeerConnectionLayoutChange.Invoke(clpConnectionNetworkLayoutProcessor);
+        }
+
+        public List<long> PeersWithConnection(long lConnection)
+        {
+            List<long> lOutput = new List<long>();
+
+            for (int i = 0; i < m_ncnNetworkConnection.m_conConnectionList.Count; i++)
+            {
+                ConnectionNetworkLayoutProcessor clpConnectionLayoutProcessor = m_ncnNetworkConnection.m_conConnectionList[i].GetPacketProcessor<ConnectionNetworkLayoutProcessor>();
+
+                if (clpConnectionLayoutProcessor.m_nlaNetworkLayout.HasTarget(lConnection))
+                {
+                    lOutput.Add(m_ncnNetworkConnection.m_conConnectionList[i].m_lUniqueID);
+                }
+            }
+
+            return lOutput;
         }
 
         protected NetworkLayout GenterateNetworkLayout()
@@ -130,11 +187,9 @@ namespace Networking
         //the connection layout at the other end of this connection
         public NetworkLayoutProcessor.NetworkLayout m_nlaNetworkLayout;
 
-        public Connection m_conConnection;
-
         protected NetworkLayoutProcessor m_nlpNetworkProcessor;
 
-        public ConnectionNetworkLayoutProcessor(DateTime dtmTimeOfCreation, NetworkLayoutProcessor nlpNetworkProcessor,Connection conConnection)
+        public ConnectionNetworkLayoutProcessor(DateTime dtmTimeOfCreation, NetworkLayoutProcessor nlpNetworkProcessor, Connection conConnection)
         {
             m_dtmTimeOfConnection = dtmTimeOfCreation;
             m_nlpNetworkProcessor = nlpNetworkProcessor;
@@ -143,7 +198,7 @@ namespace Networking
 
         public override DataPacket ProcessReceivedPacket(Connection conConnection, DataPacket pktInputPacket)
         {
-            if(pktInputPacket is NetworkLayoutPacket)
+            if (pktInputPacket is NetworkLayoutPacket)
             {
                 m_nlaNetworkLayout = (pktInputPacket as NetworkLayoutPacket).m_nlaNetworkLayout;
 
