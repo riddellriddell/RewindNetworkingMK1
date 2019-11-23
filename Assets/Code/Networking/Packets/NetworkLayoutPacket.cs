@@ -44,11 +44,11 @@ namespace Networking
 
             ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref iItemCount);
 
-            m_nlaNetworkLayout.m_conConnectionDetails = new List<NetworkLayoutProcessor.NetworkLayout.Connection>(iItemCount);
+            m_nlaNetworkLayout.m_conConnectionDetails = new List<NetworkLayoutProcessor.NetworkLayout.ConnectionState>(iItemCount);
 
             for (int i = 0; i < iItemCount; i++)
             {
-                NetworkLayoutProcessor.NetworkLayout.Connection conConnection = new NetworkLayoutProcessor.NetworkLayout.Connection();
+                NetworkLayoutProcessor.NetworkLayout.ConnectionState conConnection = new NetworkLayoutProcessor.NetworkLayout.ConnectionState();
 
                 ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref conConnection.m_lConnectionID);
                 ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref conConnection.m_dtmTimeOfConnection);
@@ -64,7 +64,7 @@ namespace Networking
             ByteStream.Serialize(pkwPacketWrapper.WriteStream,ref iItemCount);
             for(int i = 0; i < iItemCount; i++)
             {
-                NetworkLayoutProcessor.NetworkLayout.Connection conConnection = m_nlaNetworkLayout.m_conConnectionDetails[i];
+                NetworkLayoutProcessor.NetworkLayout.ConnectionState conConnection = m_nlaNetworkLayout.m_conConnectionDetails[i];
 
                 ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref conConnection.m_lConnectionID);
                 ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref conConnection.m_dtmTimeOfConnection);
