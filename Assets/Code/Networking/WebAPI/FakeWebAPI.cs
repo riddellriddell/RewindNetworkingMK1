@@ -145,44 +145,9 @@ namespace Networking
                 return true;
             }
 
-            //create gateway
-            public bool CreateGateway(long lUserID)
-            {
-                //check if gateway already exists 
-                if (m_gtwGateways.ContainsKey(lUserID) == true)
-                {
-                    return false;
-                }
-
-                //create new gateway
-                Gateway gtwGate = new Gateway()
-                {
-                    m_lOwningPlayerId = lUserID,
-                    m_lTimeOfLastUpdate = DateTime.UtcNow.Ticks,
-                    m_sstSimStatus = new SimStatus()
-                    {
-                        m_iSimStatus = (int)SimStatus.State.Setup,
-                        m_iRemainingSlots = 0
-                    }
-                };
-
-                m_gtwGateways.Add(lUserID, gtwGate);
-
-                return true;
-            }
-
             //update gateway 
-            public bool UpdateGateway(long lUserID, int iStatus, int iRemainingSlots)
+            public bool SetGateway(long lUserID, int iStatus, int iRemainingSlots)
             {
-                //check if gateway exists 
-                if (m_gtwGateways.ContainsKey(lUserID) == false)
-                {
-                    return false;
-                }
-
-                //get gate
-                Gateway gtwGate = m_gtwGateways[lUserID];
-
                 Gateway gtwNewGate = new Gateway()
                 {
                     m_lOwningPlayerId = lUserID,
@@ -293,6 +258,10 @@ namespace Networking
 
         protected string m_strServerErrorResponse = "500 Internal Server Error";
 
+        protected string m_strItemDoesNoteExistResponse = "404 Item Does Not Exist";
+
+        protected string m_strDoNotHavePermissionResponse = "403 Action Denied Error";
+
 
         protected FakeDatabase m_fdbFakeDatabase = new FakeDatabase();
 
@@ -341,14 +310,9 @@ namespace Networking
             StartCoroutine(InternalAddNewMessage(strNewMessageDetails, actAddMessageCallback));
         }
 
-        public void CreateGateway(string strGatewayDetails, Action<bool, string> actCreateGatewayCallback)
+        public void SetGateway(string strSetGatewayCommand, Action<bool, string> actGatewayUpdateCallback)
         {
-            StartCoroutine(InternalCreateGateway(strGatewayDetails, actCreateGatewayCallback));
-        }
-
-        public void UpdateGateway(string strGatewayChanges, Action<bool, string> actGatewayUpdateCallback)
-        {
-            StartCoroutine(InternalUpdateGateway(strGatewayChanges, actGatewayUpdateCallback));
+            StartCoroutine(InternalSetGateway(strSetGatewayCommand, actGatewayUpdateCallback));
         }
 
         public void SearchForGateway(string strUserID, Action<bool, string> actSearchForGateCallback)
@@ -383,7 +347,7 @@ namespace Networking
 
             if (lUserID.HasValue == false)
             {
-                actCreateUserCallback?.Invoke(false, m_strServerErrorResponse);
+                actCreateUserCallback?.Invoke(false, m_strDoNotHavePermissionResponse);
 
                 yield break;
             }
@@ -425,7 +389,7 @@ namespace Networking
 
             if (lUserID.HasValue == false)
             {
-                actGetUserCallback?.Invoke(false, m_strServerErrorResponse);
+                actGetUserCallback?.Invoke(false, m_strItemDoesNoteExistResponse);
 
                 yield break;
             }
@@ -522,8 +486,8 @@ namespace Networking
 
             if (bWasMessageAdded == false)
             {
-                //return error result
-                actSendMessageCallback?.Invoke(false, m_strServerErrorResponse);
+                //return error if accound does not exist
+                actSendMessageCallback?.Invoke(false, m_strItemDoesNoteExistResponse);
 
                 yield break;
             }
@@ -534,14 +498,14 @@ namespace Networking
             actSendMessageCallback?.Invoke(true, string.Empty);
         }
 
-        protected IEnumerator InternalCreateGateway(string strUserID, Action<bool, string> actCreateGatewayCallback)
+        protected IEnumerator InternalSetGateway(string strSetGatewayCommand, Action<bool, string> actSetGateway)
         {
             //check for timeout 
             if (Random.Range(0, 1) < m_fTimeOutChance)
             {
                 yield return new WaitForSeconds(m_fTimeOutTime);
 
-                actCreateGatewayCallback?.Invoke(false, m_strTimeOutResponse);
+                actSetGateway?.Invoke(false, m_strTimeOutResponse);
 
                 yield break;
             }
@@ -552,72 +516,24 @@ namespace Networking
             if (Random.Range(0, 1) < m_fActionErrorChance)
             {
                 //return error result
-                actCreateGatewayCallback?.Invoke(false, m_strServerErrorResponse);
-
-                yield break;
-            }
-
-            long lUserID = long.MinValue;
-
-            //try and convert user details to long
-            if (long.TryParse(strUserID, out lUserID) == false)
-            {
-                //return error result
-                actCreateGatewayCallback?.Invoke(false, m_strServerErrorResponse);
-
-                yield break;
-            }
-
-            bool bGateCreated = m_fdbFakeDatabase.CreateGateway(lUserID);
-
-            if (bGateCreated == false)
-            {
-                //return error result
-                actCreateGatewayCallback?.Invoke(false, m_strServerErrorResponse);
-
-                yield break;
-            }
-
-            //gateway created successfully
-            actCreateGatewayCallback?.Invoke(true, string.Empty);
-        }
-
-        protected IEnumerator InternalUpdateGateway(string strGatewayChanges, Action<bool, string> actUpdateGateway)
-        {
-            //check for timeout 
-            if (Random.Range(0, 1) < m_fTimeOutChance)
-            {
-                yield return new WaitForSeconds(m_fTimeOutTime);
-
-                actUpdateGateway?.Invoke(false, m_strTimeOutResponse);
-
-                yield break;
-            }
-
-            yield return new WaitForSeconds(m_fLatncy);
-
-            //check if user could not be created due to conflicts / bad connection or other conflicts
-            if (Random.Range(0, 1) < m_fActionErrorChance)
-            {
-                //return error result
-                actUpdateGateway?.Invoke(false, m_strServerErrorResponse);
+                actSetGateway?.Invoke(false, m_strServerErrorResponse);
 
                 yield break;
             }
 
             //deserialize gateway changes
-            UpdateGatewayCommand ugcUpdateGateCommand = JsonUtility.FromJson<UpdateGatewayCommand>(strGatewayChanges);
+            SetGatewayCommand ugcUpdateGateCommand = JsonUtility.FromJson<SetGatewayCommand>(strSetGatewayCommand);
 
             //try and find the target gateway
-            if (m_fdbFakeDatabase.UpdateGateway(ugcUpdateGateCommand.m_lOwningPlayerId, ugcUpdateGateCommand.m_iStatus, ugcUpdateGateCommand.m_iRemainingSlots) == false)
+            if (m_fdbFakeDatabase.SetGateway(ugcUpdateGateCommand.m_lOwningPlayerId, ugcUpdateGateCommand.m_sstStatus.m_iSimStatus, ugcUpdateGateCommand.m_sstStatus.m_iRemainingSlots) == false)
             {
                 //return error result
-                actUpdateGateway?.Invoke(false, m_strServerErrorResponse);
+                actSetGateway?.Invoke(false, m_strServerErrorResponse);
 
                 yield break;
             }
 
-            actUpdateGateway?.Invoke(true, string.Empty);
+            actSetGateway?.Invoke(true, string.Empty);
         }
 
         protected IEnumerator InternalSearchForGateway(string strGatewayDetails, Action<bool, string> actSearchCallback)

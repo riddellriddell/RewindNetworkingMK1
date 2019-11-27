@@ -122,12 +122,10 @@ namespace Networking
 
 
     [Serializable]
-    public struct UpdateGatewayCommand
+    public struct SetGatewayCommand
     {
         public long m_lOwningPlayerId;
 
-        public int m_iStatus;
-
-        public int m_iRemainingSlots;
+        public SimStatus m_sstStatus;
     }
 }
