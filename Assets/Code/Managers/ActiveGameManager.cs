@@ -152,6 +152,12 @@ namespace GameManagers
 
                 return;
             }
+            else if(m_winWebInterface.ExternalGatewayCommunicationStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Failed &&
+                m_winWebInterface.ExternalGatewayCommunicationStatus.ShouldRestart() == false)
+            {
+                EnterSetUpNewSim();
+                return;
+            }
         }
 
         protected void EnterConnectingThroughGateway()
@@ -216,6 +222,29 @@ namespace GameManagers
             {
                 //restart the connection process
                 Reset();
+                return;
+            }
+        }
+
+        protected void EnterSetUpNewSim()
+        {
+            State = ActiveGameState.SetUpNewSim;
+
+            //use passed in target sim settings to setup inital sim
+
+            // sim manager setup sim
+        }
+
+        protected void UpdateSetUpNewSim()
+        {
+            //wait for sim setup to finish
+
+            bool bIsSimSetup = true;
+
+            if(bIsSimSetup)
+            {
+                //enter run game state 
+                EnterRunningGame();
                 return;
             }
         }
