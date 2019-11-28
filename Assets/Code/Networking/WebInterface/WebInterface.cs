@@ -366,7 +366,10 @@ namespace Networking
             SetGatewayStatus = SetGatewayStatus.CommunicationFailed();
         }
 
-        //search for a gateway  
+        /// <summary>
+        /// Search for gateway returns false if already looking for gateway or player does not have an ID
+        /// </summary>
+        /// <returns></returns>
         public bool SearchForGateway()
         {
             //check if has id
