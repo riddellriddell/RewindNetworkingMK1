@@ -28,7 +28,7 @@ namespace Networking
         public Int64 m_lTo;
         public List<Byte> m_bConnectionRequestDetails;
 
-        public override int PacketSize
+        public override int PacketPayloadSize
         {
             get
             {
@@ -77,7 +77,7 @@ namespace Networking
         public Int64 m_lTo;
         public List<Byte> m_bConnectionReplyDetails;
 
-        public override int PacketSize
+        public override int PacketPayloadSize
         {
             get
             {

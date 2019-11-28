@@ -7,10 +7,12 @@ using UnityEngine;
 /// </summary>
 namespace Networking
 {
-    public abstract class ConnectionPacketProcessor 
+    public abstract class BaseConnectionPacketProcessor 
     {
         //defines the order that packet processors process a packet if it is processed by multiple packet processors 
         public abstract int Priority { get; }
+        
+        protected Connection m_conConnection = null;
 
         public virtual void Update(Connection conConnection)
         {
@@ -27,12 +29,17 @@ namespace Networking
             return pktOutputPacket;
         }
 
+        //called when a connection disconnects
+        public virtual void OnConnectionDisconnect()
+        {
+
+        }
+
         public void SetConnection(Connection conConnection)
         {
             m_conConnection = conConnection;
         }
 
-        protected Connection m_conConnection = null;
 
     }
 }

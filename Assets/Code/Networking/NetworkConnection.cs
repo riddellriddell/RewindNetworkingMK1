@@ -10,9 +10,9 @@ namespace Networking
     {
         // Defines a comparer to create a sorted set
         // that is sorted by the file extensions.
-        private class PacketProcessorComparer : IComparer<NetworkPacketProcessor>
+        private class PacketProcessorComparer : IComparer<BaseNetworkPacketProcessor>
         {
-            public int Compare(NetworkPacketProcessor x, NetworkPacketProcessor y)
+            public int Compare(BaseNetworkPacketProcessor x, BaseNetworkPacketProcessor y)
             {
                 if (x == null && y == null)
                 {
@@ -37,7 +37,7 @@ namespace Networking
         public InternetConnectionSimulator m_icwConnectionSimulation;
 
         //list of all the network connection PacketManagers 
-        public SortedSet<NetworkPacketProcessor> m_nppNetworkPacketProcessors;
+        public SortedSet<BaseNetworkPacketProcessor> m_nppNetworkPacketProcessors;
 
         //all the connections 
         public List<Connection> m_conConnectionList = new List<Connection>();
@@ -62,10 +62,10 @@ namespace Networking
 
             m_cifPacketFactory = cifPacketFactory;
             m_icwConnectionSimulation = igaInternetGateway;
-            m_nppNetworkPacketProcessors = new SortedSet<NetworkPacketProcessor>(new PacketProcessorComparer());
+            m_nppNetworkPacketProcessors = new SortedSet<BaseNetworkPacketProcessor>(new PacketProcessorComparer());
         }
 
-        public void AddPacketProcessor(NetworkPacketProcessor nppProcessor)
+        public void AddPacketProcessor(BaseNetworkPacketProcessor nppProcessor)
         {
             if (m_nppNetworkPacketProcessors.Add(nppProcessor) == false)
             {
@@ -75,9 +75,9 @@ namespace Networking
             nppProcessor.OnAddToNetwork(this);
         }
 
-        public T GetPacketProcessor<T>() where T : NetworkPacketProcessor
+        public T GetPacketProcessor<T>() where T : BaseNetworkPacketProcessor
         {
-            foreach (NetworkPacketProcessor processor in m_nppNetworkPacketProcessors)
+            foreach (BaseNetworkPacketProcessor processor in m_nppNetworkPacketProcessors)
             {
                 if (processor is T)
                 {
@@ -136,7 +136,7 @@ namespace Networking
         public void UpdateConnectionsAndProcessors()
         {
             //update all processors 
-            foreach (NetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
+            foreach (BaseNetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
             {
                 nppProcessor.Update();
             }
@@ -152,7 +152,7 @@ namespace Networking
         {
             for (int i = 0; i < m_conConnectionList.Count; i++)
             {
-                if (m_conConnectionList[i].m_lUniqueID == lConnectionID)
+                if (m_conConnectionList[i].m_lUserID == lConnectionID)
                 {
                     return true;
                 }
@@ -164,7 +164,7 @@ namespace Networking
         {
             for (int i = 0; i < m_conConnectionList.Count; i++)
             {
-                if (m_conConnectionList[i].m_lUniqueID == lConnectionID)
+                if (m_conConnectionList[i].m_lUserID == lConnectionID)
                 {
                     conConnection = m_conConnectionList[i];
 
@@ -223,7 +223,7 @@ namespace Networking
         {
             for (int i = 0; i < m_conConnectionList.Count; i++)
             {
-                if (m_conConnectionList[i].m_lUniqueID == lPlayerID)
+                if (m_conConnectionList[i].m_lUserID == lPlayerID)
                 {
                     //process packet for sending 
                     pktPacket = ProcessPacketForSending(pktPacket);
@@ -291,7 +291,7 @@ namespace Networking
 
         protected DataPacket ProcessPacketForSending(DataPacket pktPacket)
         {
-            foreach (NetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
+            foreach (BaseNetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
             {
                 pktPacket = nppProcessor.ProcessPacketForSending(pktPacket);
 
@@ -306,7 +306,7 @@ namespace Networking
 
         protected DataPacket ProcessReceivedPacket(DataPacket pktPacket)
         {
-            foreach (NetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
+            foreach (BaseNetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
             {
                 pktPacket = nppProcessor.ProcessReceivedPacket(pktPacket);
 
@@ -322,7 +322,7 @@ namespace Networking
         protected void ProcessNewConnection(Connection conConnection)
         {
             //process the new connection 
-            foreach (NetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
+            foreach (BaseNetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
             {
                 nppProcessor.OnNewConnection(conConnection);
             }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Networking
 {
-    public class NetworkConnectionPropagatorProcessor : NetworkPacketProcessor
+    public class NetworkConnectionPropagatorProcessor : BaseNetworkPacketProcessor
     {
 
         public struct ConnectionRequestProgress
@@ -48,7 +48,7 @@ namespace Networking
             conConnection.AddPacketProcessor(new ConnectionPropagatorProcessor(m_ncnNetworkConnection, this));
 
             //remove any active attemts to connect to target 
-            RemoveMissingConnectionID(conConnection.m_lUniqueID);
+            RemoveMissingConnectionID(conConnection.m_lUserID);
 
             base.OnNewConnection(conConnection);
         }
@@ -161,7 +161,7 @@ namespace Networking
             //check if connection already exists
             for(int i = 0; i < m_ncnNetworkConnection.m_conConnectionList.Count; i++)
             {
-                if(m_ncnNetworkConnection.m_conConnectionList[i].m_lUniqueID == lTargetID)
+                if(m_ncnNetworkConnection.m_conConnectionList[i].m_lUserID == lTargetID)
                 {
                     return;
                 }
@@ -221,7 +221,7 @@ namespace Networking
 
     }
 
-    class ConnectionPropagatorProcessor : ConnectionPacketProcessor
+    class ConnectionPropagatorProcessor : BaseConnectionPacketProcessor
     {
         public override int Priority
         {

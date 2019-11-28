@@ -89,9 +89,11 @@ namespace Networking
         public void AddDataPacket(DataPacket pakPacket)
         {
             byte bID = (byte)pakPacket.GetTypeID;
+            
             //encode packet type
             ByteStream.Serialize(WriteStream, ref bID);
 
+            //encode packet payload
             pakPacket.EncodePacket(this);
         }
 
@@ -112,7 +114,16 @@ namespace Networking
 
         public abstract int GetTypeID { get; }
 
-        public abstract int PacketSize { get; }
+        //the total size of the packet including the type header byte
+        public int PacketTotalSize
+        {
+            get
+            {
+                return PacketPayloadSize + 1;
+            }
+        }
+
+        public abstract int PacketPayloadSize { get; }
 
         public abstract void DecodePacket(PacketWrapper pkwPacketWrapper);
 

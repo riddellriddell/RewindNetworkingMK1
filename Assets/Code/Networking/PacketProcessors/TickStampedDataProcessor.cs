@@ -7,7 +7,7 @@ using UnityEngine;
 /// </summary>
 namespace Networking
 {
-    public class TickStampedDataNetworkProcessor : NetworkPacketProcessor
+    public class TickStampedDataNetworkProcessor : BaseNetworkPacketProcessor
     {
         public override int Priority
         {
@@ -69,7 +69,7 @@ namespace Networking
     /// <summary>
     /// this keeps track of the current tick of the connection 
     /// </summary>
-    public class TickStampedDataConnectionProcessor : ConnectionPacketProcessor
+    public class TickStampedDataConnectionProcessor : BaseConnectionPacketProcessor
     {
         public override int Priority
         {

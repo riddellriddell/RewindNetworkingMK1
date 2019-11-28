@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Networking
 {
-    public class TimeNetworkProcessor : NetworkPacketProcessor
+    public class TimeNetworkProcessor : BaseNetworkPacketProcessor
     {
         //the time everything is based off
         public DateTime BaseTime
@@ -142,7 +142,7 @@ namespace Networking
         }
     }
 
-    public class TimeConnectionProcessor : ConnectionPacketProcessor
+    public class TimeConnectionProcessor : BaseConnectionPacketProcessor
     {
         public override int Priority
         {

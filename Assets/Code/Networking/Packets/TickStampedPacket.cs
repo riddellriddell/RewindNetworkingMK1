@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Networking
 {
-
+    [Obsolete]
     public abstract class TickStampedPacket : DataPacket
     {
         public static int MaxTicksBetweenTickStampedPackets
@@ -64,6 +64,7 @@ namespace Networking
     }
 
     // this packet resets the connection Tick To Zero and it used to start a game 
+    [Obsolete]
     public class ResetTickCountPacket : DataPacket
     {
         public static int TypeID
@@ -82,7 +83,7 @@ namespace Networking
             }
         }
 
-        public override int PacketSize
+        public override int PacketPayloadSize
         {
             get
             {
@@ -101,6 +102,7 @@ namespace Networking
 
     //this is just used to keep the connection alive / add enough padding for the next input 
     //this packet is sent if 255 ticks / TickStamp.MaxTicksBetweenPackets have passed since the last packet and their have been no updates 
+    [Obsolete]
     public class PingPacket : DataPacket
     {
         public static int TypeID
@@ -119,7 +121,7 @@ namespace Networking
             }
         }
 
-        public override int PacketSize
+        public override int PacketPayloadSize
         {
             get
             {

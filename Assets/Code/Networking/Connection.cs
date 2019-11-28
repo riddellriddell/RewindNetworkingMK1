@@ -16,9 +16,9 @@ namespace Networking
 
         // Defines a comparer to create a sorted set
         // this allows control over what order the packet processing is done 
-        private class PacketProcessorComparer : IComparer<ConnectionPacketProcessor>
+        private class PacketProcessorComparer : IComparer<BaseConnectionPacketProcessor>
         {
-            public int Compare(ConnectionPacketProcessor x, ConnectionPacketProcessor y)
+            public int Compare(BaseConnectionPacketProcessor x, BaseConnectionPacketProcessor y)
             {
                 if(x == null && y == null)
                 {
@@ -44,10 +44,11 @@ namespace Networking
         public Connection m_conConnectionTarget;
 
         //the player id associated with this channel 
+        [Obsolete]
         public byte m_bConnectionID;
 
         //a unique id used to identify a player before game starts
-        public long m_lUniqueID;
+        public long m_lUserID;
 
         // the max number of packets to sent at once 
         public int m_iMaxBytesToSend;
@@ -62,7 +63,7 @@ namespace Networking
         public ClassWithIDFactory m_cifPacketFactory;
 
         // list of all the packet processors 
-        protected SortedSet<ConnectionPacketProcessor> m_cppOrderedPacketProcessorList;
+        protected SortedSet<BaseConnectionPacketProcessor> m_cppOrderedPacketProcessorList;
 
         // the packet number of the last packet sent
         protected int m_iPacketsQueuedToSendCount;
@@ -79,6 +80,7 @@ namespace Networking
         //the tick of the last packet recieved
         protected int m_iLastTickReceived;
 
+        [Obsolete]
         public Connection(byte bConnectionID, ClassWithIDFactory cifPacketFactory)
         {
             m_bConnectionID = bConnectionID;
@@ -87,7 +89,22 @@ namespace Networking
 
             m_pakReceivedPackets = new Queue<DataPacket>();
             m_PacketsInFlight = new RandomAccessQueue<DataPacket>();
-            m_cppOrderedPacketProcessorList = new SortedSet<ConnectionPacketProcessor>(new PacketProcessorComparer());
+            m_cppOrderedPacketProcessorList = new SortedSet<BaseConnectionPacketProcessor>(new PacketProcessorComparer());
+
+            m_iPacketsQueuedToSendCount = 0;
+            m_iLastAckPacketNumberSent = 0;
+            m_iTotalPacketsReceived = 0;
+        }
+
+        public Connection(long lUserID, ClassWithIDFactory cifPacketFactory)
+        {
+            m_lUserID = lUserID;
+
+            m_cifPacketFactory = cifPacketFactory;
+
+            m_pakReceivedPackets = new Queue<DataPacket>();
+            m_PacketsInFlight = new RandomAccessQueue<DataPacket>();
+            m_cppOrderedPacketProcessorList = new SortedSet<BaseConnectionPacketProcessor>(new PacketProcessorComparer());
 
             m_iPacketsQueuedToSendCount = 0;
             m_iLastAckPacketNumberSent = 0;
@@ -145,7 +162,7 @@ namespace Networking
             return false;
         }
 
-        public void AddPacketProcessor(ConnectionPacketProcessor cppProcessor)
+        public void AddPacketProcessor(BaseConnectionPacketProcessor cppProcessor)
         {
             if(m_cppOrderedPacketProcessorList.Add(cppProcessor) == false)
             {
@@ -153,9 +170,9 @@ namespace Networking
             }
         }
 
-        public T GetPacketProcessor<T>() where T : ConnectionPacketProcessor
+        public T GetPacketProcessor<T>() where T : BaseConnectionPacketProcessor
         {
-            foreach(ConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
+            foreach(BaseConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
             {
                 if(cppProcessor is T)
                 {
@@ -169,7 +186,7 @@ namespace Networking
         private DataPacket ProccessPacketForSending(DataPacket pktPacket)
         {
             //loop through all the packet processors 
-            foreach(ConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
+            foreach(BaseConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
             {
                 //process packet 
                 pktPacket = cppProcessor.ProcessPacketForSending(this,pktPacket);
@@ -187,12 +204,12 @@ namespace Networking
         private DataPacket ProccessReceivedPacket(DataPacket pktPacket)
         {
             //loop through all the packet processors 
-            foreach (ConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
+            foreach (BaseConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
             {
                 //process packet 
                 pktPacket = cppProcessor.ProcessReceivedPacket(this,pktPacket);
 
-                //check if packet is still going to get sent 
+                //check if packet is still going to get processed
                 if (pktPacket == null)
                 {
                     return null;
@@ -239,7 +256,7 @@ namespace Networking
             {
                 DataPacket pktPacketToSend = m_PacketsInFlight[i];
 
-                if (pkwPacketWrappepr.WriteStream.BytesRemaining - pktPacketToSend.PacketSize > 0)
+                if (pkwPacketWrappepr.WriteStream.BytesRemaining - pktPacketToSend.PacketTotalSize > 0)
                 {
                     pkwPacketWrappepr.AddDataPacket(pktPacketToSend);
                 }
@@ -365,7 +382,7 @@ namespace Networking
 
         private void UpdatePacketProcessors()
         {
-            foreach(ConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
+            foreach(BaseConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
             {
                 cppProcessor.Update(this);
             }

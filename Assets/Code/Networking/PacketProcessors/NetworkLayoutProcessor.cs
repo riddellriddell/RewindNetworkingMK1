@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Networking
 {
     //this packet processor tracks the layout of the network
-    public class NetworkLayoutProcessor : NetworkPacketProcessor
+    public class NetworkLayoutProcessor : BaseNetworkPacketProcessor
     {
         public delegate void ConnectionLayoutChange(ConnectionNetworkLayoutProcessor clpLayoutProcessor);
         public event ConnectionLayoutChange m_evtPeerConnectionLayoutChange;
@@ -63,7 +63,7 @@ namespace Networking
 
                     for (int j = 0; j < nlaTargetConnections.Count; j++)
                     {
-                        if (nlaTargetConnections[j].m_lUniqueID == lconnection)
+                        if (nlaTargetConnections[j].m_lUserID == lconnection)
                         {
                             bNotInTarget = false;
 
@@ -149,7 +149,7 @@ namespace Networking
 
                 if (clpConnectionLayoutProcessor.m_nlaNetworkLayout.HasTarget(lConnection))
                 {
-                    lOutput.Add(m_ncnNetworkConnection.m_conConnectionList[i].m_lUniqueID);
+                    lOutput.Add(m_ncnNetworkConnection.m_conConnectionList[i].m_lUserID);
                 }
             }
 
@@ -164,14 +164,14 @@ namespace Networking
             {
                 DateTime dtmTimeOfConnection = m_ncnNetworkConnection.m_conConnectionList[i].GetPacketProcessor<ConnectionNetworkLayoutProcessor>().m_dtmTimeOfConnection;
 
-                networkLayouy.Add(m_ncnNetworkConnection.m_conConnectionList[i].m_lUniqueID, dtmTimeOfConnection);
+                networkLayouy.Add(m_ncnNetworkConnection.m_conConnectionList[i].m_lUserID, dtmTimeOfConnection);
             }
 
             return networkLayouy;
         }
     }
 
-    public class ConnectionNetworkLayoutProcessor : ConnectionPacketProcessor
+    public class ConnectionNetworkLayoutProcessor : BaseConnectionPacketProcessor
     {
         public override int Priority
         {

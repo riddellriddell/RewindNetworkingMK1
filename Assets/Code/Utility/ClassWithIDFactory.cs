@@ -7,9 +7,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 
 public abstract class ClassWithIDFactory
-{
-
-   
+{   
     public ClassWithIDFactory()
     {
         SetupTypes();

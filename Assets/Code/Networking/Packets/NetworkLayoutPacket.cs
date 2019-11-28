@@ -26,7 +26,7 @@ namespace Networking
 
         public NetworkLayoutProcessor.NetworkLayout m_nlaNetworkLayout;
 
-        public override int PacketSize
+        public override int PacketPayloadSize
         {
             get
             {

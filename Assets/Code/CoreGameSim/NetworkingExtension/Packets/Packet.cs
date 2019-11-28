@@ -26,7 +26,7 @@ namespace Sim
             }
         }
 
-        public override int PacketSize
+        public override int PacketPayloadSize
         {
             get
             {
@@ -100,7 +100,7 @@ namespace Sim
             }
         }
 
-        public override int PacketSize
+        public override int PacketPayloadSize
         {
             get
             {

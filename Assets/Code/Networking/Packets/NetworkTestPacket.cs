@@ -30,7 +30,7 @@ namespace Networking
             }
         }
 
-        public override int PacketSize
+        public override int PacketPayloadSize
         {
             get
             {
@@ -73,7 +73,7 @@ namespace Networking
             }
         }
 
-        public override int PacketSize
+        public override int PacketPayloadSize
         {
             get
             {
