@@ -18,8 +18,7 @@ namespace Sim
             AddType<InputPacket>(InputPacket.TypeID);
             AddType<StartCountDownPacket>(StartCountDownPacket.TypeID);
             AddType<NetworkLayoutPacket>(NetworkLayoutPacket.TypeID);
-            AddType<ConnectionRequestPacket>(ConnectionRequestPacket.TypeID);
-            AddType<ConnectionReplyPacket>(ConnectionReplyPacket.TypeID);
+            AddType<ConnectionNegotiationPacket>(ConnectionNegotiationPacket.TypeID);
         }
     }
 }

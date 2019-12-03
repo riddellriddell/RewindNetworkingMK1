@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Networking
 {
-    public class TimeNetworkProcessor : BaseNetworkPacketProcessor
+    public class TimeNetworkProcessor : ManagedNetworkPacketProcessor<TimeConnectionProcessor>
     {
         //the time everything is based off
         public DateTime BaseTime
@@ -13,9 +13,9 @@ namespace Networking
             {
                 //for testing and debug
                 long lTicks = ((DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay) * TimeSpan.TicksPerDay) + (long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad);
-                
+
                 return new DateTime(lTicks, DateTimeKind.Utc);
-                               
+
                 //return DateTime.UtcNow;
             }
         }
@@ -25,9 +25,18 @@ namespace Networking
         {
             get
             {
-                return BaseTime - m_dtoCurrentTimeOffset;
+                return BaseTime - m_tspCurrentTimeOffset;
             }
 
+        }
+
+        //the time offset
+        public TimeSpan TimeOffset
+        {
+            get
+            {
+                return m_tspCurrentTimeOffset;
+            }
         }
 
         public override int Priority
@@ -38,30 +47,18 @@ namespace Networking
             }
         }
 
-        private TimeSpan m_dtoTargetTimeOffset;
-        private TimeSpan m_dtoCurrentTimeOffset;
+        private TimeSpan m_tspTargetTimeOffset;
+        private TimeSpan m_tspCurrentTimeOffset;
         private TimeSpan m_tspOffsetChangeRate;
         private TimeSpan m_tspTimeLerpSpeed = TimeSpan.FromSeconds(1);
         private TimeSpan m_tspMaxLerpDistance = TimeSpan.FromSeconds(1);
         private TimeSpan m_tspUpdateRate = TimeSpan.FromSeconds(1);
-        private NetworkConnection m_ncnNetworkConnection;
         private List<TimeSpan> m_dtoTempTimeOffsets = new List<TimeSpan>();
 
-        //this gets called when a new connection is added
-        public override void OnAddToNetwork(NetworkConnection ncnNetwork)
-        {
-            m_ncnNetworkConnection = ncnNetwork;
 
-            for (int i = 0; i < ncnNetwork.m_conConnectionList.Count; i++)
-            {
-                OnNewConnection(ncnNetwork.m_conConnectionList[i]);
-            }
-        }
-
-        public override void OnNewConnection(Connection conConnection)
+        protected override TimeConnectionProcessor NewConnectionProcessor()
         {
-           TimeConnectionProcessor tcpPacketProcessor = new TimeConnectionProcessor(this, m_tspUpdateRate);
-            conConnection.AddPacketProcessor(tcpPacketProcessor);
+            return new TimeConnectionProcessor(m_tspUpdateRate);
         }
 
         public override void Update()
@@ -77,15 +74,10 @@ namespace Networking
 
             // generate an array of all the offsets for all conenctions 
             //loop through all the conenctions 
-            for (int i = 0; i < m_ncnNetworkConnection.m_conConnectionList.Count; i++)
+            for (int i = 0; i < ChildConnectionProcessors.Count; i++)
             {
-                //get time offset 
-                Connection conConnection = m_ncnNetworkConnection.m_conConnectionList[i];
-                TimeConnectionProcessor tcpTimeProcessor = conConnection.GetPacketProcessor<TimeConnectionProcessor>();
-
                 //add offset to list
-                m_dtoTempTimeOffsets.Add(tcpTimeProcessor.Offset);
-
+                m_dtoTempTimeOffsets.Add(ChildConnectionProcessors[i].Offset);
             }
 
             //add local offset
@@ -103,29 +95,29 @@ namespace Networking
             //calculate the range to take values from
             int iMax = Math.Max(m_dtoTempTimeOffsets.Count, (m_dtoTempTimeOffsets.Count / 2) + (iOffset - 1));
 
-            m_dtoTargetTimeOffset = TimeSpan.Zero;
+            m_tspTargetTimeOffset = TimeSpan.Zero;
 
             //calculate new target offset 
             for (int i = iMin; i < iMax; i++)
             {
-                m_dtoTargetTimeOffset += m_dtoTempTimeOffsets[i];
+                m_tspTargetTimeOffset += m_dtoTempTimeOffsets[i];
             }
 
             //calc final target offset
-            m_dtoTargetTimeOffset = TimeSpan.FromTicks(m_dtoTargetTimeOffset.Ticks / Math.Max(1, iMax - iMin));
+            m_tspTargetTimeOffset = TimeSpan.FromTicks(m_tspTargetTimeOffset.Ticks / Math.Max(1, iMax - iMin));
         }
 
         private void LerpToTargetTime(float fDeltaTime)
         {
             //get direction to lerp
-            TimeSpan lerpDirection = m_dtoTargetTimeOffset - m_dtoCurrentTimeOffset;
+            TimeSpan lerpDirection = m_tspTargetTimeOffset - m_tspCurrentTimeOffset;
 
             long lAbsTimeDif = Math.Abs(lerpDirection.Ticks);
 
             //check if difference is larget than max lerp time
             if (lAbsTimeDif > m_tspMaxLerpDistance.Ticks)
             {
-                m_dtoCurrentTimeOffset = m_dtoTargetTimeOffset;
+                m_tspCurrentTimeOffset = m_tspTargetTimeOffset;
                 return;
             }
 
@@ -133,16 +125,16 @@ namespace Networking
 
             if (fTicksToLerp < lAbsTimeDif)
             {
-                m_dtoCurrentTimeOffset = m_dtoCurrentTimeOffset + TimeSpan.FromTicks((long)(fTicksToLerp * Math.Sign(lerpDirection.Ticks)));
+                m_tspCurrentTimeOffset = m_tspCurrentTimeOffset + TimeSpan.FromTicks((long)(fTicksToLerp * Math.Sign(lerpDirection.Ticks)));
             }
             else
             {
-                m_dtoCurrentTimeOffset = m_dtoTargetTimeOffset;
+                m_tspCurrentTimeOffset = m_tspTargetTimeOffset;
             }
         }
     }
 
-    public class TimeConnectionProcessor : BaseConnectionPacketProcessor
+    public class TimeConnectionProcessor : ManagedConnectionPacketProcessor<TimeNetworkProcessor>
     {
         public override int Priority
         {
@@ -156,7 +148,7 @@ namespace Networking
         {
             get
             {
-                return m_tnpTimeNetworkProcessor.BaseTime + Offset;
+                return m_tParentPacketProcessor.BaseTime + Offset;
             }
         }
 
@@ -181,10 +173,12 @@ namespace Networking
         //time since last update
         protected DateTime m_dtmTimeOfLastUpdate;
 
-        public TimeConnectionProcessor(TimeNetworkProcessor tnpNetworkProcessor, TimeSpan tspUpdateRate) : base()
+        public TimeConnectionProcessor() : base()
         {
-            m_tnpTimeNetworkProcessor = tnpNetworkProcessor;
+        }
 
+        public TimeConnectionProcessor(TimeSpan tspUpdateRate) : base()
+        {
             m_fEchoUpdateRate = tspUpdateRate;
 
             //indicate its time for an update immediatly 
@@ -193,7 +187,7 @@ namespace Networking
 
         public override void Update(Connection conConnection)
         {
-            TimeSpan tspTimeSinceLastUpdate = m_tnpTimeNetworkProcessor.BaseTime - m_dtmTimeOfLastUpdate;
+            TimeSpan tspTimeSinceLastUpdate = m_tParentPacketProcessor.BaseTime - m_dtmTimeOfLastUpdate;
 
             //check if it is time for another update 
             if (tspTimeSinceLastUpdate > m_fEchoUpdateRate && (m_bEchoSent == byte.MinValue || tspTimeSinceLastUpdate > m_tspMaxRTT))
@@ -208,7 +202,7 @@ namespace Networking
                 ntpEcho.m_bEcho = m_bEchoSent;
 
                 //reset time of echo send and time since last check
-                m_dtmTimeOfEchoSend = m_dtmTimeOfLastUpdate = m_tnpTimeNetworkProcessor.BaseTime;
+                m_dtmTimeOfEchoSend = m_dtmTimeOfLastUpdate = m_tParentPacketProcessor.BaseTime;
 
                 //queue echo 
                 conConnection.QueuePacketToSend(ntpEcho);
@@ -230,7 +224,7 @@ namespace Networking
                 ntpReply.m_bEcho = ntpEcho.m_bEcho;
 
                 //set local time 
-                ntpReply.m_lTicks = m_tnpTimeNetworkProcessor.BaseTime.Ticks;
+                ntpReply.m_lTicks = m_tParentPacketProcessor.BaseTime.Ticks;
 
                 //schedule a reply packet 
                 conConnection.QueuePacketToSend(ntpReply);
@@ -242,11 +236,11 @@ namespace Networking
                 //get packet 
                 NetTestReplyPacket ntpEcho = pktInputPacket as NetTestReplyPacket;
 
-                TimeSpan tspTimeSinceTestStart = m_tnpTimeNetworkProcessor.BaseTime - m_dtmTimeOfEchoSend;
+                TimeSpan tspTimeSinceTestStart = m_tParentPacketProcessor.BaseTime - m_dtmTimeOfEchoSend;
 
                 long tspChangeInRTT = (RTT.Ticks > 0) ? Math.Abs(RTT.Ticks - tspTimeSinceTestStart.Ticks) : 0;
 
-                
+
                 //check if echo matches 
                 if (ntpEcho.m_bEcho != m_bEchoSent || m_bEchoSent == byte.MinValue || tspTimeSinceTestStart > m_tspMaxRTT || tspChangeInRTT > m_tspMaxRTTChange.Ticks)
                 {
@@ -267,7 +261,7 @@ namespace Networking
                     m_bEchoSent = byte.MinValue;
 
                     //trigger recalculation of network time 
-                    m_tnpTimeNetworkProcessor.RecalculateTimeOffset();
+                    m_tParentPacketProcessor.RecalculateTimeOffset();
                 }
 
                 //consume echo packet as it is no longer needed 
@@ -276,7 +270,5 @@ namespace Networking
 
             return pktInputPacket;
         }
-
-        private TimeNetworkProcessor m_tnpTimeNetworkProcessor;
     }
 }

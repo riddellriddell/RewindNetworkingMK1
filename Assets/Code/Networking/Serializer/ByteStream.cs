@@ -16,6 +16,13 @@ namespace Networking
                 return m_bData.Length - ReadWriteHead;
             }
         }
+        public int BufferSize
+        {
+            get
+            {
+                return m_bData.Length;
+            }
+        }
         public ByteStream(int iBufferSize)
         {
             m_bData = new byte[iBufferSize];

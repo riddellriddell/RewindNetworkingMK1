@@ -52,14 +52,14 @@ namespace Networking
         }
 
 
-        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
+        public override void DecodePacket(ReadByteStream rbsByteStream)
         {
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_bOffset);
+            ByteStream.Serialize(rbsByteStream, ref m_bOffset);
         }
 
-        public override void EncodePacket(PacketWrapper pkwPacketWrapper)
+        public override void EncodePacket(WriteByteStream wbsByreStream)
         {
-            ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref m_bOffset);
+            ByteStream.Serialize(wbsByreStream, ref m_bOffset);
         }
     }
 
@@ -91,11 +91,11 @@ namespace Networking
             }
         }
 
-        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
+        public override void DecodePacket(ReadByteStream rbsByteStream)
         {
         }
 
-        public override void EncodePacket(PacketWrapper pkwPacketWrapper)
+        public override void EncodePacket(WriteByteStream wbsByteStream)
         {
         }
     }
@@ -129,11 +129,11 @@ namespace Networking
             }
         }
 
-        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
+        public override void DecodePacket(ReadByteStream rbsByteStream)
         {
         }
 
-        public override void EncodePacket(PacketWrapper pkwPacketWrapper)
+        public override void EncodePacket(WriteByteStream wbsWriteByteStream)
         {
         }
     }

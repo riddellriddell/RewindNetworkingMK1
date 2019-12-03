@@ -7,7 +7,7 @@ using UnityEngine;
 /// </summary>
 namespace Networking
 {
-    public class TickStampedDataNetworkProcessor : BaseNetworkPacketProcessor
+    public class TickStampedDataNetworkProcessor : ManagedNetworkPacketProcessor<TickStampedDataConnectionProcessor>
     {
         public override int Priority
         {
@@ -19,57 +19,27 @@ namespace Networking
 
         protected int m_iTick;
 
-        protected NetworkConnection m_ncnNetwork;
-
-        protected List<TickStampedDataConnectionProcessor> m_tcpTickStampProcessors;
-
         public void UpdateTick(int iTick)
         {
             m_iTick = iTick;
 
-            for (int i = 0; i < m_tcpTickStampProcessors.Count; i++)
+            for (int i = 0; i < ChildConnectionProcessors.Count; i++)
             {
-                m_tcpTickStampProcessors[i].SetTick(m_iTick);
+                ChildConnectionProcessors[i].SetTick(m_iTick);
             }
         }
 
-        public override void OnAddToNetwork(NetworkConnection ncnNetwork)
+        protected override TickStampedDataConnectionProcessor NewConnectionProcessor()
         {
-            //store network
-            m_ncnNetwork = ncnNetwork;
-
-            m_tcpTickStampProcessors = new List<TickStampedDataConnectionProcessor>();
-
-            //add tick processors to all connections 
-            for (int i = 0; i < m_ncnNetwork.m_conConnectionList.Count; i++)
-            {
-                if (m_ncnNetwork.m_conConnectionList[i] != null)
-                {
-                    AddProcessorToConnection(m_ncnNetwork.m_conConnectionList[i]);
-                }
-            }
-
+            return new TickStampedDataConnectionProcessor(m_iTick);
         }
 
-        public override void OnNewConnection(Connection conConnection)
-        {
-            AddProcessorToConnection(conConnection);
-        }
-
-        protected void AddProcessorToConnection(Connection conConnection)
-        {
-            TickStampedDataConnectionProcessor tcpTickStampedProcessor = new TickStampedDataConnectionProcessor(m_iTick);
-
-            m_tcpTickStampProcessors.Add(tcpTickStampedProcessor);
-
-            conConnection.AddPacketProcessor(tcpTickStampedProcessor);
-        }
     }
 
     /// <summary>
     /// this keeps track of the current tick of the connection 
     /// </summary>
-    public class TickStampedDataConnectionProcessor : BaseConnectionPacketProcessor
+    public class TickStampedDataConnectionProcessor : ManagedConnectionPacketProcessor<TickStampedDataNetworkProcessor>
     {
         public override int Priority
         {
@@ -84,6 +54,11 @@ namespace Networking
         protected int m_iLastPacketTickQueuedToSend;
 
         protected int m_iLastPacketTickReceived;
+
+        public TickStampedDataConnectionProcessor()
+        {
+            m_iTick = 0;
+        }
 
         public TickStampedDataConnectionProcessor(int iStartTick)
         {

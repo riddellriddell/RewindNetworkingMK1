@@ -22,12 +22,30 @@ namespace Networking
         public override int PacketPayloadSize { get; } = 0;
 
         //packet has no data to encode or decode
-        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
+        public override void DecodePacket(ReadByteStream rbsByteStream)
         {
         }
 
-        public override void EncodePacket(PacketWrapper pkwPacketWrapper)
+        public override void EncodePacket(WriteByteStream wbsByteStream)
         {
+        }
+    }
+
+    public partial class ByteStream
+    {
+        public static void Serialize(ReadByteStream rbsByteStream, GatewayActiveAnouncePacket Input)
+        {
+
+        }
+
+        public static void Serialize(WriteByteStream rbsByteStream, GatewayActiveAnouncePacket Input)
+        {
+
+        }
+
+        public static int DataSize(GatewayActiveAnouncePacket Input)
+        {
+            return 0;
         }
     }
 }

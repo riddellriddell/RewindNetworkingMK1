@@ -5,6 +5,18 @@ namespace Networking
 
     public class PacketWrapper
     {
+        //the number of packets that are used as header / not payload data 
+        public static int HeaderSize
+        {
+            get
+            {
+                int iSize = sizeof(Int32); //last acknowledged packet 
+                iSize += sizeof(Int32); //paket start index / number;
+
+                return iSize;
+            }
+        }
+
         public enum WriteMode
         {
             Read,
@@ -76,7 +88,7 @@ namespace Networking
 
         }
 
-        public PacketWrapper(Byte[] bData)
+        public PacketWrapper(byte[] bData)
         {
             Mode = WriteMode.Read;
 
@@ -89,12 +101,12 @@ namespace Networking
         public void AddDataPacket(DataPacket pakPacket)
         {
             byte bID = (byte)pakPacket.GetTypeID;
-            
+
             //encode packet type
             ByteStream.Serialize(WriteStream, ref bID);
 
             //encode packet payload
-            pakPacket.EncodePacket(this);
+            pakPacket.EncodePacket(this.WriteStream);
         }
 
     }
@@ -114,20 +126,34 @@ namespace Networking
 
         public abstract int GetTypeID { get; }
 
+        //the additional type data needed to encode this packet outside of the payload data
+        public static int TypeHeaderSize
+        {
+            get
+            {
+                return +1;
+            }
+        }
+
+
         //the total size of the packet including the type header byte
         public int PacketTotalSize
         {
             get
             {
-                return PacketPayloadSize + 1;
+                return PacketPayloadSize + TypeHeaderSize;
             }
         }
 
         public abstract int PacketPayloadSize { get; }
 
-        public abstract void DecodePacket(PacketWrapper pkwPacketWrapper);
+        //not to be serialized
+        //the source of the packt
+        //public long Source { get; }
 
-        public abstract void EncodePacket(PacketWrapper pkwPacketWrapper);
+        public abstract void DecodePacket(ReadByteStream rbsByteStream);
+
+        public abstract void EncodePacket(WriteByteStream wbsByteStream);
 
         //applys an offset to the data read for the byte used for packet type
         public virtual int ApplyDataReadOffset(int iDataReadHead)

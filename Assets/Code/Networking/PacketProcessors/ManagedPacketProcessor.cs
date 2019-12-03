@@ -10,7 +10,7 @@ namespace Networking
     /// </summary>
     public abstract class ManagedNetworkPacketProcessor<T> : BaseNetworkPacketProcessor where T : BaseConnectionPacketProcessor, IManagedConnectionPacketProcessor, new()
     {
-        protected NetworkConnection ParentNetworkConnection { get; private set; } = null;
+        public NetworkConnection ParentNetworkConnection { get; private set; } = null;
 
         protected Dictionary<long, T> ChildConnectionProcessors { get; } = new Dictionary<long, T>();
 
@@ -29,13 +29,13 @@ namespace Networking
             ParentNetworkConnection = ncnNetwork;
 
             //add processing component to each existing connection
-            foreach(Connection conConnection in ParentNetworkConnection.m_conConnectionList)
+            foreach(Connection conConnection in ParentNetworkConnection.ConnectionList.Values)
             {
                 //create new packet processor
                 T connectionProcessor = NewConnectionProcessor();
 
                 //add it to list of child packet processors
-                ChildConnectionProcessors.Add(conConnection.m_lUserID, connectionProcessor);
+                ChildConnectionProcessors.Add(conConnection.m_lUserUniqueID, connectionProcessor);
 
                 //add processor to connection
                 conConnection.AddPacketProcessor(connectionProcessor);
@@ -52,7 +52,7 @@ namespace Networking
             connectionProcessor.SetParentProcessor(this);
 
             //add it to list of child packet processors
-            ChildConnectionProcessors.Add(conConnection.m_lUserID, connectionProcessor);
+            ChildConnectionProcessors.Add(conConnection.m_lUserUniqueID, connectionProcessor);
 
             //add processor to connection
             conConnection.AddPacketProcessor(connectionProcessor);
@@ -64,7 +64,7 @@ namespace Networking
         {
             base.OnConnectionDisconnect(conConnection);
 
-            ChildConnectionProcessors.Remove(conConnection.m_lUserID);
+            ChildConnectionProcessors.Remove(conConnection.m_lUserUniqueID);
         }
     }
 
@@ -81,7 +81,7 @@ namespace Networking
     {
         protected T m_tParentPacketProcessor;
 
-        public void SetParentProcessor(BaseNetworkPacketProcessor parentPacketProcessor)
+        public virtual void SetParentProcessor(BaseNetworkPacketProcessor parentPacketProcessor)
         {
             m_tParentPacketProcessor = (T)parentPacketProcessor;
         }

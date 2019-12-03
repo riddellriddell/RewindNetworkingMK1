@@ -1,18 +1,20 @@
 ﻿using Networking;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using Random = UnityEngine.Random;
 
 namespace Networking
 {
     public class InternetConnectionSimulator : MonoBehaviour
     {
+        public static InternetConnectionSimulator Instance { get; private set; }
+
         private struct TimeStampedWrapper
         {
-            public PacketWrapper m_tWrappedData;
             public byte[] m_bData;
-            public Connection m_conTarget;
+            public Action<byte[]> m_actRecieveDataCallback;
             public float m_fTimeOfDelivery;
         }
 
@@ -32,6 +34,7 @@ namespace Networking
 
         private List<TimeStampedWrapper> m_lstDataInFlight;
 
+        [Obsolete]
         public void SendPacket(PacketWrapper packetToSend, Connection conTarget)
         {
             //check if packet is dropped 
@@ -47,9 +50,8 @@ namespace Networking
                 {
                     m_lstDataInFlight[i] = new TimeStampedWrapper()
                     {
-                        m_tWrappedData = packetToSend,
                         m_bData = packetToSend.WriteStream.GetData(),
-                        m_conTarget = conTarget,
+                        m_actRecieveDataCallback = conTarget.ReceivePacket,
                         m_fTimeOfDelivery = CalcuateDeliveryTime()
                     };
 
@@ -60,9 +62,41 @@ namespace Networking
             //if there is not enough room already then add a new entry to the list 
             m_lstDataInFlight.Add(new TimeStampedWrapper()
             {
-                m_tWrappedData = packetToSend,
                 m_bData = packetToSend.WriteStream.GetData(),
-                m_conTarget = conTarget,
+                m_actRecieveDataCallback = conTarget.ReceivePacket,
+                m_fTimeOfDelivery = CalcuateDeliveryTime()
+            });
+        }
+
+        public void SendPacket(byte[] bData, Action<byte[]> actCallback)
+        {
+            //check if packet is dropped 
+            if (IsPacketDropped())
+            {
+                return;
+            }
+
+            //loop through list of packets in flight to find one not in use 
+            for (int i = 0; i < m_lstDataInFlight.Count; i++)
+            {
+                if (m_lstDataInFlight[i].m_fTimeOfDelivery == 0)
+                {
+                    m_lstDataInFlight[i] = new TimeStampedWrapper()
+                    {
+                        m_bData = bData,
+                        m_actRecieveDataCallback = actCallback,
+                        m_fTimeOfDelivery = CalcuateDeliveryTime()
+                    };
+
+                    return;
+                }
+            }
+
+            //if there is not enough room already then add a new entry to the list 
+            m_lstDataInFlight.Add(new TimeStampedWrapper()
+            {
+                m_bData = bData,
+                m_actRecieveDataCallback = actCallback,
                 m_fTimeOfDelivery = CalcuateDeliveryTime()
             });
         }
@@ -70,6 +104,11 @@ namespace Networking
         // Use this for initialization
         void Start()
         {
+            if(Instance == null)
+            {
+                Instance = this;
+            }
+
             m_lstDataInFlight = new List<TimeStampedWrapper>();
         }
 
@@ -82,10 +121,10 @@ namespace Networking
             //loop through all the packets in flight 
             for (int i = 0; i < m_lstDataInFlight.Count; i++)
             {
-                if (m_lstDataInFlight[i].m_fTimeOfDelivery < Time.timeSinceLevelLoad && m_lstDataInFlight[i].m_tWrappedData != null)
+                if (m_lstDataInFlight[i].m_fTimeOfDelivery < Time.timeSinceLevelLoad && m_lstDataInFlight[i].m_bData != null)
                 {
                     //deliver packet 
-                    m_lstDataInFlight[i].m_conTarget.ReceivePacket(m_lstDataInFlight[i].m_bData);
+                    m_lstDataInFlight[i].m_actRecieveDataCallback?.Invoke(m_lstDataInFlight[i].m_bData);
 
                     m_lstDataInFlight[i] = new TimeStampedWrapper();
                 }

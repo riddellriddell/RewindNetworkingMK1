@@ -12,7 +12,14 @@ namespace Networking
         //defines the order that packet processors process a packet if it is processed by multiple packet processors 
         public abstract int Priority { get; }
         
-        protected Connection m_conConnection = null;
+        public Connection ParentConnection { get; private set; } = null;
+
+        //this gets called after the connection packet processor has been added to the 
+        //conneciton and all of its setup values have been set
+        public virtual void Start()
+        {
+
+        }
 
         public virtual void Update(Connection conConnection)
         {
@@ -37,7 +44,7 @@ namespace Networking
 
         public void SetConnection(Connection conConnection)
         {
-            m_conConnection = conConnection;
+            ParentConnection = conConnection;
         }
 
 

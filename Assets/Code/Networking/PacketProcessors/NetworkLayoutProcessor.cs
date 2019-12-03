@@ -3,96 +3,159 @@ using System.Collections.Generic;
 
 namespace Networking
 {
+    public struct NetworkLayout
+    {
+        public struct ConnectionState
+        {
+            public long m_lConnectionID;
+            public DateTime m_dtmTimeOfConnection;
+
+            public ConnectionState(long lID, DateTime dtmTimeOfConnection)
+            {
+                m_lConnectionID = lID;
+                m_dtmTimeOfConnection = dtmTimeOfConnection;
+            }
+
+        }
+
+        public List<ConnectionState> m_conConnectionDetails;
+
+        public NetworkLayout(int iConnectionCount)
+        {
+            m_conConnectionDetails = new List<ConnectionState>(iConnectionCount);
+        }
+
+        public void Add(long lConnectionID, DateTime dtmTimeOfConnection)
+        {
+            if (m_conConnectionDetails == null)
+            {
+                m_conConnectionDetails = new List<ConnectionState>();
+            }
+
+            //check if it has already been added 
+            for (int i = 0; i < m_conConnectionDetails.Count; i++)
+            {
+                if (m_conConnectionDetails[i].m_lConnectionID == lConnectionID)
+                {
+                    m_conConnectionDetails[i] = new ConnectionState(lConnectionID, dtmTimeOfConnection);
+                    return;
+                }
+            }
+
+            m_conConnectionDetails.Add(new ConnectionState(lConnectionID, dtmTimeOfConnection));
+        }
+
+        public List<long> ConnectionsNotInDictionary(Dictionary<long, Connection> conTargetConnections)
+        {
+            List<long> conOutput = new List<long>();
+
+            for (int i = 0; i < m_conConnectionDetails.Count; i++)
+            {
+                long lConnectionID = m_conConnectionDetails[i].m_lConnectionID;
+
+                if (conTargetConnections.ContainsKey(lConnectionID) == false)
+                {
+
+                    conOutput.Add(m_conConnectionDetails[i].m_lConnectionID);
+
+                }
+            }
+
+            return conOutput;
+        }
+
+        public bool HasTarget(long lConnectionID)
+        {
+            for (int i = 0; i < m_conConnectionDetails.Count; i++)
+            {
+                if (m_conConnectionDetails[i].m_lConnectionID == lConnectionID)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    //serializer for network data layout
+    public partial class ByteStream
+    {
+        public static void Serialize(ReadByteStream rbsByteStream, ref NetworkLayout Input)
+        {
+            Int32 iSize = 0;
+
+            Serialize(rbsByteStream,ref iSize);
+
+            Input.m_conConnectionDetails = new List<NetworkLayout.ConnectionState>(iSize);
+
+            for (int i = 0; i < iSize; i++)
+            {
+                NetworkLayout.ConnectionState cstState = new NetworkLayout.ConnectionState(); 
+                Serialize(rbsByteStream, ref cstState);
+
+                Input.m_conConnectionDetails.Add(cstState);
+            }
+        }
+
+        public static void Serialize(WriteByteStream wbsByteStream, ref NetworkLayout Input)
+        {
+            Int32 iSize = Input.m_conConnectionDetails.Count;
+
+            Serialize(wbsByteStream, ref iSize);
+
+            for (int i = 0; i < iSize; i++)
+            {
+                NetworkLayout.ConnectionState cstState = Input.m_conConnectionDetails[i];
+                Serialize(wbsByteStream, ref cstState);
+            }
+        }
+
+        public static void Serialize(ReadByteStream rbsByteStream, ref NetworkLayout.ConnectionState Input)
+        {
+            Serialize(rbsByteStream, ref Input.m_lConnectionID);
+            Serialize(rbsByteStream, ref Input.m_dtmTimeOfConnection);
+        }
+
+        public static void Serialize(WriteByteStream wbsByteStream, ref NetworkLayout.ConnectionState Input)
+        {
+            Serialize(wbsByteStream, ref Input.m_lConnectionID);
+            Serialize(wbsByteStream, ref Input.m_dtmTimeOfConnection);
+        }
+
+        public static int DataSize(ref NetworkLayout Input)
+        {
+            int iSize = DataSize(Input.m_conConnectionDetails.Count);
+
+            NetworkLayout.ConnectionState cnsState = new NetworkLayout.ConnectionState();
+
+            iSize += DataSize(ref cnsState);
+
+            return iSize;
+        }
+
+        public static int DataSize(ref NetworkLayout.ConnectionState Input)
+        {
+            int iSize = DataSize(Input.m_lConnectionID);
+
+            iSize += DataSize(Input.m_dtmTimeOfConnection);
+
+            return iSize;
+        }
+    }
+
     //this packet processor tracks the layout of the network
-    public class NetworkLayoutProcessor : BaseNetworkPacketProcessor
+    public class NetworkLayoutProcessor : ManagedNetworkPacketProcessor<ConnectionNetworkLayoutProcessor>
     {
         public delegate void ConnectionLayoutChange(ConnectionNetworkLayoutProcessor clpLayoutProcessor);
         public event ConnectionLayoutChange m_evtPeerConnectionLayoutChange;
 
-        public struct NetworkLayout
-        {
-            public struct ConnectionState
-            {
-                public long m_lConnectionID;
-                public DateTime m_dtmTimeOfConnection;
+        public List<long> MissingConenctions { get; } = new List<long>();
 
-                public ConnectionState(long lID, DateTime dtmTimeOfConnection)
-                {
-                    m_lConnectionID = lID;
-                    m_dtmTimeOfConnection = dtmTimeOfConnection;
-                }
 
-            }
+        protected bool m_bShouldUpdatePeers = false;
 
-            public List<ConnectionState> m_conConnectionDetails;
-
-            public NetworkLayout(int iConnectionCount)
-            {
-                m_conConnectionDetails = new List<ConnectionState>(iConnectionCount);
-            }
-
-            public void Add(long lConnectionID, DateTime dtmTimeOfConnection)
-            {
-                if (m_conConnectionDetails == null)
-                {
-                    m_conConnectionDetails = new List<ConnectionState>();
-                }
-
-                //check if it has already been added 
-                for (int i = 0; i < m_conConnectionDetails.Count; i++)
-                {
-                    if (m_conConnectionDetails[i].m_lConnectionID == lConnectionID)
-                    {
-                        m_conConnectionDetails[i] = new ConnectionState(lConnectionID, dtmTimeOfConnection);
-                        return;
-                    }
-                }
-
-                m_conConnectionDetails.Add(new ConnectionState(lConnectionID, dtmTimeOfConnection));
-            }
-
-            public List<ConnectionState> ConnectionsNotInList(List<Connection> nlaTargetConnections)
-            {
-                List<ConnectionState> conOutput = new List<ConnectionState>();
-
-                for (int i = 0; i < m_conConnectionDetails.Count; i++)
-                {
-                    long lconnection = m_conConnectionDetails[i].m_lConnectionID;
-
-                    bool bNotInTarget = true;
-
-                    for (int j = 0; j < nlaTargetConnections.Count; j++)
-                    {
-                        if (nlaTargetConnections[j].m_lUserID == lconnection)
-                        {
-                            bNotInTarget = false;
-
-                            break;
-                        }
-
-                        if (bNotInTarget)
-                        {
-                            conOutput.Add(m_conConnectionDetails[i]);
-                        }
-                    }
-                }
-
-                return conOutput;
-            }
-
-            public bool HasTarget(long lConnectionID)
-            {
-                for (int i = 0; i < m_conConnectionDetails.Count; i++)
-                {
-                    if (m_conConnectionDetails[i].m_lConnectionID == lConnectionID)
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-        }
+        public HashSet<long> MissingConnections { get; } = new HashSet<long>();
 
         public override int Priority
         {
@@ -102,40 +165,20 @@ namespace Networking
             }
         }
 
-        protected NetworkConnection m_ncnNetworkConnection;
-
-        public override void OnAddToNetwork(NetworkConnection ncnNetwork)
+        public override void Update()
         {
-            m_ncnNetworkConnection = ncnNetwork;
-
-            for (int i = 0; i < m_ncnNetworkConnection.m_conConnectionList.Count; i++)
+            if(m_bShouldUpdatePeers)
             {
-                OnNewConnection(m_ncnNetworkConnection.m_conConnectionList[i]);
+                SendNetworkLayoutToPeers();
+                m_bShouldUpdatePeers = false;
             }
-        }
-
-        public override void OnNewConnection(Connection conConnection)
-        {
-            TimeNetworkProcessor tnpNetworkTime = m_ncnNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
-
-            //create new network layouy tracker
-            ConnectionNetworkLayoutProcessor cnlConnectionLayout = new ConnectionNetworkLayoutProcessor(tnpNetworkTime.NetworkTime, this, conConnection);
-
-            conConnection.AddPacketProcessor(cnlConnectionLayout);
-
-            //send out updated network layout accross the network 
-            base.OnNewConnection(conConnection);
-
-            //generate network layout packet and send it to all connections
-            NetworkLayoutPacket nlpNetworkLayoutPacket = m_ncnNetworkConnection.m_cifPacketFactory.CreateType<NetworkLayoutPacket>(NetworkLayoutPacket.TypeID);
-            nlpNetworkLayoutPacket.m_nlaNetworkLayout = GenterateNetworkLayout();
-
-            //send packet out to all connections updating them on what users this computer is conencted to 
-            m_ncnNetworkConnection.TransmitPacketToAll(nlpNetworkLayoutPacket);
         }
 
         public void OnPeerNetworkLayoutChange(ConnectionNetworkLayoutProcessor clpConnectionNetworkLayoutProcessor)
         {
+            //check if peer has new connections that are missing in local 
+            CheckForMissingConnections();
+
             m_evtPeerConnectionLayoutChange.Invoke(clpConnectionNetworkLayoutProcessor);
         }
 
@@ -143,35 +186,108 @@ namespace Networking
         {
             List<long> lOutput = new List<long>();
 
-            for (int i = 0; i < m_ncnNetworkConnection.m_conConnectionList.Count; i++)
+            for (int i = 0; i < ChildConnectionProcessors.Count; i++)
             {
-                ConnectionNetworkLayoutProcessor clpConnectionLayoutProcessor = m_ncnNetworkConnection.m_conConnectionList[i].GetPacketProcessor<ConnectionNetworkLayoutProcessor>();
-
-                if (clpConnectionLayoutProcessor.m_nlaNetworkLayout.HasTarget(lConnection))
+                if (ChildConnectionProcessors[i].m_nlaNetworkLayout.HasTarget(lConnection))
                 {
-                    lOutput.Add(m_ncnNetworkConnection.m_conConnectionList[i].m_lUserID);
+                    lOutput.Add(ChildConnectionProcessors[i].ParentConnection.m_lUserUniqueID);
                 }
             }
 
             return lOutput;
         }
 
+        public override void OnNewConnection(Connection conConnection)
+        {
+            base.OnNewConnection(conConnection);
+
+            RemoveMissingConnectionID(conConnection.m_lUserUniqueID);
+        }
+
+        protected void SendNetworkLayoutToPeers()
+        {
+            //generate network layout packet and send it to all connections
+            NetworkLayoutPacket nlpNetworkLayoutPacket = ParentNetworkConnection.m_cifPacketFactory.CreateType<NetworkLayoutPacket>(NetworkLayoutPacket.TypeID);
+            nlpNetworkLayoutPacket.m_nlaNetworkLayout = GenterateNetworkLayout();
+
+            //send packet out to all connections updating them on what users this computer is conencted to 
+            ParentNetworkConnection.TransmitPacketToAll(nlpNetworkLayoutPacket);
+        }
+
+        protected override ConnectionNetworkLayoutProcessor NewConnectionProcessor()
+        {
+            m_bShouldUpdatePeers = true;
+
+            return base.NewConnectionProcessor();
+        }
+
+        protected override void OnClientProcessorDisconnect(Connection conConnection, ConnectionNetworkLayoutProcessor tConnectionProcessor)
+        {
+            base.OnClientProcessorDisconnect(conConnection, tConnectionProcessor);
+
+            //tell peers next update the change in network layout
+            m_bShouldUpdatePeers = true;
+
+            //update the missing connections list
+            CheckForMissingConnections();
+        }
+
         protected NetworkLayout GenterateNetworkLayout()
         {
-            NetworkLayout networkLayouy = new NetworkLayout(m_ncnNetworkConnection.m_conConnectionList.Count);
+            NetworkLayout networkLayout = new NetworkLayout(ChildConnectionProcessors.Count);
 
-            for (int i = 0; i < m_ncnNetworkConnection.m_conConnectionList.Count; i++)
+            foreach(ConnectionNetworkLayoutProcessor clpLayout in ChildConnectionProcessors.Values)
             {
-                DateTime dtmTimeOfConnection = m_ncnNetworkConnection.m_conConnectionList[i].GetPacketProcessor<ConnectionNetworkLayoutProcessor>().m_dtmTimeOfConnection;
+                DateTime dtmTimeOfConnection = clpLayout.NetworkTimeOfConnection;
 
-                networkLayouy.Add(m_ncnNetworkConnection.m_conConnectionList[i].m_lUserID, dtmTimeOfConnection);
+                networkLayout.Add(clpLayout.ParentConnection.m_lUserUniqueID, dtmTimeOfConnection);
             }
 
-            return networkLayouy;
+            return networkLayout;
+        }
+
+        protected void CheckForMissingConnections()
+        {
+            MissingConnections.Clear();
+
+            foreach (Connection conConnection in ParentNetworkConnection.ConnectionList.Values)
+            {
+                //check if peer has missing connections 
+                CheckPeerForMissingConnection(conConnection);
+            }
+
+        }
+
+        protected void CheckPeerForMissingConnection(Connection conConnection)
+        {
+            ConnectionNetworkLayoutProcessor clpConnectionLayout = conConnection.GetPacketProcessor<ConnectionNetworkLayoutProcessor>();
+
+            List<long> lMissingConnections = clpConnectionLayout.m_nlaNetworkLayout.ConnectionsNotInDictionary(ParentNetworkConnection.ConnectionList);
+
+            for (int i = 0; i < lMissingConnections.Count; i++)
+            {
+                TryAddMissingConnectionID(lMissingConnections[i]);
+            }
+        }
+        
+        protected void TryAddMissingConnectionID(long lConnectionID)
+        {
+            if (MissingConnections.Contains(lConnectionID))
+            {
+                return;
+            }
+
+
+            MissingConnections.Add(lConnectionID);
+        }
+               
+        protected void RemoveMissingConnectionID(long lConnectionID)
+        {
+            MissingConnections.Remove(lConnectionID);
         }
     }
 
-    public class ConnectionNetworkLayoutProcessor : BaseConnectionPacketProcessor
+    public class ConnectionNetworkLayoutProcessor : ManagedConnectionPacketProcessor<NetworkLayoutProcessor>
     {
         public override int Priority
         {
@@ -181,28 +297,45 @@ namespace Networking
             }
         }
 
-        //the time this connection was made 
-        public DateTime m_dtmTimeOfConnection;
-
-        //the connection layout at the other end of this connection
-        public NetworkLayoutProcessor.NetworkLayout m_nlaNetworkLayout;
-
-        protected NetworkLayoutProcessor m_nlpNetworkProcessor;
-
-        public ConnectionNetworkLayoutProcessor(DateTime dtmTimeOfCreation, NetworkLayoutProcessor nlpNetworkProcessor, Connection conConnection)
+        public DateTime NetworkTimeOfConnection
         {
-            m_dtmTimeOfConnection = dtmTimeOfCreation;
-            m_nlpNetworkProcessor = nlpNetworkProcessor;
-            m_conConnection = conConnection;
+            get
+            {
+                return m_dtmBaseTimeOfConnection + m_tnpNetworkTime.TimeOffset;
+            }
         }
 
+        //the time this connection was made 
+        public DateTime m_dtmBaseTimeOfConnection;
+
+        //the connection layout at the other end of this connection
+        public NetworkLayout m_nlaNetworkLayout;
+
+        protected TimeNetworkProcessor m_tnpNetworkTime;
+
+        public ConnectionNetworkLayoutProcessor()
+        {
+        }
+
+        public override void Start()
+        {
+            base.Start();
+
+            m_tnpNetworkTime = m_tParentPacketProcessor.ParentNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
+
+            //store the network time that this 
+            m_dtmBaseTimeOfConnection = m_tnpNetworkTime.BaseTime;
+
+        }
+
+        //update the targets Packet layout
         public override DataPacket ProcessReceivedPacket(Connection conConnection, DataPacket pktInputPacket)
         {
             if (pktInputPacket is NetworkLayoutPacket)
             {
                 m_nlaNetworkLayout = (pktInputPacket as NetworkLayoutPacket).m_nlaNetworkLayout;
 
-                m_nlpNetworkProcessor.OnPeerNetworkLayoutChange(this);
+                m_tParentPacketProcessor.OnPeerNetworkLayoutChange(this);
 
                 return null;
             }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -37,16 +36,17 @@ namespace Networking
         public InternetConnectionSimulator m_icwConnectionSimulation;
 
         //list of all the network connection PacketManagers 
-        public SortedSet<BaseNetworkPacketProcessor> m_nppNetworkPacketProcessors;
+        public SortedSet<BaseNetworkPacketProcessor> NetworkPacketProcessors { get; } = new SortedSet<BaseNetworkPacketProcessor>(new PacketProcessorComparer());
 
         //all the connections 
-        public List<Connection> m_conConnectionList = new List<Connection>();
+        public Dictionary<long, Connection> ConnectionList { get; } = new Dictionary<long, Connection>();
 
         //the local id of the player
+        [Obsolete]
         public byte m_bPlayerID;
 
         //the unique id for this player
-        public int m_lPlayerUniqueID;
+        public int m_lUserUniqueID;
 
         public delegate void PacketDataIn(byte bPlayerID, DataPacket pktInput);
         public event PacketDataIn m_evtPacketDataIn;
@@ -54,20 +54,22 @@ namespace Networking
         //used to create packets 
         public ClassWithIDFactory m_cifPacketFactory;
 
+        public IPeerTransmitterFactory m_ptfPeerTransmitterFactory;
+
         public NetworkConnection(ClassWithIDFactory cifPacketFactory, InternetConnectionSimulator igaInternetGateway)
         {
             //generate a unique ID
             // m_lPlayerUniqueID = SystemInfo.deviceUniqueIdentifier.GetHashCode();
-            m_lPlayerUniqueID = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+            m_lUserUniqueID = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
 
             m_cifPacketFactory = cifPacketFactory;
             m_icwConnectionSimulation = igaInternetGateway;
-            m_nppNetworkPacketProcessors = new SortedSet<BaseNetworkPacketProcessor>(new PacketProcessorComparer());
+
         }
 
         public void AddPacketProcessor(BaseNetworkPacketProcessor nppProcessor)
         {
-            if (m_nppNetworkPacketProcessors.Add(nppProcessor) == false)
+            if (NetworkPacketProcessors.Add(nppProcessor) == false)
             {
                 Debug.LogError("Packet Processor Failed To Add to connection");
             }
@@ -77,7 +79,7 @@ namespace Networking
 
         public T GetPacketProcessor<T>() where T : BaseNetworkPacketProcessor
         {
-            foreach (BaseNetworkPacketProcessor processor in m_nppNetworkPacketProcessors)
+            foreach (BaseNetworkPacketProcessor processor in NetworkPacketProcessors)
             {
                 if (processor is T)
                 {
@@ -89,26 +91,46 @@ namespace Networking
         }
 
         //when connection is first made default to the connection Tick 
+        [Obsolete]
         public void MakeFirstConnection(int startTick)
         {
 
         }
 
-        public void MakeConnection(string strConnectionDetails)
+        public Connection CreateNewConnection(long lUserUniqueID)
         {
+            //check if connection already exists for user 
+            if (ConnectionList.TryGetValue(lUserUniqueID, out Connection conTargetConnection))
+            {
+                //destroy connection
+                conTargetConnection.DisconnectFromPeer();
 
+                //remove from conenciton list
+                ConnectionList.Remove(lUserUniqueID);
+            }
+
+            //create new peer connection
+            IPeerTransmitter ptrPeerTransmitter = m_ptfPeerTransmitterFactory.CreatePeerTransmitter();
+
+            //create new connection
+            Connection conNewConnection = new Connection(this, lUserUniqueID, m_cifPacketFactory, ptrPeerTransmitter);
+
+            //register with network manager
+            RegisterConnection(conNewConnection);
+
+            return conNewConnection;
         }
 
-        public void MakeConnection(Connection conDebugConnection)
+        public void RegisterConnection(Connection conNewConnection)
         {
             //add connection to connection list
-            m_conConnectionList.Add(conDebugConnection);
+            ConnectionList.Add(conNewConnection.m_lUserUniqueID, conNewConnection);
 
             //set connection values 
-            conDebugConnection.m_iMaxBytesToSend = 500;
+            conNewConnection.m_iMaxBytesToSend = 500;
 
             //process new connection 
-            ProcessNewConnection(conDebugConnection);
+            ProcessNewConnection(conNewConnection);
         }
 
         public void MakeTestingConnection(NetworkConnection nwcConnectionTarget)
@@ -126,8 +148,8 @@ namespace Networking
             m_conLocalConnection.m_conConnectionTarget = m_conTargetConnection;
             m_conTargetConnection.m_conConnectionTarget = m_conLocalConnection;
 
-            MakeConnection(m_conLocalConnection);
-            nwcConnectionTarget.MakeConnection(m_conTargetConnection);
+            RegisterConnection(m_conLocalConnection);
+            nwcConnectionTarget.RegisterConnection(m_conTargetConnection);
 
 
 
@@ -136,64 +158,26 @@ namespace Networking
         public void UpdateConnectionsAndProcessors()
         {
             //update all processors 
-            foreach (BaseNetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
+            foreach (BaseNetworkPacketProcessor nppProcessor in NetworkPacketProcessors)
             {
                 nppProcessor.Update();
             }
 
             //update connections with current tick
-            for (int i = 0; i < m_conConnectionList.Count; i++)
+            foreach (Connection conConnection in ConnectionList.Values)
             {
-                m_conConnectionList[i].UpdateConnection();
+                conConnection.UpdateConnection();
             }
-        }
-
-        public bool HasConnection(long lConnectionID)
-        {
-            for (int i = 0; i < m_conConnectionList.Count; i++)
-            {
-                if (m_conConnectionList[i].m_lUserID == lConnectionID)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public bool TryGetConnection(long lConnectionID, out Connection conConnection)
-        {
-            for (int i = 0; i < m_conConnectionList.Count; i++)
-            {
-                if (m_conConnectionList[i].m_lUserID == lConnectionID)
-                {
-                    conConnection = m_conConnectionList[i];
-
-                    return true;
-                }
-            }
-
-            conConnection = null;
-
-            return false;
         }
 
         //send packet to all connected players 
-        public bool TransmitPacketToAll(DataPacket pktPacket)
-        {
-            //process packet for sending 
-            pktPacket = ProcessPacketForSending(pktPacket);
-
-            if (pktPacket == null)
+        public void TransmitPacketToAll(DataPacket pktPacket)
+        {       
+            foreach (Connection conConnection in ConnectionList.Values)
             {
-                return false;
+                //process packet for sending 
+                SendPackage(conConnection.m_lUserUniqueID, pktPacket);
             }
-
-            for (int i = 0; i < m_conConnectionList.Count; i++)
-            {
-                m_conConnectionList[i].QueuePacketToSend(pktPacket);
-            }
-
-            return true;
         }
 
         //get the number of conenctions that are functioning correctly 
@@ -201,9 +185,9 @@ namespace Networking
         {
             int iConnectionCount = 0;
 
-            for (int i = 0; i < m_conConnectionList.Count; i++)
+            foreach (Connection conConnection in ConnectionList.Values)
             {
-                if (m_conConnectionList[i] != null)
+                if (conConnection.Status == Connection.ConnectionStatus.Connected)
                 {
                     iConnectionCount++;
                 }
@@ -219,43 +203,39 @@ namespace Networking
         }
 
         //send a packet out to a specific connection 
-        public bool SendPackage(long lPlayerID, DataPacket pktPacket)
+        public void SendPackage(long lPlayerID, DataPacket pktPacket)
         {
-            for (int i = 0; i < m_conConnectionList.Count; i++)
+            //get connection for ID
+            if (ConnectionList.TryGetValue(lPlayerID, out Connection conConnection))
             {
-                if (m_conConnectionList[i].m_lUserID == lPlayerID)
+                //process packet for sending 
+                pktPacket = SendingPacketNetworkProcesses(lPlayerID, pktPacket);
+
+                if (pktPacket == null)
                 {
-                    //process packet for sending 
-                    pktPacket = ProcessPacketForSending(pktPacket);
-
-                    if (pktPacket == null)
-                    {
-                        return false;
-                    }
-
-                    m_conConnectionList[i].QueuePacketToSend(pktPacket);
-
-                    return true;
+                    return;
                 }
-            }
 
-            return false;
+                conConnection.QueuePacketToSend(pktPacket);
+            }
         }
 
+        [Obsolete]
         public void DestributeReceivedPackets()
         {
             //loop through all the connections 
-            for (int i = 0; i < m_conConnectionList.Count; i++)
+            foreach(Connection conConnection in ConnectionList.Values)
             {
-                while (m_conConnectionList[i].m_pakReceivedPackets.Count > 0)
+                while (conConnection.ReceivedPackets.Count > 0)
                 {
-                    DataPacket pktPacket = m_conConnectionList[i].m_pakReceivedPackets.Dequeue();
+                    DataPacket pktPacket = conConnection.ReceivedPackets.Dequeue();
 
-                    ProcessPacket(m_conConnectionList[i].m_bConnectionID, pktPacket);
+                    ProcessPacket(conConnection.m_bConnectionID, pktPacket);
                 }
             }
         }
 
+        [Obsolete]
         public Connection MakeConnectionOffer()
         {
             Connection conOffer = new Connection(m_bPlayerID, m_cifPacketFactory);
@@ -263,18 +243,25 @@ namespace Networking
             return conOffer;
         }
 
+        [Obsolete]
         public Connection MakeReply(Connection conConnectionOffer)
         {
-            MakeConnection(conConnectionOffer);
+            RegisterConnection(conConnectionOffer);
 
             Connection conOffer = new Connection(m_bPlayerID, m_cifPacketFactory);
 
             return conOffer;
         }
 
+        [Obsolete]
         public void RecieveConnectionReply(Connection conConnectionReply)
         {
-            MakeConnection(conConnectionReply);
+            RegisterConnection(conConnectionReply);
+        }
+
+        public void ProcessRecievedPacket(long lUserID, DataPacket pktPacket)
+        {
+            ReceivedPacketNetworkProcesses(lUserID, pktPacket);
         }
 
         protected void ProcessPacket(byte bPlayerConnection, DataPacket pktPacket)
@@ -289,11 +276,11 @@ namespace Networking
             }
         }
 
-        protected DataPacket ProcessPacketForSending(DataPacket pktPacket)
+        protected DataPacket SendingPacketNetworkProcesses(long lUserID, DataPacket pktPacket)
         {
-            foreach (BaseNetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
+            foreach (BaseNetworkPacketProcessor nppProcessor in NetworkPacketProcessors)
             {
-                pktPacket = nppProcessor.ProcessPacketForSending(pktPacket);
+                pktPacket = nppProcessor.ProcessPacketForSending(lUserID, pktPacket);
 
                 if (pktPacket == null)
                 {
@@ -304,11 +291,11 @@ namespace Networking
             return pktPacket;
         }
 
-        protected DataPacket ProcessReceivedPacket(DataPacket pktPacket)
+        protected DataPacket ReceivedPacketNetworkProcesses(long lUserID, DataPacket pktPacket)
         {
-            foreach (BaseNetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
+            foreach (BaseNetworkPacketProcessor nppProcessor in NetworkPacketProcessors)
             {
-                pktPacket = nppProcessor.ProcessReceivedPacket(pktPacket);
+                pktPacket = nppProcessor.ProcessReceivedPacket(lUserID, pktPacket);
 
                 if (pktPacket == null)
                 {
@@ -322,7 +309,7 @@ namespace Networking
         protected void ProcessNewConnection(Connection conConnection)
         {
             //process the new connection 
-            foreach (BaseNetworkPacketProcessor nppProcessor in m_nppNetworkPacketProcessors)
+            foreach (BaseNetworkPacketProcessor nppProcessor in NetworkPacketProcessors)
             {
                 nppProcessor.OnNewConnection(conConnection);
             }

@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Networking
 {
-    public class ConnectionRequestPacket : DataPacket
+    public class ConnectionNegotiationPacket : DataPacket
     {
         public static int TypeID
         {
@@ -20,87 +17,61 @@ namespace Networking
         {
             get
             {
-               return TypeID;
-            }
-        }
-
-        public Int64 m_lFrom;
-        public Int64 m_lTo;
-        public List<Byte> m_bConnectionRequestDetails;
-
-        public override int PacketPayloadSize
-        {
-            get
-            {
-                int iPacketSize = sizeof(Int64) * 2;
-                iPacketSize += sizeof(Int32);
-                iPacketSize += sizeof(Byte) * m_bConnectionRequestDetails.Count;
-
-                return iPacketSize;
-            }
-        }
-
-        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
-        {
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_lFrom);
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_lTo);
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_bConnectionRequestDetails);
-        }
-
-        public override void EncodePacket(PacketWrapper pkwPacketWrapper)
-        {
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_lFrom);
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_lTo);
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_bConnectionRequestDetails);
-        }
-    }
-
-    public class ConnectionReplyPacket : DataPacket
-    {
-        public static int TypeID
-        {
-            get
-            {
-                return 8;
-            }
-        }
-
-        public override int GetTypeID
-        {
-            get
-            {
                 return TypeID;
             }
         }
 
         public Int64 m_lFrom;
         public Int64 m_lTo;
-        public List<Byte> m_bConnectionReplyDetails;
+        public Int32 m_iIndex;
+        public string m_strConnectionNegotiationMessage;
 
         public override int PacketPayloadSize
         {
             get
             {
-                int iPacketSize = sizeof(Int64) * 2;
-                iPacketSize += sizeof(Int32);
-                iPacketSize += sizeof(Byte) * m_bConnectionReplyDetails.Count;
-
-                return iPacketSize;
+                return ByteStream.DataSize(this);
             }
         }
 
-        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
+        public override void DecodePacket(ReadByteStream rbsByteStream)
         {
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_lFrom);
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_lTo);
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_bConnectionReplyDetails);
+            ByteStream.Serialize(rbsByteStream,this);
         }
 
-        public override void EncodePacket(PacketWrapper pkwPacketWrapper)
+        public override void EncodePacket(WriteByteStream wbsByteStream)
         {
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_lFrom);
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_lTo);
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_bConnectionReplyDetails);
+            ByteStream.Serialize(wbsByteStream, this);
+        }
+    }
+
+    //used to serialize and deserialize packet
+    public partial class ByteStream
+    {
+        public static void Serialize(ReadByteStream rbsByteStream, ConnectionNegotiationPacket Input)
+        {
+            Serialize(rbsByteStream, ref Input.m_lFrom);
+            Serialize(rbsByteStream, ref Input.m_lTo);
+            Serialize(rbsByteStream, ref Input.m_iIndex);
+            Serialize(rbsByteStream, ref Input.m_strConnectionNegotiationMessage);
+        }
+
+        public static void Serialize(WriteByteStream rbsByteStream, ConnectionNegotiationPacket Input)
+        {
+            Serialize(rbsByteStream, ref Input.m_lFrom);
+            Serialize(rbsByteStream, ref Input.m_lTo);
+            Serialize(rbsByteStream, ref Input.m_iIndex);
+            Serialize(rbsByteStream, ref Input.m_strConnectionNegotiationMessage);
+        }
+
+        public static int DataSize(ConnectionNegotiationPacket Input)
+        {
+            int iSize = DataSize(Input.m_lFrom);
+            iSize += DataSize(Input.m_lTo);
+            iSize += DataSize(Input.m_iIndex);
+            iSize += DataSize(Input.m_strConnectionNegotiationMessage);
+
+            return iSize;
         }
     }
 }

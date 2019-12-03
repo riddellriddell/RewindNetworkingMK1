@@ -53,22 +53,22 @@ namespace Sim
             };
         }
 
-        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
+        public override void DecodePacket(ReadByteStream rbsByteStream)
         {
-            base.DecodePacket(pkwPacketWrapper);
+            base.DecodePacket(rbsByteStream);
 
             //decode tick offset
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream,ref m_bInput);
+            ByteStream.Serialize(rbsByteStream,ref m_bInput);
 
         }
 
-        public override void EncodePacket(PacketWrapper pkwPacketWrapper)
+        public override void EncodePacket(WriteByteStream wbsByteStream)
         {
 
-            base.EncodePacket(pkwPacketWrapper);
+            base.EncodePacket(wbsByteStream);
 
             //decode tick offset
-            ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref m_bInput);
+            ByteStream.Serialize(wbsByteStream, ref m_bInput);
         }
     }
 
@@ -118,16 +118,16 @@ namespace Sim
             m_lGameStartTime = lTime;
         }
 
-        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
+        public override void DecodePacket(ReadByteStream rbsByteStream)
         {
             //decode game start time 
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_lGameStartTime);
+            ByteStream.Serialize(rbsByteStream, ref m_lGameStartTime);
         }
 
-        public override void EncodePacket(PacketWrapper pkwPacketWrapper)
+        public override void EncodePacket(WriteByteStream wbsByteStream)
         {
             //encode game start time 
-            ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref m_lGameStartTime);
+            ByteStream.Serialize(wbsByteStream, ref m_lGameStartTime);
         }
     }
 }

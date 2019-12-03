@@ -11,6 +11,16 @@ namespace Networking
     /// </summary>
     public class NetworkGatewayManager : ManagedNetworkPacketProcessor<ConnectionGatewayManager>
     {
+        [Serializable]
+        public struct GatewayMessage
+        {
+            public int m_iType;
+
+            public int m_lTargetUserID;
+
+            public DataPacket[] m_dpkMessageJson;
+        }
+
         /// <summary>
         /// how many secconds between anouncing you currently have a gateway running
         /// </summary>
@@ -43,6 +53,11 @@ namespace Networking
         /// </summary>
         public bool NeedsOpenGateway { get; private set; }
 
+        /// <summary>
+        /// messages to send through gateway (if active)
+        /// </summary>
+        public Queue<GatewayMessage> MessagesToSend { get; private set; }
+
         //defines the order that packet processors process packets
         public override int Priority { get; } = 10;
 
@@ -72,7 +87,7 @@ namespace Networking
                     //check if this user is highest user ID and should open gate 
                     foreach (long userID in ChildConnectionProcessors.Keys)
                     {
-                        if(userID > ParentNetworkConnection.m_lPlayerUniqueID)
+                        if(userID > ParentNetworkConnection.m_lUserUniqueID)
                         {
                             bShouldOpenGate = false;
 
@@ -92,10 +107,38 @@ namespace Networking
         }
 
         //process gateway packets
-        public override DataPacket ProcessReceivedPacket(DataPacket pktInputPacket)
+        //public override DataPacket ProcessReceivedPacket(DataPacket pktInputPacket)
+        //{
+        //    return base.ProcessReceivedPacket(pktInputPacket);
+        //}
+
+        //code to handle messages sent and recieved throught the WebInterface
+        #region GatewayMessages
+
+        public void ProcessMessageToGateway(long lTargetUserID, DataPacket dpkDataPacket)
         {
-            return base.ProcessReceivedPacket(pktInputPacket);
+            //check packet size
+
+            //if packet is too big encode using multi packet encoder
+
+            //WriteByteStream wbsWriteStream = new WriteByteStream(500);
+            //
+            //dpkDataPacket.EncodePacket(wbsWriteStream);
+            //
+            //GatewayMessage gmsMessage = new GatewayMessage()
+            //{
+            //    m_dpkMessageJson = dpkDataPacket.
+            //}
         }
+        
+
+        //process message from matchmaking server
+        public void ProcessMessageFromGateway(string strMessage)
+        {
+            GatewayMessage mgsGateMessage = JsonUtility.FromJson<GatewayMessage>(strMessage);
+        }
+
+        #endregion
     }
 
     public class ConnectionGatewayManager : ManagedConnectionPacketProcessor<NetworkGatewayManager>

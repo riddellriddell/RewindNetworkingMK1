@@ -10,7 +10,9 @@ namespace Networking
         public enum ConnectionStatus
         {
             New,
+            Initializing,
             Connected,
+            Disconnecting,
             Disconnected
         }
 
@@ -40,7 +42,10 @@ namespace Networking
         }
 
         //values used for testing
+        [Obsolete]
         public InternetConnectionSimulator m_icsConnectionSim;
+
+        [Obsolete]
         public Connection m_conConnectionTarget;
 
         //the player id associated with this channel 
@@ -48,22 +53,40 @@ namespace Networking
         public byte m_bConnectionID;
 
         //a unique id used to identify a player before game starts
-        public long m_lUserID;
+        public long m_lUserUniqueID;
 
-        // the max number of packets to sent at once 
+        // the max number of bytes to send at once
         public int m_iMaxBytesToSend;
 
+        // the max payload to send (max bytes - packet wrapper header)
+        public int MaxPacketBytesToSend
+        {
+            get
+            {
+                return m_iMaxBytesToSend - PacketWrapper.HeaderSize;
+            }
+        }
+
         // list of all the packets that have been received but not yet processed 
-        public Queue<DataPacket> m_pakReceivedPackets;
+        [Obsolete]
+        public Queue<DataPacket> ReceivedPackets { get; } = new Queue<DataPacket>();
+
+        // messages created by the transmittion system used to establish a connection to another peer
+        public Queue<string> TransmittionNegotiationMessages { get; } = new Queue<string>();
 
         // list of all the packets to send that have not yet acknowledged  
-        public RandomAccessQueue<DataPacket> m_PacketsInFlight;
+        public RandomAccessQueue<DataPacket> PacketsInFlight { get; } = new RandomAccessQueue<DataPacket>();
              
         //used to create packets 
         public ClassWithIDFactory m_cifPacketFactory;
 
+        //the current state of the connection
+        public ConnectionStatus Status { get; private set; } = ConnectionStatus.Initializing;
+
+        protected IPeerTransmitter m_ptrTransmitter;
+
         // list of all the packet processors 
-        protected SortedSet<BaseConnectionPacketProcessor> m_cppOrderedPacketProcessorList;
+        protected SortedSet<BaseConnectionPacketProcessor> OrderedPacketProcessorList { get; } = new SortedSet<BaseConnectionPacketProcessor>(new PacketProcessorComparer());
 
         // the packet number of the last packet sent
         protected int m_iPacketsQueuedToSendCount;
@@ -80,6 +103,9 @@ namespace Networking
         //the tick of the last packet recieved
         protected int m_iLastTickReceived;
 
+        //the peer network this connection is being managed by
+        protected NetworkConnection m_ncnParetnNetworkConneciton;
+
         [Obsolete]
         public Connection(byte bConnectionID, ClassWithIDFactory cifPacketFactory)
         {
@@ -87,29 +113,76 @@ namespace Networking
 
             m_cifPacketFactory = cifPacketFactory;
 
-            m_pakReceivedPackets = new Queue<DataPacket>();
-            m_PacketsInFlight = new RandomAccessQueue<DataPacket>();
-            m_cppOrderedPacketProcessorList = new SortedSet<BaseConnectionPacketProcessor>(new PacketProcessorComparer());
+            ReceivedPackets = new Queue<DataPacket>();
+            PacketsInFlight = new RandomAccessQueue<DataPacket>();
+            OrderedPacketProcessorList = new SortedSet<BaseConnectionPacketProcessor>(new PacketProcessorComparer());
 
             m_iPacketsQueuedToSendCount = 0;
             m_iLastAckPacketNumberSent = 0;
             m_iTotalPacketsReceived = 0;
         }
 
-        public Connection(long lUserID, ClassWithIDFactory cifPacketFactory)
+        public Connection(NetworkConnection ncnParetnNetwork, long lUserUniqueID, ClassWithIDFactory cifPacketFactory, IPeerTransmitter ptrPeerTransmitter )
         {
-            m_lUserID = lUserID;
+            Status = ConnectionStatus.Initializing;
+
+            m_ncnParetnNetworkConneciton = ncnParetnNetwork;
+
+            m_lUserUniqueID = lUserUniqueID;
 
             m_cifPacketFactory = cifPacketFactory;
 
-            m_pakReceivedPackets = new Queue<DataPacket>();
-            m_PacketsInFlight = new RandomAccessQueue<DataPacket>();
-            m_cppOrderedPacketProcessorList = new SortedSet<BaseConnectionPacketProcessor>(new PacketProcessorComparer());
+            m_ptrTransmitter = ptrPeerTransmitter;
+
+            //listen for negotiation messages
+            m_ptrTransmitter.OnNegotiationMessageCreated += OnNegoriationMessageFromTransmitter;
+
+            //listen for data sent over the transmittion system
+            m_ptrTransmitter.OnDataReceive += ReceivePacket;
+
+            //listen for establishment of a connection to another peer
+            m_ptrTransmitter.OnConnectionEstablished += OnConnectionEstablished;
 
             m_iPacketsQueuedToSendCount = 0;
             m_iLastAckPacketNumberSent = 0;
             m_iTotalPacketsReceived = 0;
         }
+
+        #region TransmittionHandling
+
+        /// <summary>
+        /// get transmittion settings from transmittion component 
+        /// </summary>
+        public void StartConnectionNegotiation()
+        {
+            m_ptrTransmitter.StartNegotiation();
+        }
+
+        //process network negotiation data
+        public void ProcessNetworkNegotiationMessage(string strConnectionData)
+        {
+            m_ptrTransmitter.ProcessNegotiationMessage(strConnectionData);
+        }
+
+        public void DisconnectFromPeer()
+        {
+            m_ptrTransmitter.Disconnect();
+        }
+        
+        protected void OnNegoriationMessageFromTransmitter(string strMessageJson)
+        {
+            TransmittionNegotiationMessages.Enqueue(strMessageJson);
+        }
+
+        protected void OnConnectionEstablished()
+        {
+            //check that we are transittioning from correct state
+            if (Status == ConnectionStatus.Initializing)
+            {
+                Status = ConnectionStatus.Connected;
+            }
+        }
+        #endregion
 
         //check if a ping packet is needed to keep the connection alive
         public void UpdateConnection()
@@ -140,21 +213,29 @@ namespace Networking
 
                 iPacketNumberHead++;
 
-                //add packet to list of packets to be processed 
-                QueueReceivedPacket(pktDecodedPacket, iPacketNumberHead);
+                //check if packet is in order
+                if(IsPacketInOrder(iPacketNumberHead))
+                {
+                    //update the most recent packet number
+                    m_iTotalPacketsReceived = iPacketNumberHead;
+
+                    //add packet to list of packets to be processed 
+                    ProcessRecievedPacket(pktDecodedPacket);
+                }                
             }
         }
 
         public bool QueuePacketToSend(DataPacket pktPacket)
         {
-            m_iPacketsQueuedToSendCount++;
 
-            pktPacket = ProccessPacketForSending(pktPacket);
+            pktPacket = SendingPacketConnectionProcesses(pktPacket);
 
             //check if packet should be sent
             if(pktPacket != null)
             {
-                m_PacketsInFlight.Enqueue(pktPacket);
+                PacketsInFlight.Enqueue(pktPacket);
+
+                m_iPacketsQueuedToSendCount++;
 
                 return true;
             }           
@@ -164,15 +245,19 @@ namespace Networking
 
         public void AddPacketProcessor(BaseConnectionPacketProcessor cppProcessor)
         {
-            if(m_cppOrderedPacketProcessorList.Add(cppProcessor) == false)
+            if(OrderedPacketProcessorList.Add(cppProcessor) == false)
             {
                 Debug.LogError("Packet Processor Failed To Add to connection");
             }
-        }
 
+            cppProcessor.SetConnection(this);
+
+            cppProcessor.Start();
+        }
+               
         public T GetPacketProcessor<T>() where T : BaseConnectionPacketProcessor
         {
-            foreach(BaseConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
+            foreach(BaseConnectionPacketProcessor cppProcessor in OrderedPacketProcessorList)
             {
                 if(cppProcessor is T)
                 {
@@ -183,10 +268,32 @@ namespace Networking
             return null;
         }
 
-        private DataPacket ProccessPacketForSending(DataPacket pktPacket)
+        public void ProcessRecievedPacket(DataPacket pktPacket)
+        {
+            //use the per connection packet processors to evaluate the packet
+            pktPacket = RecievedPacketConnectionProcesses(pktPacket);
+
+            //check if this packet should be passed on to be processed by the rest of the game 
+            if (pktPacket != null)
+            {
+                //queue up the packet (remove in future)
+                ReceivedPackets.Enqueue(pktPacket);
+
+                //send packets to network packet manager for further processing
+                m_ncnParetnNetworkConneciton.ProcessRecievedPacket(m_lUserUniqueID, pktPacket);
+            }
+        }
+
+
+        /// <summary>
+        /// processes packet for sending and returns null if packet should not be sent
+        /// </summary>
+        /// <param name="pktPacket"></param>
+        /// <returns></returns>
+        private DataPacket SendingPacketConnectionProcesses(DataPacket pktPacket)
         {
             //loop through all the packet processors 
-            foreach(BaseConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
+            foreach(BaseConnectionPacketProcessor cppProcessor in OrderedPacketProcessorList)
             {
                 //process packet 
                 pktPacket = cppProcessor.ProcessPacketForSending(this,pktPacket);
@@ -201,10 +308,16 @@ namespace Networking
             return pktPacket;
         }
 
-        private DataPacket ProccessReceivedPacket(DataPacket pktPacket)
+        /// <summary>
+        /// runs the per connection packet processes to modifiy the data
+        /// returns null if packet should not be processed more by network conneciton
+        /// </summary>
+        /// <param name="pktPacket"></param>
+        /// <returns></returns>
+        private DataPacket RecievedPacketConnectionProcesses(DataPacket pktPacket)
         {
             //loop through all the packet processors 
-            foreach (BaseConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
+            foreach (BaseConnectionPacketProcessor cppProcessor in OrderedPacketProcessorList)
             {
                 //process packet 
                 pktPacket = cppProcessor.ProcessReceivedPacket(this,pktPacket);
@@ -222,17 +335,17 @@ namespace Networking
         private void SendPackets()
         {
             //check if there is anything to send
-            if (m_PacketsInFlight.Count == 0)
+            if (PacketsInFlight.Count == 0)
             {
                 return;
             }
 
             //calculate the number of packets that dont need to be sent 
-            int iPacketsToDrop = m_PacketsInFlight.Count - (m_iPacketsQueuedToSendCount - m_iLastAckPacketNumberSent);
+            int iPacketsToDrop = PacketsInFlight.Count - (m_iPacketsQueuedToSendCount - m_iLastAckPacketNumberSent);
 
-            if (iPacketsToDrop >= m_PacketsInFlight.Count)
+            if (iPacketsToDrop >= PacketsInFlight.Count)
             {
-                m_PacketsInFlight.Clear();
+                PacketsInFlight.Clear();
 
                 return;
             }
@@ -240,21 +353,21 @@ namespace Networking
             //dequeue all the old packets that have already been acknowledged
             for (int i = 0; i < iPacketsToDrop; i++)
             {
-                m_PacketsInFlight.Dequeue();
+                PacketsInFlight.Dequeue();
             }
 
-            if (m_PacketsInFlight.Count == 0)
+            if (PacketsInFlight.Count == 0)
             {
                 return;
             }
 
             //create packet wrapper 
-            PacketWrapper pkwPacketWrappepr = new PacketWrapper(m_iTotalPacketsReceived, m_iPacketsQueuedToSendCount - m_PacketsInFlight.Count, m_iMaxBytesToSend);
+            PacketWrapper pkwPacketWrappepr = new PacketWrapper(m_iTotalPacketsReceived, m_iPacketsQueuedToSendCount - PacketsInFlight.Count, m_iMaxBytesToSend);
      
             //add as many packets as possible without hitting the max send data limit
-            for (int i = 0; i < m_PacketsInFlight.Count; i++)
+            for (int i = 0; i < PacketsInFlight.Count; i++)
             {
-                DataPacket pktPacketToSend = m_PacketsInFlight[i];
+                DataPacket pktPacketToSend = PacketsInFlight[i];
 
                 if (pkwPacketWrappepr.WriteStream.BytesRemaining - pktPacketToSend.PacketTotalSize > 0)
                 {
@@ -283,106 +396,26 @@ namespace Networking
             DataPacket pktOutput = m_cifPacketFactory.CreateType<DataPacket>(iPacketType);
                         
             //decode packet
-            pktOutput.DecodePacket(packetWrapper);
+            pktOutput.DecodePacket(packetWrapper.ReadStream);
 
             return pktOutput;
         }
 
-        private void QueueReceivedPacket(DataPacket pktPacket, int iPacketNumber)
+        private bool IsPacketInOrder(int iPacketNumber)
         {
             //check if packet has already been queued 
             if (iPacketNumber <= m_iTotalPacketsReceived)
             {
-                return;
+                return false;
             }
 
-            //update the most recent packet number
-            m_iTotalPacketsReceived = iPacketNumber;
-
-            pktPacket = ProccessReceivedPacket(pktPacket);
-
-            //check if this packet should be passed on to be processed by the rest of the game 
-            if (pktPacket != null)
-            {
-                //queue up the packet 
-                m_pakReceivedPackets.Enqueue(pktPacket);
-            }
+            return true;
         }
 
-        ////process packets that have a tick stamp
-        //private void ProcessReceivedTickStampedPackets(Packet pktPacket)
-        //{
-        //    //check if packet is ping packet 
-        //    if (pktPacket is PingPacket)
-        //    {
-        //        m_iLastTickReceived += TickStampedPacket.MaxTicksBetweenTickStampedPackets;
-        //
-        //        return;
-        //    }
-        //
-        //    if (pktPacket is TickStampedPacket)
-        //    {
-        //        TickStampedPacket tspPacket = pktPacket as TickStampedPacket;
-        //
-        //        //update the tick of the connection target 
-        //        m_iLastTickReceived += tspPacket.Offset;
-        //
-        //        //set the tick of the packet 
-        //        tspPacket.m_iTick = m_iLastTickReceived;
-        //
-        //        return;
-        //    }
-        //
-        //    if(pktPacket is ResetTickCountPacket)
-        //    {
-        //        m_iLastTickReceived = 0;
-        //
-        //        return;
-        //    }
-        //}
-
-       // private void ProcessSendingTickStampedPackets(Packet pktPacket)
-       // {
-       //     //reset the tick for game start events 
-       //     if(pktPacket is ResetTickCountPacket)
-       //     {
-       //         //reset connection tick
-       //         m_iLastPacketTickQueuedToSend = 0;
-       //     }
-       //
-       //     if(pktPacket is PingPacket)
-       //     {
-       //         m_iLastPacketTickQueuedToSend += TickStampedPacket.MaxTicksBetweenTickStampedPackets;
-       //     }
-       //
-       //     //set the offset for tick stamped packets
-       //     if (pktPacket is TickStampedPacket)
-       //     {
-       //         TickStampedPacket tspPacket = pktPacket as TickStampedPacket;
-       //
-       //         //check if the target tick between this packet and the next is too big
-       //         while (tspPacket.m_iTick - m_iLastPacketTickQueuedToSend > TickStampedPacket.MaxTicksBetweenTickStampedPackets)
-       //         {
-       //             //queue a ping packet 
-       //             QueuePacketToSend(new PingPacket());
-       //
-       //             //shift the tick forward 
-       //             m_iLastPacketTickQueuedToSend += TickStampedPacket.MaxTicksBetweenTickStampedPackets;
-       //         }
-       //
-       //         //set the packets offset from the previouse packet 
-       //         tspPacket.SetOffset(m_iLastPacketTickQueuedToSend);
-       //
-       //         //update the current tick
-       //         m_iLastPacketTickQueuedToSend = tspPacket.m_iTick;
-       //
-       //         return;
-       //     }
-       // }
 
         private void UpdatePacketProcessors()
         {
-            foreach(BaseConnectionPacketProcessor cppProcessor in m_cppOrderedPacketProcessorList)
+            foreach(BaseConnectionPacketProcessor cppProcessor in OrderedPacketProcessorList)
             {
                 cppProcessor.Update(this);
             }

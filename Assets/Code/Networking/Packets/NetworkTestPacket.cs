@@ -38,14 +38,14 @@ namespace Networking
             }
         }
 
-        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
+        public override void DecodePacket(ReadByteStream rbsByteStream)
         {
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_bEcho);
+            ByteStream.Serialize(rbsByteStream, ref m_bEcho);
         }
 
-        public override void EncodePacket(PacketWrapper pkwPacketWrapper)
+        public override void EncodePacket(WriteByteStream wbsByteStream)
         {
-            ByteStream.Serialize(pkwPacketWrapper.WriteStream,ref m_bEcho);
+            ByteStream.Serialize(wbsByteStream,ref m_bEcho);
         }
     }
 
@@ -81,20 +81,20 @@ namespace Networking
             }
         }
 
-        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
+        public override void DecodePacket(ReadByteStream rbsByteStream)
         {
 
             //decode tick offset
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_bEcho);
-            ByteStream.Serialize(pkwPacketWrapper.ReadStream, ref m_lTicks);
+            ByteStream.Serialize(rbsByteStream, ref m_bEcho);
+            ByteStream.Serialize(rbsByteStream, ref m_lTicks);
 
         }
 
-        public override void EncodePacket(PacketWrapper pkwPacketWrapper)
+        public override void EncodePacket(WriteByteStream wbsByteStream)
         {
             //encode tick offset
-            ByteStream.Serialize(pkwPacketWrapper.WriteStream,ref m_bEcho);
-            ByteStream.Serialize(pkwPacketWrapper.WriteStream,ref m_lTicks);
+            ByteStream.Serialize(wbsByteStream,ref m_bEcho);
+            ByteStream.Serialize(wbsByteStream,ref m_lTicks);
         }
     }
 }

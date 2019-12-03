@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Networking
 {
@@ -24,51 +22,42 @@ namespace Networking
             }
         }
 
-        public NetworkLayoutProcessor.NetworkLayout m_nlaNetworkLayout;
+        public NetworkLayout m_nlaNetworkLayout;
 
         public override int PacketPayloadSize
         {
             get
             {
-                int iPacketSize = sizeof(Int32);
-
-                iPacketSize += sizeof(Int64) * 2 * m_nlaNetworkLayout.m_conConnectionDetails.Count;
-
-                return iPacketSize;
+                return ByteStream.DataSize(this);
             }
         }
 
-        public override void DecodePacket(PacketWrapper pkwPacketWrapper)
+        public override void DecodePacket(ReadByteStream pkwPacketWrapper)
         {
-            int iItemCount = 0;
-
-            ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref iItemCount);
-
-            m_nlaNetworkLayout.m_conConnectionDetails = new List<NetworkLayoutProcessor.NetworkLayout.ConnectionState>(iItemCount);
-
-            for (int i = 0; i < iItemCount; i++)
-            {
-                NetworkLayoutProcessor.NetworkLayout.ConnectionState conConnection = new NetworkLayoutProcessor.NetworkLayout.ConnectionState();
-
-                ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref conConnection.m_lConnectionID);
-                ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref conConnection.m_dtmTimeOfConnection);
-
-                m_nlaNetworkLayout.m_conConnectionDetails.Add(conConnection);
-            }
+            ByteStream.Serialize(pkwPacketWrapper, this);
         }
 
-        public override void EncodePacket(PacketWrapper pkwPacketWrapper)
+        public override void EncodePacket(WriteByteStream pkwPacketWrapper)
         {
-            int iItemCount = m_nlaNetworkLayout.m_conConnectionDetails.Count;
+            ByteStream.Serialize(pkwPacketWrapper, this);
+        }
+    }
 
-            ByteStream.Serialize(pkwPacketWrapper.WriteStream,ref iItemCount);
-            for(int i = 0; i < iItemCount; i++)
-            {
-                NetworkLayoutProcessor.NetworkLayout.ConnectionState conConnection = m_nlaNetworkLayout.m_conConnectionDetails[i];
+    public partial class ByteStream
+    {
+        public static void Serialize(ReadByteStream rbsByteStream, NetworkLayoutPacket Input)
+        {
+            ByteStream.Serialize(rbsByteStream, ref Input.m_nlaNetworkLayout);
+        }
 
-                ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref conConnection.m_lConnectionID);
-                ByteStream.Serialize(pkwPacketWrapper.WriteStream, ref conConnection.m_dtmTimeOfConnection);
-            }
+        public static void Serialize(WriteByteStream wbsByteStream, NetworkLayoutPacket Input)
+        {
+            ByteStream.Serialize(wbsByteStream, ref Input.m_nlaNetworkLayout);
+        }
+
+        public static int DataSize(NetworkLayoutPacket Input)
+        {
+            return ByteStream.DataSize(ref Input.m_nlaNetworkLayout);
         }
     }
 }
