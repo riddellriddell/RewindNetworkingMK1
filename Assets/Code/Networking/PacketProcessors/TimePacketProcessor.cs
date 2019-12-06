@@ -132,6 +132,12 @@ namespace Networking
                 m_tspCurrentTimeOffset = m_tspTargetTimeOffset;
             }
         }
+
+        protected override void AddDependentPacketsToPacketFactory(ClassWithIDFactory cifPacketFactory)
+        {
+            cifPacketFactory.AddType<NetTestSendPacket>(NetTestSendPacket.TypeID);
+            cifPacketFactory.AddType<NetTestReplyPacket>(NetTestReplyPacket.TypeID);
+        }
     }
 
     public class TimeConnectionProcessor : ManagedConnectionPacketProcessor<TimeNetworkProcessor>

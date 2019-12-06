@@ -1,8 +1,6 @@
 ﻿using Networking;
 using Sim;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -35,21 +33,26 @@ namespace GameManagers
 
         //the state of the game
         public ActiveGameState State { get; private set; } = ActiveGameState.GettingGateway;
-                
+
         //the web interface 
         protected WebInterface m_winWebInterface = null;
 
         //the game sim
         protected SimManager m_smgSimManager = null;
-        
+
         //the peer to peer network
         protected NetworkConnection m_ncnNetworkConnection;
 
+        //the interface between the p2p network and the web API
+        protected NetworkGatewayManager m_ngmGatewayManager;
+
+        protected NetworkConnectionPropagatorProcessor m_ncpConnectionPropegator;
+
         //the amount of time to wait to get gateway before timing out and starting again
-        protected float m_fGettingGatewayTimeout = 10f;
+        protected float m_fGettingGatewayTimeout = 30f;
 
         //the amount of time to wait before timing out a connection through a gateway
-        protected float m_fGatewayConnectionTimeout = 10f;
+        protected float m_fGatewayConnectionTimeout = 30f;
         protected DateTime m_dtmConnectThroughGateStart;
 
         //the timeout time for getting sim state from cluster
@@ -60,8 +63,11 @@ namespace GameManagers
         public ActiveGameManager(WebInterface winWebInterface)
         {
             m_winWebInterface = winWebInterface;
+
+            //start the connection process
+            EnterGettingGateway();
         }
-        
+
         public void UpdateGame(float fDeltaTime)
         {
 
@@ -71,6 +77,7 @@ namespace GameManagers
                 case ActiveGameState.GettingGateway:
 
                     //wait for web interface to either fail or succeed 
+                    UpdateGettingGateway();
 
                     break;
 
@@ -81,6 +88,7 @@ namespace GameManagers
                     //apply response to network connection
                     //mark network connection as connected to cluster
                     //exit state when connection through network connection estabished 
+                    UpdateConnectingThroughGateway();
 
                     break;
 
@@ -88,30 +96,36 @@ namespace GameManagers
 
                     //request sim state from cluster
                     //exit when sim state pulled from cluster
+                    UpdateGettingSimStateFromCluster();
 
                     break;
 
                 case ActiveGameState.SetUpNewSim:
                     //no existing game found so setting up new sim internally 
                     //return when sim created using start settings 
+                    UpdateSetUpNewSim();
 
                     break;
 
                 case ActiveGameState.RunningStandardGame:
 
                     //listen for any disconnect or stop commands from sim 
-
                     //send any sim game logs to server
-
                     //check if gateway needs to be setup
-
                     //if gateway is running pass any messages for gateway manager through to network connector
+                    UpdateRunningGame();
 
                     //when sim ends ent
 
+
+                    break;
+                case ActiveGameState.GameEnded:
+
+                     UpdateGameEndState();
+
                     break;
             }
-                
+
 
         }
 
@@ -128,32 +142,41 @@ namespace GameManagers
 
         }
 
+        #region GameStates
+
         protected void EnterGettingGateway()
         {
+            Debug.Log($"Enter {ActiveGameState.GettingGateway.ToString()} state");
+
             //set state to getting gateway
             State = ActiveGameState.GettingGateway;
 
             //request gateway from webinterface
-            if(m_winWebInterface.SearchForGateway() == false)
+            if (m_winWebInterface.SearchForGateway() == false)
             {
+                Debug.Log($"User:{m_winWebInterface.PlayerID} Encountered error when searching for gateway");
+
                 //error has occured searching for gateway exit active game state
                 State = ActiveGameState.Error;
                 return;
             }
+
+            //setup network to connect through gateway 
+            SetupNetworking();
         }
 
         protected void UpdateGettingGateway()
         {
             //check if gateway found
-            if(m_winWebInterface.ExternalGatewayCommunicationStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Succedded)
+            if (m_winWebInterface.ExternalGatewayCommunicationStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Succedded)
             {
                 //transition to connecting through gateway 
                 EnterConnectingThroughGateway();
 
                 return;
             }
-            else if(m_winWebInterface.ExternalGatewayCommunicationStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Failed &&
-                m_winWebInterface.ExternalGatewayCommunicationStatus.ShouldRestart() == false)
+            else if (m_winWebInterface.ExternalGatewayCommunicationStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Failed &&
+               ( m_winWebInterface.ExternalGatewayCommunicationStatus.ShouldRestart() == false || m_winWebInterface.NoGatewayExistsOnServer))
             {
                 EnterSetUpNewSim();
                 return;
@@ -162,22 +185,29 @@ namespace GameManagers
 
         protected void EnterConnectingThroughGateway()
         {
+            Debug.Log($"Enter {ActiveGameState.ConnectingThroughGateway.ToString()} state");
+
             State = ActiveGameState.ConnectingThroughGateway;
             m_dtmConnectThroughGateStart = DateTime.UtcNow;
 
             //tell p2p network to start a new connection for gateway
             long lConnectionID = m_winWebInterface.ExternalGateway.Value.m_lOwningPlayerId;
+
+            //tell the connection propegator who to try to connect to
+            m_ncpConnectionPropegator.StartRequest(lConnectionID);
         }
 
         protected void UpdateConnectingThroughGateway()
         {
             //check if gateway has any new messages for network
-
             //check if network has any new messages to send through gateway 
+            HandleGateway();
+
+            //update networking processes 
+            m_ncnNetworkConnection.UpdateConnectionsAndProcessors();
 
             //check if network has established connection
-            bool bHasEstablishedConnection = true;
-            if (bHasEstablishedConnection)
+            if (m_ncnNetworkConnection.m_bIsConnectedToSwarm)
             {
                 //start getting sim state from cluster
                 EnterGettingSimStateFromCluster();
@@ -187,8 +217,11 @@ namespace GameManagers
             //check for timeout 
             TimeSpan tspTimeSinceConnectionStart = DateTime.UtcNow - m_dtmConnectThroughGateStart;
 
-            if(tspTimeSinceConnectionStart.TotalSeconds > m_fGatewayConnectionTimeout)
+            if (tspTimeSinceConnectionStart.TotalSeconds > m_fGatewayConnectionTimeout)
             {
+
+                Debug.Log("Connection attempt timed out");
+
                 //connection attempt timed out restarting active game connection process
                 Reset();
                 return;
@@ -197,20 +230,30 @@ namespace GameManagers
 
         protected void EnterGettingSimStateFromCluster()
         {
+            Debug.Log($"Enter {ActiveGameState.GettingSimStateFromCluster.ToString()} state");
+
             State = ActiveGameState.GettingSimStateFromCluster;
             m_dtmGettingSimStateStart = DateTime.UtcNow;
         }
 
         protected void UpdateGettingSimStateFromCluster()
         {
+            //update networking 
+            m_ncnNetworkConnection.UpdateConnectionsAndProcessors();
+
+            //update gateway management 
+            HandleGateway();
+
+
             //check if sim state has been fetched from cluster
             bool bHasFetchedSimState = true;
-            if(bHasFetchedSimState)
+            if (bHasFetchedSimState)
             {
                 //set sim state using fetched state 
 
 
                 //transition to running normal game
+                EnterRunningGame();
 
                 return;
             }
@@ -228,11 +271,14 @@ namespace GameManagers
 
         protected void EnterSetUpNewSim()
         {
+            Debug.Log($"Enter {ActiveGameState.SetUpNewSim.ToString()} state");
+
             State = ActiveGameState.SetUpNewSim;
 
             //use passed in target sim settings to setup inital sim
 
             // sim manager setup sim
+
         }
 
         protected void UpdateSetUpNewSim()
@@ -241,8 +287,12 @@ namespace GameManagers
 
             bool bIsSimSetup = true;
 
-            if(bIsSimSetup)
+            if (bIsSimSetup)
             {
+
+                //activate network layer to start looking for new connections
+                m_ncnNetworkConnection.m_bIsConnectedToSwarm = true;
+
                 //enter run game state 
                 EnterRunningGame();
                 return;
@@ -251,6 +301,8 @@ namespace GameManagers
 
         protected void EnterRunningGame()
         {
+            Debug.Log($"Enter {ActiveGameState.RunningStandardGame.ToString()} state");
+
             State = ActiveGameState.RunningStandardGame;
 
             //change setting on network to running standard game
@@ -258,6 +310,7 @@ namespace GameManagers
 
         protected void UpdateRunningGame()
         {
+
             // ------------ check for errors -----------------
             //check for error in networking
 
@@ -274,6 +327,7 @@ namespace GameManagers
             //update simulation
 
             //update networking 
+            m_ncnNetworkConnection.UpdateConnectionsAndProcessors();
 
             //update Web Interface(may be external? )
 
@@ -287,17 +341,16 @@ namespace GameManagers
 
             //----------- check for networking system changes 
 
-            //check if Gateway is needed
+            //update gateway management 
+            HandleGateway();
 
-            //get sim state and use it to set gateway
 
-            //get any inputs from web and apply them to p2p network
-
-            //get any inputs from p2p network that need to be sent through network
         }
-        
+
         protected void EnterEndGameState()
         {
+            Debug.Log($"Enter {ActiveGameState.GameEnded.ToString()} state");
+
             State = ActiveGameState.GameEnded;
 
             //deactivate networking 
@@ -308,6 +361,90 @@ namespace GameManagers
         protected void UpdateGameEndState()
         {
             //wait for user to exit back to main menu
+        }
+
+        #endregion
+
+        /// <summary>
+        /// gets messages from web api and passes them to the peer to peer networking layer
+        /// </summary>
+        protected void HandleGateway()
+        {
+            //check if Gateway is needed
+            if (m_ngmGatewayManager.NeedsOpenGateway)
+            {
+                //get sim state and use it to set gateway
+                SimStatus smsStatus = new SimStatus()
+                {
+                    m_iRemainingSlots = 10,
+                    m_iSimStatus = (int)SimStatus.State.Lobby
+                };
+
+                m_winWebInterface.SetGateway(smsStatus);
+
+            }
+            else
+            {
+                //make sure gateway is disabled
+                m_winWebInterface.CloseGateway();
+            }
+
+            //if still in the connection phase of an active gateway
+            if (m_ncnNetworkConnection.m_bIsConnectedToSwarm == false || m_ngmGatewayManager.NeedsOpenGateway)
+            {
+                //make sure getting messages from server is enabled
+                if(m_winWebInterface.IsGettingMessagesFromServer() == false)
+                {
+                    m_winWebInterface.StartGettingMessages();
+                }
+
+                //get any inputs from web and apply them to p2p network
+                while (m_winWebInterface.MessagesFromServer.Count > 0)
+                {
+                    UserMessage usmMessage = m_winWebInterface.MessagesFromServer.Dequeue();
+
+                    Debug.Log($"recieved message{usmMessage.m_strMessage} from: {usmMessage.m_lFromUser}");
+
+                    m_ngmGatewayManager.ProcessMessageFromGateway(usmMessage);
+                }
+
+                //get any inputs from p2p network that need to be sent through network
+                while (m_ngmGatewayManager.MessagesToSend.Count > 0)
+                {
+                    SendMessageCommand smcMessage = m_ngmGatewayManager.MessagesToSend.Dequeue();
+
+                    Debug.Log($"sending message {smcMessage.m_strMessage} from: {smcMessage.m_lFromID} to:{smcMessage.m_lToID}");
+
+                    m_winWebInterface.SendMessage(smcMessage);
+                }
+            }
+            else
+            {
+                if (m_winWebInterface.IsGettingMessagesFromServer())
+                {
+                    Debug.Log($"User:{m_winWebInterface.PlayerID} stopping getting messages from server");
+                    m_winWebInterface.StopGettingMessages();
+                }
+            }
+        }
+
+        protected void SetupNetworking()
+        {
+            //create network
+            m_ncnNetworkConnection = new NetworkConnection(m_winWebInterface.PlayerID, new FakeWebRTCFactory());
+
+            //add network processors
+            m_ncnNetworkConnection.AddPacketProcessor(new TimeNetworkProcessor());
+            m_ncnNetworkConnection.AddPacketProcessor(new NetworkdLargePacketTransferManager());
+            m_ncnNetworkConnection.AddPacketProcessor(new NetworkLayoutProcessor());
+
+            m_ngmGatewayManager = new NetworkGatewayManager();
+            m_ncnNetworkConnection.AddPacketProcessor(m_ngmGatewayManager);
+
+            m_ncpConnectionPropegator = new NetworkConnectionPropagatorProcessor();
+            m_ncnNetworkConnection.AddPacketProcessor(m_ncpConnectionPropegator);
+           
+
         }
     }
 }

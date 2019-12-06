@@ -37,12 +37,12 @@ namespace Networking
 
         }
 
-        public virtual DataPacket ProcessReceivedPacket(long lUserID, DataPacket pktInputPacket)
+        public virtual DataPacket ProcessReceivedPacket(long lFromUserID, DataPacket pktInputPacket)
         {
             return pktInputPacket;
         }
 
-        public virtual DataPacket ProcessPacketForSending(long lUserID, DataPacket pktOutputPacket)
+        public virtual DataPacket ProcessPacketForSending(long lToUserID, DataPacket pktOutputPacket)
         {
             return pktOutputPacket;
         }

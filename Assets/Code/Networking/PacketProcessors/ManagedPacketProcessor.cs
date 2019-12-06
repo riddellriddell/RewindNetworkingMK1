@@ -24,12 +24,20 @@ namespace Networking
 
         }
 
+        protected virtual void AddDependentPacketsToPacketFactory(ClassWithIDFactory cifPacketFactory)
+        {
+
+        }
+
         public override void OnAddToNetwork(NetworkConnection ncnNetwork)
         {
             ParentNetworkConnection = ncnNetwork;
 
+            //chance to add the packet types that this processor is reliant on
+            AddDependentPacketsToPacketFactory(ParentNetworkConnection.PacketFactory);
+
             //add processing component to each existing connection
-            foreach(Connection conConnection in ParentNetworkConnection.ConnectionList.Values)
+            foreach (Connection conConnection in ParentNetworkConnection.ConnectionList.Values)
             {
                 //create new packet processor
                 T connectionProcessor = NewConnectionProcessor();

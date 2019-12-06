@@ -13,20 +13,22 @@ namespace Networking
 
         public byte[] m_bSharedBuffer;
 
-        public override DataPacket ProcessPacketForSending(long lUserID, DataPacket pktOutputPacket)
+        protected override void AddDependentPacketsToPacketFactory(ClassWithIDFactory cifPacketFactory)
         {
-            return base.ProcessPacketForSending(lUserID, pktOutputPacket);
+            cifPacketFactory.AddType<LargePacket>(LargePacket.TypeID);
         }
+
     }
 
     public class ConnectionLargePacketTransferManager : ManagedConnectionPacketProcessor<NetworkdLargePacketTransferManager>
     {
         public override int Priority { get; } = 12;
+        protected List<LargePacket> LargePacketSections { get; } = new List<LargePacket>();
 
         public override DataPacket ProcessPacketForSending(Connection conConnection, DataPacket pktOutputPacket)
         {
             //check is packet  larger than the mtu and will need splitting 
-            if (pktOutputPacket.PacketTotalSize > conConnection.MaxPacketBytesToSend)
+            if ((pktOutputPacket is LargePacket) == false && pktOutputPacket.PacketTotalSize > conConnection.MaxPacketBytesToSend)
             {
                 //split packet and reassemble at other end
                 List<LargePacket> lpkSplitPackets = SplitPacket(pktOutputPacket, conConnection.MaxPacketBytesToSend);
@@ -36,9 +38,45 @@ namespace Networking
                 {
                     conConnection.QueuePacketToSend(lpkSplitPackets[i]);
                 }
+
+                //don't try and send packet because its beeing sent as split packets instead 
+                return null;
             }
 
             return base.ProcessPacketForSending(conConnection, pktOutputPacket);
+        }
+
+        public override DataPacket ProcessReceivedPacket(Connection conConnection, DataPacket pktInputPacket)
+        {
+            if(pktInputPacket is LargePacket)
+            {
+                LargePacketSections.Add(pktInputPacket as LargePacket);
+
+                //check if all the packet segments have arrived and the large packet can be decoded
+                if (IsLargePacketListComplete(LargePacketSections))
+                {
+                    //decode the large packet from array of sub packets 
+                    DataPacket dpkReconstructedPacket = CombineSplitPackets(LargePacketSections);
+
+                    //process the reconstructed packet
+                    conConnection.ProcessRecievedPacket(dpkReconstructedPacket);
+                }
+
+                return null;
+
+            }
+
+            return base.ProcessReceivedPacket(conConnection, pktInputPacket);
+        }
+
+        public bool IsLargePacketListComplete(List<LargePacket> lpkPacketSegments)
+        {
+            if (lpkPacketSegments[lpkPacketSegments.Count - 1].m_bIsLastPacketInSequence == 1)
+            {
+                return true;
+            }
+
+            return false;
         }
 
         public List<LargePacket> SplitPacket(DataPacket pktOutputPacket, int iMaxPacketSize)
@@ -65,9 +103,6 @@ namespace Networking
             //divide packet up into sendable chunks 
             int iReadStartIndex = 0;
 
-            //index to keep track of sub packet number
-            int iSubPacketNumber = 0;
-
             while (iReadStartIndex < wbsWriteStream.ReadWriteHead)
             {
                 //get packet to send data 
@@ -86,11 +121,8 @@ namespace Networking
                 //add payload to packet
                 lpkLargePacket.m_bPacketSegment.AddRange(arsSegment);
 
-                //set package index
-                lpkLargePacket.m_iSubPacketNumber = iSubPacketNumber;
-
-                //increment index
-                iSubPacketNumber++;
+                //indicate this packet is not the last in the sequence
+                lpkLargePacket.m_bIsLastPacketInSequence = 0;
 
                 iReadStartIndex += iMTU;
 
@@ -99,6 +131,9 @@ namespace Networking
 
                 lpkOutput.Add(lpkLargePacket);
             }
+
+            //mark last packet in sequence
+            lpkOutput[lpkOutput.Count - 1].m_bIsLastPacketInSequence = 1;
 
             return lpkOutput;
         }
@@ -118,12 +153,14 @@ namespace Networking
             //copy packet data across 
             foreach (LargePacket lpkPacket in colLargePakets)
             {
-                int iNumberOfItems = lpkPacket.m_bPacketSegment.Count;
+                int iSubPacketSize = lpkPacket.m_bPacketSegment.Count;
 
-                Array.Copy(lpkPacket.m_bPacketSegment.ToArray(), 0, m_tParentPacketProcessor.m_bSharedBuffer, iWriteHead, iNumberOfItems);
+                Array.Copy(lpkPacket.m_bPacketSegment.ToArray(), 0, m_tParentPacketProcessor.m_bSharedBuffer, iWriteHead, iSubPacketSize);
 
-                iWriteHead += iNumberOfItems;
+                iWriteHead += iSubPacketSize;
             }
+            
+            colLargePakets.Clear();
 
             ReadByteStream rbsReadStream = new ReadByteStream(m_tParentPacketProcessor.m_bSharedBuffer);
 
@@ -134,6 +171,7 @@ namespace Networking
             DataPacket dpkOutputPacket = ParentConnection.m_cifPacketFactory.CreateType<DataPacket>(bPacketType);
 
             dpkOutputPacket.DecodePacket(rbsReadStream);
+
 
             return dpkOutputPacket;
         }

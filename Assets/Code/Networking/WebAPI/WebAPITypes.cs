@@ -37,19 +37,19 @@ namespace Networking
         public int m_iPlayerRank;
     }
 
+    //todo find a better way to do this
+    public enum MessageType
+    {
+        GatewayMessage,
+        WebRTCOffer,
+        WebRTCIceCandidate,
+        WebRTCReply,
+    }
+
+
     [Serializable]
     public struct UserMessage
-    {
-        /// <summary>
-        /// Message Types
-        /// </summary>
-        public enum MessageType
-        {
-            WebRTCOffer,
-            WebRTCIceCandidate,
-            WebRTCReply,
-        }
-
+    {       
         public long m_lFromUser;
         public long m_lTimeOfMessage;
         public int m_iMessageType;
@@ -114,6 +114,8 @@ namespace Networking
     [Serializable]
     public struct SendMessageCommand
     {
+      
+
         public long m_lFromID;
         public long m_lToID;
         public int m_iType;

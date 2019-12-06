@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Assets.Code.Utility;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 
 namespace Networking
@@ -10,17 +12,7 @@ namespace Networking
     /// server and if no gateway exists decides if it wants to become a gateway 
     /// </summary>
     public class NetworkGatewayManager : ManagedNetworkPacketProcessor<ConnectionGatewayManager>
-    {
-        [Serializable]
-        public struct GatewayMessage
-        {
-            public int m_iType;
-
-            public int m_lTargetUserID;
-
-            public DataPacket[] m_dpkMessageJson;
-        }
-
+    {      
         /// <summary>
         /// how many secconds between anouncing you currently have a gateway running
         /// </summary>
@@ -44,30 +36,40 @@ namespace Networking
         }
 
         /// <summary>
-        /// turns off gateway managers attempts to setup new gateways / communicate gateway setup with other peers in cluster
-        /// </summary>
-        public bool m_bEnabled;
-
-        /// <summary>
         /// based on the current peer network should this peer have a gateway to the matchmaker open
         /// </summary>
-        public bool NeedsOpenGateway { get; private set; }
+        public bool NeedsOpenGateway { get; private set; } = false;
 
         /// <summary>
         /// messages to send through gateway (if active)
         /// </summary>
-        public Queue<GatewayMessage> MessagesToSend { get; private set; }
+        public Queue<SendMessageCommand> MessagesToSend { get; } = new Queue<SendMessageCommand>();
+
 
         //defines the order that packet processors process packets
         public override int Priority { get; } = 10;
 
+
+        protected NetworkLayoutProcessor m_nlpNetworkLayoutProcessor;
+
         public override void Update()
         {
+            base.Update();
+
             //check if enabled and is not currently an active gate 
-            if(m_bEnabled && NeedsOpenGateway == false)
+            if (ParentNetworkConnection.m_bIsConnectedToSwarm == true && NeedsOpenGateway == false)
             {
+                //check if there is any connections this client is missing
+                if(m_nlpNetworkLayoutProcessor.MissingConnections.Count > 0)
+                {
+                    return;
+                }
+
                 //is there an active gate in the cluster
                 bool bActiveGate = false;
+
+                bool bHadEnoughTimeToRecieveGatewayNotification = true;
+
 
                 //check if there is a client that has an open gateway
                 foreach(ConnectionGatewayManager cgmConnection in ChildConnectionProcessors.Values)
@@ -77,10 +79,16 @@ namespace Networking
                         bActiveGate = true;
                         break;
                     }
+
+                    if (cgmConnection.HadTimeToRecieveGateNotification == false)
+                    {
+                        bHadEnoughTimeToRecieveGatewayNotification = false;
+                        break;
+                    }
                 }
 
-                //if there is no active gate
-                if (bActiveGate == false)
+                //if there is no active gate and enough time has passed on all connections to detect open gates
+                if (bActiveGate == false && bHadEnoughTimeToRecieveGatewayNotification == true)
                 {
                     bool bShouldOpenGate = true;
 
@@ -97,48 +105,93 @@ namespace Networking
 
                     if(bShouldOpenGate)
                     {
+                        Debug.Log($"User:{ParentNetworkConnection.m_lUserUniqueID} Opening Gateway");
+
                         //open gate 
                         NeedsOpenGateway = true;
                     }
                 }
-            }
-
-            base.Update();
+            }           
         }
-
-        //process gateway packets
-        //public override DataPacket ProcessReceivedPacket(DataPacket pktInputPacket)
-        //{
-        //    return base.ProcessReceivedPacket(pktInputPacket);
-        //}
 
         //code to handle messages sent and recieved throught the WebInterface
         #region GatewayMessages
 
         public void ProcessMessageToGateway(long lTargetUserID, DataPacket dpkDataPacket)
         {
-            //check packet size
 
-            //if packet is too big encode using multi packet encoder
+            WriteByteStream wbsWriteStream = new WriteByteStream(dpkDataPacket.PacketTotalSize);
 
-            //WriteByteStream wbsWriteStream = new WriteByteStream(500);
-            //
-            //dpkDataPacket.EncodePacket(wbsWriteStream);
-            //
-            //GatewayMessage gmsMessage = new GatewayMessage()
-            //{
-            //    m_dpkMessageJson = dpkDataPacket.
-            //}
+            byte bPacketType = (byte)dpkDataPacket.GetTypeID;
+
+            //store the type of packet being sent 
+            ByteStream.Serialize(wbsWriteStream, ref bPacketType);
+
+            //encode packet data
+            dpkDataPacket.EncodePacket(wbsWriteStream);
+
+            SendMessageCommand smcSendMessageCommand = new SendMessageCommand()
+            {
+                m_iType = (int)MessageType.GatewayMessage,
+                m_lFromID = ParentNetworkConnection.m_lUserUniqueID,
+                m_lToID = lTargetUserID,
+                m_strMessage = JsonUtility.ToJson(new JsonByteArrayWrapper(wbsWriteStream.GetData()))
+            };
+
+            //add to send message list
+            MessagesToSend.Enqueue(smcSendMessageCommand);
         }
         
-
         //process message from matchmaking server
-        public void ProcessMessageFromGateway(string strMessage)
+        public void ProcessMessageFromGateway(UserMessage usmMessage)
         {
-            GatewayMessage mgsGateMessage = JsonUtility.FromJson<GatewayMessage>(strMessage);
+            //check message type
+            switch(usmMessage.m_iMessageType)
+            {
+                case (int)MessageType.GatewayMessage:
+
+                    //get packet data
+                    JsonByteArrayWrapper jbwWrapper = JsonUtility.FromJson<JsonByteArrayWrapper>(usmMessage.m_strMessage);
+
+                    //convert to read stream
+                    ReadByteStream rbsByteStream = new ReadByteStream(jbwWrapper.m_bWrappedArray);
+
+                    byte bPackageType = 0;
+
+                    //get packet type id
+                    ByteStream.Serialize(rbsByteStream, ref bPackageType);
+
+                    //get packet type from id
+                    DataPacket dpkPacket = ParentNetworkConnection.PacketFactory.CreateType<DataPacket>(bPackageType);
+
+                    //convert sent data to target packet
+                    dpkPacket.DecodePacket(rbsByteStream);
+
+                    //process any connection propegation messages 
+                    if (dpkPacket is ConnectionNegotiationBasePacket)
+                    {
+                        NetworkConnectionPropagatorProcessor ncpPropegator = ParentNetworkConnection.GetPacketProcessor<NetworkConnectionPropagatorProcessor>();
+
+                        //TODO:: this should be replaced by a less fragile system 
+                        ncpPropegator.ProcessReceivedPacket(usmMessage.m_lFromUser, dpkPacket);
+                    }
+
+                    break;
+            }
         }
 
         #endregion
+
+        public override void OnAddToNetwork(NetworkConnection ncnNetwork)
+        {
+            base.OnAddToNetwork(ncnNetwork);
+            m_nlpNetworkLayoutProcessor = ParentNetworkConnection.GetPacketProcessor<NetworkLayoutProcessor>();
+        }
+
+        protected override void AddDependentPacketsToPacketFactory(ClassWithIDFactory cifPacketFactory)
+        {
+            cifPacketFactory.AddType<GatewayActiveAnouncePacket>(GatewayActiveAnouncePacket.TypeID);
+        }
     }
 
     public class ConnectionGatewayManager : ManagedConnectionPacketProcessor<NetworkGatewayManager>
@@ -156,6 +209,9 @@ namespace Networking
             }
         }
 
+        //has enough time passed for the peer to send an open gate notification
+        public bool HadTimeToRecieveGateNotification { get; private set; } = false;
+
         public DateTime TimeOfLastGatewayNotification { get; private set; } = DateTime.MinValue;
 
         public DateTime TimeOfFistGatewatActivation { get; private set; } = DateTime.MinValue;
@@ -164,10 +220,18 @@ namespace Networking
 
         protected DateTime m_dtmTimeOfLastOpenGateNotification = DateTime.MinValue;
 
+        protected TimeNetworkProcessor m_tnpNetworkTime;
+
+        public override void Start()
+        {
+            base.Start();
+            m_tnpNetworkTime = m_tParentPacketProcessor.ParentNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
+        }
+
         public override void Update(Connection conConnection)
         {
             //check if user has active gateway
-            if (m_tParentPacketProcessor.m_bEnabled && m_tParentPacketProcessor.NeedsOpenGateway)
+            if (m_tParentPacketProcessor.ParentNetworkConnection.m_bIsConnectedToSwarm && m_tParentPacketProcessor.NeedsOpenGateway)
             {
                 //check if gateway has timed out
                 if (DateTime.UtcNow - m_dtmTimeOfLastOpenGateNotification > NetworkGatewayManager.GatewayAnounceRate)
@@ -179,7 +243,15 @@ namespace Networking
                     conConnection.QueuePacketToSend(gapAnouncePacket);
 
                     //update the last time a gateway announce was sent 
-                    m_dtmTimeOfLastOpenGateNotification = DateTime.UtcNow;
+                    m_dtmTimeOfLastOpenGateNotification = m_tnpNetworkTime.BaseTime;
+                }
+            }
+
+            if(HadTimeToRecieveGateNotification == false)
+            {
+                if(conConnection.Status == Connection.ConnectionStatus.Connected && conConnection.m_dtmConnectionEstablishTime > m_tnpNetworkTime.BaseTime + NetworkGatewayManager.GatewayTimeout)
+                {
+                    HadTimeToRecieveGateNotification = true;
                 }
             }
 

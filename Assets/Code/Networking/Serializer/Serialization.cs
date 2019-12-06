@@ -71,23 +71,23 @@ namespace Networking
         public static void Serialize(ReadByteStream rbsStream, ref List<Byte> Output)
         {
             Int32 iItems = 0;
+            
+            Serialize(rbsStream, ref iItems);
 
             if (Output == null)
             {
-                Output = new List<Byte>();
+                Output = new List<Byte>(iItems);
             }
             else
             {
                 Output.Clear();
             }
 
-            Serialize(rbsStream, ref iItems);
-
             for (int i = 0; i < iItems; i++)
             {
                 Byte value = 0;
                 Serialize(rbsStream, ref value);
-                Output[i] = value;
+                Output.Add(value);
             }
         }
 

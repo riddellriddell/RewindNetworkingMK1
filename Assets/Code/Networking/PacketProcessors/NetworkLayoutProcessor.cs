@@ -46,7 +46,13 @@ namespace Networking
         }
 
         public List<long> ConnectionsNotInDictionary(Dictionary<long, Connection> conTargetConnections)
-        {
+        {            
+            //check that connections list is setup
+            if(m_conConnectionDetails == null)
+            {
+                return new List<long>(conTargetConnections.Keys);
+            }
+
             List<long> conOutput = new List<long>();
 
             for (int i = 0; i < m_conConnectionDetails.Count; i++)
@@ -66,6 +72,11 @@ namespace Networking
 
         public bool HasTarget(long lConnectionID)
         {
+            if (m_conConnectionDetails == null)
+            {
+                return false;
+            }
+
             for (int i = 0; i < m_conConnectionDetails.Count; i++)
             {
                 if (m_conConnectionDetails[i].m_lConnectionID == lConnectionID)
@@ -150,9 +161,6 @@ namespace Networking
         public delegate void ConnectionLayoutChange(ConnectionNetworkLayoutProcessor clpLayoutProcessor);
         public event ConnectionLayoutChange m_evtPeerConnectionLayoutChange;
 
-        public List<long> MissingConenctions { get; } = new List<long>();
-
-
         protected bool m_bShouldUpdatePeers = false;
 
         public HashSet<long> MissingConnections { get; } = new HashSet<long>();
@@ -186,11 +194,11 @@ namespace Networking
         {
             List<long> lOutput = new List<long>();
 
-            for (int i = 0; i < ChildConnectionProcessors.Count; i++)
+            foreach (KeyValuePair<long,ConnectionNetworkLayoutProcessor> kvpPair in ChildConnectionProcessors)
             {
-                if (ChildConnectionProcessors[i].m_nlaNetworkLayout.HasTarget(lConnection))
+                if (kvpPair.Value.m_nlaNetworkLayout.HasTarget(lConnection))
                 {
-                    lOutput.Add(ChildConnectionProcessors[i].ParentConnection.m_lUserUniqueID);
+                    lOutput.Add(kvpPair.Key);
                 }
             }
 
@@ -207,7 +215,7 @@ namespace Networking
         protected void SendNetworkLayoutToPeers()
         {
             //generate network layout packet and send it to all connections
-            NetworkLayoutPacket nlpNetworkLayoutPacket = ParentNetworkConnection.m_cifPacketFactory.CreateType<NetworkLayoutPacket>(NetworkLayoutPacket.TypeID);
+            NetworkLayoutPacket nlpNetworkLayoutPacket = ParentNetworkConnection.PacketFactory.CreateType<NetworkLayoutPacket>(NetworkLayoutPacket.TypeID);
             nlpNetworkLayoutPacket.m_nlaNetworkLayout = GenterateNetworkLayout();
 
             //send packet out to all connections updating them on what users this computer is conencted to 
@@ -285,6 +293,11 @@ namespace Networking
         {
             MissingConnections.Remove(lConnectionID);
         }
+
+        protected override void AddDependentPacketsToPacketFactory(ClassWithIDFactory cifPacketFactory)
+        {
+            cifPacketFactory.AddType<NetworkLayoutPacket>(NetworkLayoutPacket.TypeID);
+        }
     }
 
     public class ConnectionNetworkLayoutProcessor : ManagedConnectionPacketProcessor<NetworkLayoutProcessor>
@@ -315,6 +328,7 @@ namespace Networking
 
         public ConnectionNetworkLayoutProcessor()
         {
+            m_nlaNetworkLayout = new NetworkLayout(0);
         }
 
         public override void Start()

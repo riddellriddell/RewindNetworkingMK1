@@ -49,22 +49,25 @@ namespace Networking
                     return null;
                 }
 
-                long lNewID = 0;
+                long lNewID = -1;
                 bool isUnique = false;
 
                 //repeate untill unique id found
                 while (isUnique == false)
                 {
+                    //create unique id
+                    lNewID++;
+
                     isUnique = true;
 
                     //loop through all existing accounts
                     foreach (UserIDCredentialsPair uicPair in m_uicUserIDCredentialsPairs)
                     {
-                        //check if id is uniqu
+                        //check if id is unique
                         if (uicPair.m_lAccountID == lNewID)
                         {
-                            //move on to next id
-                            lNewID++;
+                            //move on to next id                            
+                            isUnique = false;
                             break;
                         }
                     }
@@ -574,7 +577,7 @@ namespace Networking
 
             if (gtwGate.HasValue == false)
             {
-                actSearchCallback?.Invoke(true, string.Empty);
+                actSearchCallback?.Invoke(false, m_strItemDoesNoteExistResponse);
 
                 yield break;
             }

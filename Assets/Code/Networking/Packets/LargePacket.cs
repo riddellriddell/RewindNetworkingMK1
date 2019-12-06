@@ -21,7 +21,7 @@ namespace Networking
         {
             get
             {
-                int iSize = ByteStream.DataSize(m_iSubPacketNumber);
+                int iSize = ByteStream.DataSize(m_bIsLastPacketInSequence);
                 iSize += 1; //the size of the byte array
                 iSize += TypeHeaderSize; //the type def for the entire packet
                 return iSize;
@@ -44,7 +44,7 @@ namespace Networking
             }
         }
 
-        public int m_iSubPacketNumber;
+        public byte m_bIsLastPacketInSequence;
 
         public List<byte> m_bPacketSegment = new List<byte>();
 
@@ -63,19 +63,19 @@ namespace Networking
     {
         public static void Serialize(ReadByteStream rbsByteStream, LargePacket Input)
         {
-            Serialize(rbsByteStream, ref Input.m_iSubPacketNumber);
+            Serialize(rbsByteStream, ref Input.m_bIsLastPacketInSequence);
             Serialize(rbsByteStream, ref Input.m_bPacketSegment);
         }
 
         public static void Serialize(WriteByteStream wbsByteStream, LargePacket Input)
         {
-            Serialize(wbsByteStream, ref Input.m_iSubPacketNumber);
+            Serialize(wbsByteStream, ref Input.m_bIsLastPacketInSequence);
             Serialize(wbsByteStream, ref Input.m_bPacketSegment);
         }
 
         public static int DataSize(LargePacket Input)
         {
-            int iSize = DataSize(Input.m_iSubPacketNumber);
+            int iSize = DataSize(Input.m_bIsLastPacketInSequence);
             iSize += DataSize(Input.m_bPacketSegment);
 
             return iSize;

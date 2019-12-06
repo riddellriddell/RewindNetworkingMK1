@@ -21,7 +21,7 @@ namespace Sim
                 return;
             }
 
-            m_ncnNetworkConnection = new NetworkConnection(new GamePacketFactory(), m_icwConnectionSimulation);
+            m_ncnNetworkConnection = new NetworkConnection(UnityEngine.Random.Range(int.MinValue,int.MaxValue), new FakeWebRTCFactory());
 
             m_ncnNetworkConnection.AddPacketProcessor(new TickStampedDataNetworkProcessor());
             m_ncnNetworkConnection.AddPacketProcessor(new TimeNetworkProcessor());

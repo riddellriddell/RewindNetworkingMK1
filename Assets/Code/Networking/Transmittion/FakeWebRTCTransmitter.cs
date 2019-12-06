@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace Networking
 {
@@ -42,9 +43,10 @@ namespace Networking
 
         public FakeWebRTCTransmitter()
         {
-            m_iTransmitterID = TransmitterRegistery.Count;
+            //m_iTransmitterID = TransmitterRegistery.Count;
+            m_iTransmitterID = Random.Range(int.MinValue, int.MaxValue);
 
-            TransmitterRegistery.Add(m_iTransmitterID, this);
+            TransmitterRegistery[m_iTransmitterID] = this;
         }
 
         protected void OnDataRecieved(byte[] bData)
@@ -68,10 +70,15 @@ namespace Networking
         protected IEnumerator MakeOffer()
         {
             //check state 
-            if(State != PeerTransmitterState.Negotiating )
+            if(State != PeerTransmitterState.New )
             {
                 yield break;
             }
+
+            //change state to negotiating 
+            State = PeerTransmitterState.Negotiating;
+
+            Debug.Log($"making offer negotiation message");
 
             yield return new WaitForSeconds(s_fOfferCreateTime);
 
@@ -101,10 +108,14 @@ namespace Networking
         protected IEnumerator MakeReply()
         {
             //check state 
-            if (State != PeerTransmitterState.Negotiating)
+            if (State != PeerTransmitterState.New && State != PeerTransmitterState.Negotiating)
             {
                 yield break;
             }
+
+            State = PeerTransmitterState.Negotiating;
+
+            Debug.Log($"making reply negotiation message");
 
             yield return new WaitForSeconds(s_fOfferCreateTime);
 
@@ -127,6 +138,8 @@ namespace Networking
             {
                 yield break;
             }
+
+            Debug.Log($"making ice negotiation message");
 
             NegotiationMessage nmsMessage = new NegotiationMessage()
             {
@@ -151,12 +164,15 @@ namespace Networking
 
         public bool ProcessNegotiationMessage(string strMessage)
         {
+            Debug.Log($"Processing message {strMessage}");
+
             NegotiationMessage nmsNegotiationMessage = JsonUtility.FromJson<NegotiationMessage>(strMessage);
 
             if(nmsNegotiationMessage.m_iType == (int)NegotiationMessage.Type.Offer ||
                 nmsNegotiationMessage.m_iType == (int)NegotiationMessage.Type.Reply)
             {
-                m_iTargetID = nmsNegotiationMessage.m_iType;
+                Debug.Log($" Target Transmitter ID:{nmsNegotiationMessage.m_iSender}");
+                m_iTargetID = nmsNegotiationMessage.m_iSender;
 
                 //if message was offer start making reply
                 if(nmsNegotiationMessage.m_iType == (int)NegotiationMessage.Type.Offer)
@@ -164,10 +180,12 @@ namespace Networking
                     InternetConnectionSimulator.Instance.StartCoroutine(MakeReply());
                 }
             }
-            else if(m_bMakingOffer)
+            else if(m_bMakingOffer && State != PeerTransmitterState.Connected)
             {
                 //update the number of ice candidates recieved
                 m_iIceCandidatesRecieved++;
+
+                Debug.Log($"{s_iConnectOnReturnIceCandidate - m_iIceCandidatesRecieved} Left to create connection !!!");
 
                 //if enough ice candidates have been recieved make connection
                 if(m_iIceCandidatesRecieved >= s_iConnectOnReturnIceCandidate)
@@ -176,8 +194,11 @@ namespace Networking
                     {
                         if(TransmitterRegistery.TryGetValue(m_iTargetID,out FakeWebRTCTransmitter fwtTarget))
                         {
+                            Debug.Log("Transmitter connection established!!!!");
+
                             State = PeerTransmitterState.Connected;
                             fwtTarget.MakeConnection();
+                            OnConnectionEstablished?.Invoke();
                         }
                     }
                 }

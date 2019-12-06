@@ -8,26 +8,6 @@ namespace Networking
     public class NetworkConnectionPropagatorProcessor : ManagedNetworkPacketProcessor<ConnectionPropagatorProcessor>
     {
 
-        public class ActiveConnectionNegotiation
-        {
-            public ActiveConnectionNegotiation(long lConnectionID, DateTime dtmTime)
-            {
-                m_lConnectionID = lConnectionID;
-                m_dtmBaseTimeConnectionNegotionStart = dtmTime;
-                m_cnpUnprocessedNegotiationPackets = new Dictionary<int,ConnectionNegotiationPacket>();
-                m_iNextMessageIndex = 0;
-            }
-
-            public long m_lConnectionID;
-            public DateTime m_dtmBaseTimeConnectionNegotionStart;
-
-            //list of all the negotiation packets recieved so they can be processed in order
-            public Dictionary<int,ConnectionNegotiationPacket> m_cnpUnprocessedNegotiationPackets;
-
-            //the index of the last sent message 
-            public int m_iNextMessageIndex;
-        }
-
         public override int Priority
         {
             get
@@ -43,95 +23,63 @@ namespace Networking
         //due to cross dependency gateway cant be set on class creation 
         protected NetworkGatewayManager m_ngmGatewayManager;
 
-        protected List<ActiveConnectionNegotiation> m_acnActiveConnectionRequests = new List<ActiveConnectionNegotiation>();
-        
         public override void OnAddToNetwork(NetworkConnection ncnNetwork)
         {
             m_nlpNetworkLayout = ncnNetwork.GetPacketProcessor<NetworkLayoutProcessor>();
 
             m_tnpNetworkTime = ncnNetwork.GetPacketProcessor<TimeNetworkProcessor>();
 
+            m_ngmGatewayManager = ncnNetwork.GetPacketProcessor<NetworkGatewayManager>();
+
             m_nlpNetworkLayout.m_evtPeerConnectionLayoutChange += OnPeerNetworkLayoutChange;
 
             base.OnAddToNetwork(ncnNetwork);
         }
-        
-        public void OnPeerNetworkLayoutChange(ConnectionNetworkLayoutProcessor clpNetworkLayoutProcessor)
-        {
 
-        }
-
-        public void StartReply(List<Byte> bRequestDetails, long lTargetID)
+        public override DataPacket ProcessReceivedPacket(long lUserID, DataPacket pktInputPacket)
         {
-            //send off to connection to create new webrtc connection 
-        }
-
-        public void ProcessReply(List<Byte> bReplyDetails, long lTargetID)
-        {
-            //check if connection already exists
-            for (int i = 0; i < ParentNetworkConnection.ConnectionList.Count; i++)
+            if(pktInputPacket is ConnectionNegotiationBasePacket)
             {
-                if (ParentNetworkConnection.ConnectionList[i].m_lUserUniqueID == lTargetID)
-                {
-                    return;
-                }
+                //process connection negotiation packet
+                ProcessConnectionNegotiationMessage(pktInputPacket as ConnectionNegotiationBasePacket);
+
+                return null;
             }
 
-            //process connection ID
+            return base.ProcessReceivedPacket(lUserID, pktInputPacket);
         }
 
-        //protected void OnRequestFinish(List<Byte> bRequestOffer, long lTargetID)
-        //{
-        //    NetworkLayoutProcessor nlpNetworkLayoutProcessor = ParentNetworkConnection.GetPacketProcessor<NetworkLayoutProcessor>();
+        public override void Update()
+        {
+            base.Update();
 
-        //    List<long> lPeersToSendThrough = nlpNetworkLayoutProcessor.PeersWithConnection(lTargetID);
+            SendConnectionNegotiationMessages();
+        }
 
-        //    if (lPeersToSendThrough.Count > 0)
-        //    {
-        //        //send request to target
-        //        ConnectionNegotiationPacket crpConnectionRequestPacket = ParentNetworkConnection.m_cifPacketFactory.CreateType<ConnectionNegotiationPacket>(ConnectionNegotiationPacket.TypeID);
+        public void OnPeerNetworkLayoutChange(ConnectionNetworkLayoutProcessor clpNetworkLayoutProcessor)
+        {
+            //check if peer has a connection to a peer not connected to this peer
+            ConnectToMissingConnections();
+        }
+        
+        public void StartRequest(long lUserID)
+        {
+            DateTime dtmStartTime = m_tnpNetworkTime.BaseTime;
 
-        //        crpConnectionRequestPacket.m_strConnectionNegotiationMessage = bRequestOffer;
-        //        crpConnectionRequestPacket.m_lFrom = ParentNetworkConnection.m_lUserUniqueID;
-        //        crpConnectionRequestPacket.m_lTo = lTargetID;
+            //make new connection
+            Connection conConnection = ParentNetworkConnection.CreateNewConnection(dtmStartTime, lUserID);
 
-        //        ParentNetworkConnection.SendPackage(lPeersToSendThrough[0], crpConnectionRequestPacket);
-        //    }
-        //    else
-        //    {
-        //        //if there was no connection to send through remove connection attempt
-        //        RemoveMissingConnectionID(lTargetID);
-        //    }
-        //}
+            //start making connection offer 
+            conConnection.StartConnectionNegotiation();
+        }
 
-        //protected void OnReplyFinish(List<Byte> bReplyOffer, long lTargetID)
-        //{
-        //    NetworkLayoutProcessor nlpNetworkLayoutProcessor = ParentNetworkConnection.GetPacketProcessor<NetworkLayoutProcessor>();
-
-        //    List<long> lPeersToSendThrough = nlpNetworkLayoutProcessor.PeersWithConnection(lTargetID);
-
-        //    if (lPeersToSendThrough.Count > 0)
-        //    {
-        //        //send request to target
-        //        ConnectionReplyPacket crpConnectionReplyPacket = ParentNetworkConnection.m_cifPacketFactory.CreateType<ConnectionReplyPacket>(ConnectionReplyPacket.TypeID);
-
-        //        crpConnectionReplyPacket.m_bConnectionReplyDetails = bReplyOffer;
-        //        crpConnectionReplyPacket.m_lFrom = ParentNetworkConnection.m_lUserUniqueID;
-        //        crpConnectionReplyPacket.m_lTo = lTargetID;
-
-        //        ParentNetworkConnection.SendPackage(lPeersToSendThrough[0], crpConnectionReplyPacket);
-        //    }
-        //    else
-        //    {
-        //        //if there was no connection to send through remove connection attempt
-        //        RemoveMissingConnectionID(lTargetID);
-        //    }
-        //}
-
+        /// <summary>
+        /// find any peers that are not connected to this peer but are connected through a mutural peer and start the connection process
+        /// </summary>
         protected void ConnectToMissingConnections()
         {
             //check if there are any peers that this user is not connected too
-            if(m_nlpNetworkLayout.MissingConnections.Count > 0)
+            if (m_nlpNetworkLayout.MissingConnections.Count > 0)
             {
                 List<long> lMissingConnections = new List<long>(m_nlpNetworkLayout.MissingConnections);
 
@@ -140,7 +88,7 @@ namespace Networking
                     //check if connecting to this peer is blockd for some reason
 
                     //check if this is the correct peer to be making the connection attempt
-                    if(ShouldPeerStartConnection(ParentNetworkConnection.m_lUserUniqueID,lUserID) == false)
+                    if (ShouldPeerStartConnection(ParentNetworkConnection.m_lUserUniqueID, lUserID) == false)
                     {
                         //skip user
                         continue;
@@ -153,26 +101,11 @@ namespace Networking
             }
         }
         
-        protected void StartRequest(long lUserID)
-        {
-            DateTime dtmStartTime = m_tnpNetworkTime.BaseTime;
-
-            m_acnActiveConnectionRequests.Add(new ActiveConnectionNegotiation(lUserID, dtmStartTime));
-
-            //make request for connection data
-
-            //make new connection
-            Connection conConnection = ParentNetworkConnection.CreateNewConnection(lUserID);
-
-            //start making connection offer 
-            conConnection.StartConnectionNegotiation();
-        }
-        
         /// <summary>
         /// to connect 2 peers over the network one peer has to be selected to initiate the connection
         /// peer selection is done based on user id
         /// </summary>
-        protected bool ShouldPeerStartConnection(long lPeerDecidingToConnect, long lTargetPeer )
+        protected bool ShouldPeerStartConnection(long lPeerDecidingToConnect, long lTargetPeer)
         {
             //this may need to be changed in the future 
             return lPeerDecidingToConnect > lTargetPeer;
@@ -181,38 +114,32 @@ namespace Networking
         //check active connection negotiations to see if a message needs sending 
         protected void SendConnectionNegotiationMessages()
         {
-            //loop through all active connection negatiations 
-            for (int i = m_acnActiveConnectionRequests.Count - 1; i > -1; i--)
+            List<long> lConnectionsToRemove = new List<long>();
+
+            //loop through connections
+            foreach (ConnectionPropagatorProcessor cppProcessor in ChildConnectionProcessors.Values)
             {
-                //target connection id
-                long lTargetID = m_acnActiveConnectionRequests[i].m_lConnectionID;
+                //update packets to send 
+                cppProcessor.UpdateNegotiationMessagesToSend();
 
-                //try get associated connection
-                if (ParentNetworkConnection.ConnectionList.TryGetValue(lTargetID, out Connection conTargetConnection) == true)
+                //check for messages to send 
+                if (cppProcessor.NegotiationPacketsToSend.Count == 0)
                 {
-                    //check for messages to send 
-                    if(conTargetConnection.TransmittionNegotiationMessages.Count == 0)
-                    {
-                        //no messages continue to next connection negotiation
-                        continue;
-                    }
+                    //no messages continue to next connection negotiation
+                    continue;
+                }
 
-                    //increment number of messages sent
-                    int iMessageIndex = m_acnActiveConnectionRequests[i].m_iNextMessageIndex++;
-                                       
-                    //convert message into packet form 
-                    ConnectionNegotiationPacket cnpPacket = ParentNetworkConnection.m_cifPacketFactory.CreateType<ConnectionNegotiationPacket>(ConnectionNegotiationPacket.TypeID);
+                //check for client that messages can be sent through
+                List<long> lMutualPeers = m_nlpNetworkLayout.PeersWithConnection(cppProcessor.ParentConnection.m_lUserUniqueID);
 
-                    cnpPacket.m_lFrom = ParentNetworkConnection.m_lUserUniqueID;
-                    cnpPacket.m_lTo = lTargetID;
-                    cnpPacket.m_iIndex = iMessageIndex;
-                    cnpPacket.m_strConnectionNegotiationMessage = conTargetConnection.TransmittionNegotiationMessages.Dequeue();
+                //loop through packets to send 
+                while (cppProcessor.NegotiationPacketsToSend.Count > 0)
+                {
+                    //get the next packet to send
+                    ConnectionNegotiationBasePacket cnpPacket = cppProcessor.NegotiationPacketsToSend.Dequeue();
 
-                    //check for client that messages can be sent through
-                    List<long> lMutualPeers = m_nlpNetworkLayout.PeersWithConnection(lTargetID);
-
-                    
-                    if(lMutualPeers.Count != 0)
+                    //check if message can be sent through a mutural peer 
+                    if (lMutualPeers.Count != 0)
                     {
                         //pick a random open peer to send message through 
                         long lRelayConnection = lMutualPeers[Random.Range(0, lMutualPeers.Count)];
@@ -220,27 +147,104 @@ namespace Networking
                         //send packet to peer
                         ParentNetworkConnection.SendPackage(lRelayConnection, cnpPacket);
                     }
-                    else if(m_ngmGatewayManager.NeedsOpenGateway == true) //if no client exists check if user has active gateway
+                    //if no client exists check if user has active gateway or this is the first connection to the swarm
+                    else if (m_ngmGatewayManager.NeedsOpenGateway == true || ParentNetworkConnection.m_bIsConnectedToSwarm == false) 
                     {
-                        m_ngmGatewayManager.ProcessPacketForSending(cnpPacket);
+                        m_ngmGatewayManager.ProcessMessageToGateway(cnpPacket.m_lTo, cnpPacket);
                     }
                     else //if there is no way to send message close connection negotiation
                     {
-
-                    }                    
-                }
-                else
-                {
-                    //remove connection negotiations that have no connection
-                    m_acnActiveConnectionRequests.RemoveAt(i);
+                        lConnectionsToRemove.Add(cnpPacket.m_lTo);
+                        break;                        
+                    }
                 }
             }
+
+            //check if there are any connections that should be removed 
+            for(int i = 0; i < lConnectionsToRemove.Count; i++)
+            {
+                ParentNetworkConnection.DestroyConnection(lConnectionsToRemove[i]);
+            }
+        }
+
+        protected void ProcessConnectionNegotiationMessage(ConnectionNegotiationBasePacket cnpPacket)
+        {
+            //validate message 
+
+            //check if message is intended for user
+            if (IsTargetForConnectionNegotiationMessage(cnpPacket) == false)
+            {
+                //todo validate packet and check that new connection public key matches
+                //this users public key for the target connection
+
+                //forward packet
+                ParentNetworkConnection.SendPackage(cnpPacket.m_lTo, cnpPacket);
+
+                //packet handled
+                return;
+            }
+
+            ConnectionPropagatorProcessor cppFromConnection = null;
+
+            //if packet is intended for this peer
+            //check if a connection has already been opened 
+            if (ChildConnectionProcessors.TryGetValue(cnpPacket.m_lFrom, out cppFromConnection))
+            {
+                //check if packet is from new connection request and requires the connection to be destroyed and recreated
+                if (cppFromConnection.DoesNegotiationMessageInvalidateConnection(cnpPacket))
+                {
+                    //replace connection with new one
+                    ParentNetworkConnection.CreateNewConnection(cnpPacket.m_dtmNegotiationStart, cnpPacket.m_lFrom);
+
+                    //get new connection propegator 
+                    ChildConnectionProcessors.TryGetValue(cnpPacket.m_lFrom, out cppFromConnection);
+                }
+
+            }
+            else
+            {
+                //create new connection to handle connection negotiation 
+                ParentNetworkConnection.CreateNewConnection(cnpPacket.m_dtmNegotiationStart, cnpPacket.m_lFrom);
+
+                //get new connection propegator
+                ChildConnectionProcessors.TryGetValue(cnpPacket.m_lFrom, out cppFromConnection);
+            }
+
+            //check if packet is outdated and should be discarded
+            if (cppFromConnection.IsOutdatedMessage(cnpPacket))
+            {
+                return;
+            }
+
+            //add message to connection propegator
+            cppFromConnection.QueueNegotiationMessageForProcessing(cnpPacket);
+
         }
         
+        protected bool IsTargetForConnectionNegotiationMessage(ConnectionNegotiationBasePacket cnpPacket)
+        {
+            if (cnpPacket.m_lTo == ParentNetworkConnection.m_lUserUniqueID)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        protected override void AddDependentPacketsToPacketFactory(ClassWithIDFactory cifPacketFactory)
+        {
+            cifPacketFactory.AddType<ConnectionNegotiationMessagePacket>(ConnectionNegotiationMessagePacket.TypeID);
+        }
+
     }
 
     public class ConnectionPropagatorProcessor : ManagedConnectionPacketProcessor<NetworkConnectionPropagatorProcessor>
     {
+        public Queue<ConnectionNegotiationBasePacket> NegotiationPacketsToSend { get; } = new Queue<ConnectionNegotiationBasePacket>();
+        protected Dictionary<int, ConnectionNegotiationBasePacket> UnprocessedNegotiationPackets { get; } = new Dictionary<int, ConnectionNegotiationBasePacket>();
+        protected int m_iProcessedMessagesHead = 0;
+        protected int m_iNextMessageIndex = 0;
+
         public override int Priority
         {
             get
@@ -253,48 +257,96 @@ namespace Networking
         {
         }
 
-        //public override DataPacket ProcessReceivedPacket(Connection conConnection, DataPacket pktInputPacket)
-        //{
-        //    if (pktInputPacket is ConnectionNegotiationPacket)
-        //    {
-        //        ConnectionNegotiationPacket crpConnectionRequest = pktInputPacket as ConnectionNegotiationPacket;
+        /// <summary>
+        /// checks if new connection attempt has started and this message is part of that new conneciton attempt
+        /// if a new attempt is started then this connection should be destroyed and a new one created
+        /// </summary>
+        /// <param name="cnpPacket"></param>
+        /// <returns></returns>
+        public bool DoesNegotiationMessageInvalidateConnection(ConnectionNegotiationBasePacket cnpPacket)
+        {
+            if (ParentConnection.m_conConnectionSetupStart < cnpPacket.m_dtmNegotiationStart)
+            {
+                return true;
+            }
 
-        //        //check if this request is intended for this peer
-        //        if (crpConnectionRequest.m_lTo == m_tParentPacketProcessor.ParentNetworkConnection.m_lUserUniqueID)
-        //        {
-        //            //start reply
-        //            m_tParentPacketProcessor.StartReply(crpConnectionRequest.m_strConnectionNegotiationMessage, crpConnectionRequest.m_lFrom);
-        //        }
-        //        else
-        //        {
-        //            //send to target peer
-        //            m_tParentPacketProcessor.ParentNetworkConnection.SendPackage(crpConnectionRequest.m_lTo, crpConnectionRequest);
-        //        }
+            return false;
+        }
 
-        //        return null;
-        //    }
+        /// <summary>
+        /// is this message from a previouse connection attempt
+        /// </summary>
+        /// <param name="cnpPacket"></param>
+        /// <returns></returns>
+        public bool IsOutdatedMessage(ConnectionNegotiationBasePacket cnpPacket)
+        {
+            if (ParentConnection.m_conConnectionSetupStart > cnpPacket.m_dtmNegotiationStart)
+            {
+                return true;
+            }
 
-        //    if (pktInputPacket is ConnectionReplyPacket)
-        //    {
-        //        ConnectionReplyPacket crpConnectionReply = pktInputPacket as ConnectionReplyPacket;
+            return false;
+        }
 
-        //        //check if this request is intended for this peer
-        //        if (crpConnectionReply.m_lTo == m_tParentPacketProcessor.ParentNetworkConnection.m_lUserUniqueID)
-        //        {
-        //            //start reply
-        //            m_tParentPacketProcessor.ProcessReply(crpConnectionReply.m_bConnectionReplyDetails, crpConnectionReply.m_lFrom);
-        //        }
-        //        else
-        //        {
-        //            //send to target peer
-        //            m_tParentPacketProcessor.ParentNetworkConnection.SendPackage(crpConnectionReply.m_lTo, crpConnectionReply);
-        //        }
+        /// <summary>
+        /// add the connection negotiation packet to a queue so they will only be executed in order
+        /// </summary>
+        /// <param name="cnpPacket"></param>
+        public void QueueNegotiationMessageForProcessing(ConnectionNegotiationBasePacket cnpPacket)
+        {
+            //add message to queue
+            UnprocessedNegotiationPackets[cnpPacket.m_iIndex] = cnpPacket;
 
-        //        return null;
-        //    }
+            //if process messages that have arrived in order /  are next to process
+            ProcessNegotiationMessages();
+        }
+               
+        public void UpdateNegotiationMessagesToSend()
+        {           
+            while (ParentConnection.TransmittionNegotiationMessages.Count > 0)
+            {
+                string strMessage = ParentConnection.TransmittionNegotiationMessages.Dequeue();
 
-        //    return base.ProcessReceivedPacket(conConnection, pktInputPacket);
-        //}
+                Debug.Log($"Connection:{ParentConnection.m_lUserUniqueID} Processing Negotiation messages:{strMessage} to send to user:{ParentConnection.m_lUserUniqueID} from User {m_tParentPacketProcessor.ParentNetworkConnection.m_lUserUniqueID}");
+
+                ConnectionNegotiationMessagePacket cnmPacket = ParentConnection.m_cifPacketFactory.CreateType<ConnectionNegotiationMessagePacket>(ConnectionNegotiationMessagePacket.TypeID);
+
+                cnmPacket.m_dtmNegotiationStart = ParentConnection.m_conConnectionSetupStart;
+                cnmPacket.m_iIndex = m_iNextMessageIndex;
+                cnmPacket.m_lFrom = m_tParentPacketProcessor.ParentNetworkConnection.m_lUserUniqueID;
+                cnmPacket.m_lTo = ParentConnection.m_lUserUniqueID;
+                cnmPacket.m_strConnectionNegotiationMessage = strMessage;
+
+                //queue up packet to send
+                NegotiationPacketsToSend.Enqueue(cnmPacket);
+
+                //update message index
+                m_iNextMessageIndex++;
+            }
+        }
+
+        /// <summary>
+        /// negotiation messages that are sent to
+        /// </summary>
+        protected void ProcessNegotiationMessages()
+        {
+            while (UnprocessedNegotiationPackets.TryGetValue(m_iProcessedMessagesHead, out ConnectionNegotiationBasePacket cnpPacket))
+            {
+                //move to next packet
+                m_iProcessedMessagesHead++;
+
+                //send message to be processed
+                if (cnpPacket is ConnectionNegotiationMessagePacket)
+                {
+                    ProcessMessage(cnpPacket as ConnectionNegotiationMessagePacket);
+                }
+            }
+        }
+
+        protected void ProcessMessage(ConnectionNegotiationMessagePacket cnmPacket)
+        {
+            ParentConnection.ProcessNetworkNegotiationMessage(cnmPacket.m_strConnectionNegotiationMessage);
+        }
 
     }
 }

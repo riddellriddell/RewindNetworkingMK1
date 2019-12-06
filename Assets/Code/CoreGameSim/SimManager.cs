@@ -99,7 +99,6 @@ namespace Sim
             {
                 m_nccConnectionTarget.Init();
                 m_ntcConnectionTarget = m_nccConnectionTarget.m_ncnNetworkConnection;
-                m_ntcNetworkConnection.MakeTestingConnection(m_ntcConnectionTarget);
             }
 
             m_ntcNetworkConnection.m_evtPacketDataIn += HandleInputFromNetwork;

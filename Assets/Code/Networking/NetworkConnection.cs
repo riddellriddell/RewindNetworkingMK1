@@ -32,8 +32,8 @@ namespace Networking
             }
         }
 
-        //the link through the internet to other clients
-        public InternetConnectionSimulator m_icwConnectionSimulation;
+        //is this peer connected to a swarm
+        public bool m_bIsConnectedToSwarm = false;
 
         //list of all the network connection PacketManagers 
         public SortedSet<BaseNetworkPacketProcessor> NetworkPacketProcessors { get; } = new SortedSet<BaseNetworkPacketProcessor>(new PacketProcessorComparer());
@@ -46,24 +46,24 @@ namespace Networking
         public byte m_bPlayerID;
 
         //the unique id for this player
-        public int m_lUserUniqueID;
+        public long m_lUserUniqueID;
 
         public delegate void PacketDataIn(byte bPlayerID, DataPacket pktInput);
         public event PacketDataIn m_evtPacketDataIn;
 
         //used to create packets 
-        public ClassWithIDFactory m_cifPacketFactory;
+        public ClassWithIDFactory PacketFactory { get; } = new ClassWithIDFactory();
 
         public IPeerTransmitterFactory m_ptfPeerTransmitterFactory;
 
-        public NetworkConnection(ClassWithIDFactory cifPacketFactory, InternetConnectionSimulator igaInternetGateway)
+        public NetworkConnection(long lUserID, IPeerTransmitterFactory ptfPeerTransmitterFactory)
         {
             //generate a unique ID
             // m_lPlayerUniqueID = SystemInfo.deviceUniqueIdentifier.GetHashCode();
-            m_lUserUniqueID = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+            //m_lUserUniqueID = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+            m_lUserUniqueID = lUserID;
 
-            m_cifPacketFactory = cifPacketFactory;
-            m_icwConnectionSimulation = igaInternetGateway;
+            m_ptfPeerTransmitterFactory = ptfPeerTransmitterFactory;
 
         }
 
@@ -97,28 +97,41 @@ namespace Networking
 
         }
 
-        public Connection CreateNewConnection(long lUserUniqueID)
+        public Connection CreateNewConnection(DateTime dtmNegotiationStart, long lUserUniqueID)
         {
-            //check if connection already exists for user 
-            if (ConnectionList.TryGetValue(lUserUniqueID, out Connection conTargetConnection))
-            {
-                //destroy connection
-                conTargetConnection.DisconnectFromPeer();
-
-                //remove from conenciton list
-                ConnectionList.Remove(lUserUniqueID);
-            }
+            //destroy any existing connection for this user 
+            DestroyConnection(lUserUniqueID);
 
             //create new peer connection
             IPeerTransmitter ptrPeerTransmitter = m_ptfPeerTransmitterFactory.CreatePeerTransmitter();
 
             //create new connection
-            Connection conNewConnection = new Connection(this, lUserUniqueID, m_cifPacketFactory, ptrPeerTransmitter);
+            Connection conNewConnection = new Connection(dtmNegotiationStart, this, lUserUniqueID, PacketFactory, ptrPeerTransmitter);
 
             //register with network manager
             RegisterConnection(conNewConnection);
 
             return conNewConnection;
+        }
+        
+        public void DestroyConnection(long lUserID)
+        {
+            //check if connection already exists for user 
+            if (ConnectionList.TryGetValue(lUserID, out Connection conTargetConnection))
+            {
+                //destroy connection
+                conTargetConnection.DisconnectFromPeer();
+
+                //remove from conenciton list
+                ConnectionList.Remove(lUserID);
+
+                //update all packet managers
+                foreach(BaseNetworkPacketProcessor bppProcessor in NetworkPacketProcessors)
+                {
+                    //tell packet processor that user has disconnected
+                    bppProcessor.OnConnectionDisconnect(conTargetConnection);
+                }
+            }
         }
 
         public void RegisterConnection(Connection conNewConnection)
@@ -131,28 +144,6 @@ namespace Networking
 
             //process new connection 
             ProcessNewConnection(conNewConnection);
-        }
-
-        public void MakeTestingConnection(NetworkConnection nwcConnectionTarget)
-        {
-            this.m_bPlayerID = 0;
-            nwcConnectionTarget.m_bPlayerID = 1;
-
-            //create new connection 
-            Connection m_conLocalConnection = new Connection(nwcConnectionTarget.m_bPlayerID, m_cifPacketFactory);
-            m_conLocalConnection.m_icsConnectionSim = m_icwConnectionSimulation;
-
-            Connection m_conTargetConnection = new Connection(m_bPlayerID, nwcConnectionTarget.m_cifPacketFactory);
-            m_conTargetConnection.m_icsConnectionSim = m_icwConnectionSimulation;
-
-            m_conLocalConnection.m_conConnectionTarget = m_conTargetConnection;
-            m_conTargetConnection.m_conConnectionTarget = m_conLocalConnection;
-
-            RegisterConnection(m_conLocalConnection);
-            nwcConnectionTarget.RegisterConnection(m_conTargetConnection);
-
-
-
         }
 
         public void UpdateConnectionsAndProcessors()
@@ -238,7 +229,7 @@ namespace Networking
         [Obsolete]
         public Connection MakeConnectionOffer()
         {
-            Connection conOffer = new Connection(m_bPlayerID, m_cifPacketFactory);
+            Connection conOffer = new Connection(m_bPlayerID, PacketFactory);
 
             return conOffer;
         }
@@ -248,7 +239,7 @@ namespace Networking
         {
             RegisterConnection(conConnectionOffer);
 
-            Connection conOffer = new Connection(m_bPlayerID, m_cifPacketFactory);
+            Connection conOffer = new Connection(m_bPlayerID, PacketFactory);
 
             return conOffer;
         }

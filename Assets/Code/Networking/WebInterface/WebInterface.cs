@@ -163,6 +163,7 @@ namespace Networking
 
         public Gateway? ExternalGateway { get; private set; }
         public WebAPICommunicationTracker ExternalGatewayCommunicationStatus { get; private set; } = WebAPICommunicationTracker.StartState(5);
+        public bool NoGatewayExistsOnServer { get; private set; } = false;
 
         protected string m_strUniqueDeviceIdentifier = string.Empty;
 
@@ -186,7 +187,7 @@ namespace Networking
 
             //check if message fetch needs updating 
             if (
-                MessageFetchStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.NotStarted ||
+                MessageFetchStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.NotStarted &&
                 MessageFetchStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled)
             {
                 //check if it should be restarted
@@ -211,7 +212,7 @@ namespace Networking
                 //get the next message to send
                 SendMessageCommand smcMessageCommand = MessagesToSend.Peek();
 
-                MessageSendStatus = MessageSendStatus.Reset().StartNewAttempt();
+                MessageSendStatus = MessageSendStatus.Reset();
                 InternalStartSendingMessage(smcMessageCommand);
             }
             else if (
@@ -229,7 +230,7 @@ namespace Networking
                 }
                 else if (MessageSendStatus.TimeSinceLastCommunication() > TimeBetweenMessageSendAttempts)
                 {
-                    MessageSendStatus = MessageSendStatus.Reset().StartNewAttempt();
+                    MessageSendStatus = MessageSendStatus.Reset();
                     InternalStartSendingMessage(smcMessageCommand);
                 }
             }
@@ -245,7 +246,7 @@ namespace Networking
                 SetGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled) &&
                 SetGatewayStatus.TimeSinceLastCommunication() > TimeBetweenGatewayUpdates)
             {
-                SetGatewayStatus = SetGatewayStatus.Reset().StartNewAttempt();
+                SetGatewayStatus = SetGatewayStatus.Reset();
                 InternalStartSetGateway();
             }
 
@@ -280,6 +281,19 @@ namespace Networking
             return true;
         }
 
+        //check if the web interface is currently getting messages from the server
+        public bool IsGettingMessagesFromServer()
+        {
+            if(
+                MessageFetchStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.Cancled ||
+                MessageFetchStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.NotStarted)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         //get any sent or recieved messages
         public bool StartGettingMessages()
         {
@@ -303,13 +317,6 @@ namespace Networking
         //send message 
         public bool SendMessage(long lTarget, int iMessageType, string strMessage)
         {
-            //check if local id found
-            if (PlayerIDCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Succedded)
-            {
-                //dont have a local player id and cant send messages 
-                return false;
-            }
-
             //create message command
             SendMessageCommand smcMessageCommand = new SendMessageCommand()
             {
@@ -319,13 +326,23 @@ namespace Networking
                 m_strMessage = strMessage
             };
 
+            return SendMessage(smcMessageCommand);
+        }
+
+        public bool SendMessage(SendMessageCommand smcMessageCommand)
+        {
+            //check if local id found
+            if (PlayerIDCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Succedded)
+            {
+                //dont have a local player id and cant send messages 
+                return false;
+            }        
+
             //add to message queue
             MessagesToSend.Enqueue(smcMessageCommand);
 
             //check if message sending should be restarted 
-            if (MessageSendStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.Cancled ||
-                MessageSendStatus.ShouldRestart() == false)
-
+            if (MessageSendStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.Cancled)
             {
                 MessageSendStatus = MessageSendStatus.Reset();
             }
@@ -352,7 +369,7 @@ namespace Networking
             if (SetGatewayStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.NotStarted ||
                 SetGatewayStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.Cancled)
             {
-                SetGatewayStatus = SetGatewayStatus.Reset().StartNewAttempt();
+                SetGatewayStatus = SetGatewayStatus.Reset();
                 InternalStartSetGateway();
             }
 
@@ -375,6 +392,7 @@ namespace Networking
             //check if has id
             if (PlayerIDCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Succedded)
             {
+                Debug.Log("User ID has not been fetched from server before looking for gateway");
                 return false;
             }
 
@@ -382,8 +400,10 @@ namespace Networking
             if (
                 ExternalGatewayCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.NotStarted &&
                 ExternalGatewayCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Failed &&
-                ExternalGatewayCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled)
+                ExternalGatewayCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled &&
+                ExternalGatewayCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Succedded)
             {
+                Debug.Log("Starting search for gateway before previouse one has finished");
                 return false;
             }
 
@@ -613,6 +633,8 @@ namespace Networking
 
         protected void InternalStartSetGateway()
         {
+            Debug.Log("Setting Gateway Status");
+
             SetGatewayStatus = SetGatewayStatus.StartNewAttempt();
 
             string strGatewayCommand = JsonUtility.ToJson(LocalGatewaySimStatus);
@@ -640,7 +662,7 @@ namespace Networking
         protected void InternalStartSearchForGateway()
         {
             ExternalGatewayCommunicationStatus = ExternalGatewayCommunicationStatus.StartNewAttempt();
-
+            NoGatewayExistsOnServer = false;
             FakeWebAPI.Instance.SearchForGateway(PlayerID.ToString(), InternalOnFinishSearchForGateway);
         }
 
@@ -653,7 +675,15 @@ namespace Networking
 
             if (bWasSuccess == false)
             {
+                //check if the reason the conenction failed was because the server has no matching games
+                if(strResult.Contains("404"))
+                {
+                    NoGatewayExistsOnServer = true;
+                }
+
                 ExternalGatewayCommunicationStatus = ExternalGatewayCommunicationStatus.CommunicationFailed();
+
+                return;
             }
 
             try
@@ -662,6 +692,8 @@ namespace Networking
                 ExternalGateway = JsonUtility.FromJson<Gateway>(strResult);
 
                 ExternalGatewayCommunicationStatus = ExternalGatewayCommunicationStatus.CommunicationSuccessfull();
+
+                NoGatewayExistsOnServer = false;
             }
             catch
             {

@@ -58,6 +58,12 @@ namespace Networking
         // the max number of bytes to send at once
         public int m_iMaxBytesToSend;
 
+        // the time this connection was initalised
+        public DateTime m_conConnectionSetupStart;
+
+        //the time this connection was established
+        public DateTime m_dtmConnectionEstablishTime;
+
         // the max payload to send (max bytes - packet wrapper header)
         public int MaxPacketBytesToSend
         {
@@ -122,8 +128,12 @@ namespace Networking
             m_iTotalPacketsReceived = 0;
         }
 
-        public Connection(NetworkConnection ncnParetnNetwork, long lUserUniqueID, ClassWithIDFactory cifPacketFactory, IPeerTransmitter ptrPeerTransmitter )
+        public Connection(DateTime dtmNegotiationStart, NetworkConnection ncnParetnNetwork, long lUserUniqueID, ClassWithIDFactory cifPacketFactory, IPeerTransmitter ptrPeerTransmitter )
         {
+            m_conConnectionSetupStart = dtmNegotiationStart;
+
+            m_dtmConnectionEstablishTime = DateTime.MinValue;
+
             Status = ConnectionStatus.Initializing;
 
             m_ncnParetnNetworkConneciton = ncnParetnNetwork;
@@ -171,6 +181,7 @@ namespace Networking
         
         protected void OnNegoriationMessageFromTransmitter(string strMessageJson)
         {
+            Debug.Log($"Negotiation message:{strMessageJson} created by transmitter on peer {m_ncnParetnNetworkConneciton.m_lUserUniqueID}");
             TransmittionNegotiationMessages.Enqueue(strMessageJson);
         }
 
@@ -181,6 +192,12 @@ namespace Networking
             {
                 Status = ConnectionStatus.Connected;
             }
+
+            //store the time connection was established 
+            m_dtmConnectionEstablishTime = m_ncnParetnNetworkConneciton.GetPacketProcessor<TimeNetworkProcessor>().BaseTime;
+
+            //inform parent that now part of the swarm 
+            m_ncnParetnNetworkConneciton.m_bIsConnectedToSwarm = true;
         }
         #endregion
 
@@ -283,8 +300,7 @@ namespace Networking
                 m_ncnParetnNetworkConneciton.ProcessRecievedPacket(m_lUserUniqueID, pktPacket);
             }
         }
-
-
+        
         /// <summary>
         /// processes packet for sending and returns null if packet should not be sent
         /// </summary>
@@ -411,8 +427,7 @@ namespace Networking
 
             return true;
         }
-
-
+        
         private void UpdatePacketProcessors()
         {
             foreach(BaseConnectionPacketProcessor cppProcessor in OrderedPacketProcessorList)

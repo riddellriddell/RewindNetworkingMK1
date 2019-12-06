@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-public abstract class ClassWithIDFactory
+public class ClassWithIDFactory
 {   
     public ClassWithIDFactory()
     {
@@ -32,7 +32,10 @@ public abstract class ClassWithIDFactory
         return (T)Activator.CreateInstance(m_tipTypeIDs[iID]);
     }
 
-    protected abstract void SetupTypes();
+    protected virtual void SetupTypes()
+    {
+
+    }
 
     protected List<Type> m_tipTypeIDs = new List<Type>();
 }
