@@ -34,18 +34,36 @@ namespace Networking
         {
             get
             {
-                return 2;
+                return ByteStream.DataSize(this);
             }
         }
 
         public override void DecodePacket(ReadByteStream rbsByteStream)
         {
-            ByteStream.Serialize(rbsByteStream, ref m_bEcho);
+            ByteStream.Serialize(rbsByteStream, this);
         }
 
         public override void EncodePacket(WriteByteStream wbsByteStream)
         {
-            ByteStream.Serialize(wbsByteStream,ref m_bEcho);
+            ByteStream.Serialize(wbsByteStream, this);
+        }
+    }
+
+    public partial class ByteStream
+    {
+        public static void Serialize(ReadByteStream ByteStream, NetTestSendPacket Input)
+        {
+            Serialize(ByteStream,ref Input.m_bEcho);
+        }
+
+        public static void Serialize(WriteByteStream ByteStream, NetTestSendPacket Input)
+        {
+            Serialize(ByteStream, ref Input.m_bEcho);
+        }
+
+        public static int DataSize(NetTestSendPacket Input)
+        {
+            return DataSize(Input.m_bEcho);
         }
     }
 
@@ -60,7 +78,7 @@ namespace Networking
         }
 
         //the time on this computer 
-        public long m_lTicks;
+        public long m_lLocalBaseTimeTicks;
 
         //the value to echo back 
         public byte m_bEcho;
@@ -77,24 +95,42 @@ namespace Networking
         {
             get
             {
-                return 2;
+                return ByteStream.DataSize(this);
             }
         }
 
         public override void DecodePacket(ReadByteStream rbsByteStream)
         {
-
             //decode tick offset
-            ByteStream.Serialize(rbsByteStream, ref m_bEcho);
-            ByteStream.Serialize(rbsByteStream, ref m_lTicks);
-
+            ByteStream.Serialize(rbsByteStream, this);
         }
 
         public override void EncodePacket(WriteByteStream wbsByteStream)
         {
             //encode tick offset
-            ByteStream.Serialize(wbsByteStream,ref m_bEcho);
-            ByteStream.Serialize(wbsByteStream,ref m_lTicks);
+            ByteStream.Serialize(wbsByteStream, this);
+        }
+    }
+
+    public partial class ByteStream
+    {
+        public static void Serialize(ReadByteStream ByteStream, NetTestReplyPacket Input)
+        {
+            Serialize(ByteStream, ref Input.m_lLocalBaseTimeTicks);
+            Serialize(ByteStream, ref Input.m_bEcho);
+        }
+
+        public static void Serialize(WriteByteStream ByteStream, NetTestReplyPacket Input)
+        {
+            Serialize(ByteStream, ref Input.m_lLocalBaseTimeTicks);
+            Serialize(ByteStream, ref Input.m_bEcho);
+        }
+
+        public static int DataSize(NetTestReplyPacket Input)
+        {
+            int iSize = DataSize(Input.m_lLocalBaseTimeTicks);
+            iSize += DataSize(Input.m_bEcho);
+            return iSize;
         }
     }
 }

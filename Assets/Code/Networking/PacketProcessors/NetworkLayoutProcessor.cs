@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Networking
 {
@@ -161,7 +162,7 @@ namespace Networking
         public delegate void ConnectionLayoutChange(ConnectionNetworkLayoutProcessor clpLayoutProcessor);
         public event ConnectionLayoutChange m_evtPeerConnectionLayoutChange;
 
-        protected bool m_bShouldUpdatePeers = false;
+        public bool m_bShouldUpdatePeers = false;
 
         public HashSet<long> MissingConnections { get; } = new HashSet<long>();
 
@@ -177,6 +178,8 @@ namespace Networking
         {
             if(m_bShouldUpdatePeers)
             {
+                Debug.Log("sending layout to connected peers");
+
                 SendNetworkLayoutToPeers();
                 m_bShouldUpdatePeers = false;
             }
@@ -222,13 +225,6 @@ namespace Networking
             ParentNetworkConnection.TransmitPacketToAll(nlpNetworkLayoutPacket);
         }
 
-        protected override ConnectionNetworkLayoutProcessor NewConnectionProcessor()
-        {
-            m_bShouldUpdatePeers = true;
-
-            return base.NewConnectionProcessor();
-        }
-
         protected override void OnClientProcessorDisconnect(Connection conConnection, ConnectionNetworkLayoutProcessor tConnectionProcessor)
         {
             base.OnClientProcessorDisconnect(conConnection, tConnectionProcessor);
@@ -246,9 +242,14 @@ namespace Networking
 
             foreach(ConnectionNetworkLayoutProcessor clpLayout in ChildConnectionProcessors.Values)
             {
-                DateTime dtmTimeOfConnection = clpLayout.NetworkTimeOfConnection;
+                //check if fully connected
+                if (clpLayout.ParentConnection.Status == Connection.ConnectionStatus.Connected)
+                {
+                    Debug.Log($"adding connection: {clpLayout.ParentConnection.m_lUserUniqueID} to network layout");
+                    DateTime dtmTimeOfConnection = clpLayout.NetworkTimeOfConnection;
 
-                networkLayout.Add(clpLayout.ParentConnection.m_lUserUniqueID, dtmTimeOfConnection);
+                    networkLayout.Add(clpLayout.ParentConnection.m_lUserUniqueID, dtmTimeOfConnection);
+                }
             }
 
             return networkLayout;
@@ -347,6 +348,8 @@ namespace Networking
         {
             if (pktInputPacket is NetworkLayoutPacket)
             {
+                Debug.Log("Recieved network layout packet");
+
                 m_nlaNetworkLayout = (pktInputPacket as NetworkLayoutPacket).m_nlaNetworkLayout;
 
                 m_tParentPacketProcessor.OnPeerNetworkLayoutChange(this);
@@ -355,6 +358,11 @@ namespace Networking
             }
 
             return pktInputPacket;
+        }
+
+        public override void OnConnectionStateChange(Connection.ConnectionStatus cstOldState, Connection.ConnectionStatus cstNewState)
+        {
+            m_tParentPacketProcessor.m_bShouldUpdatePeers = true;
         }
     }
 }

@@ -37,14 +37,22 @@ namespace Networking
 
         protected int m_iTargetID = int.MinValue;
 
-        protected bool m_bMakingOffer = false;
+        public bool m_bMakingOffer = false;
 
-        protected int m_iIceCandidatesRecieved = 0;
+        protected bool m_bSessionDescriptionFinished = false;
+
+        public int m_iIceCandidatesRecieved = 0;
 
         public FakeWebRTCTransmitter()
         {
-            //m_iTransmitterID = TransmitterRegistery.Count;
+            //m_iTransmitterID = 0 - TransmitterRegistery.Count;
             m_iTransmitterID = Random.Range(int.MinValue, int.MaxValue);
+
+            while(TransmitterRegistery.ContainsKey(m_iTargetID))
+            {
+                Debug.Log("Collision for transmitter id detected calculating new id");
+                m_iTransmitterID = Random.Range(int.MinValue, int.MaxValue);
+            }
 
             TransmitterRegistery[m_iTransmitterID] = this;
         }
@@ -90,6 +98,8 @@ namespace Networking
 
             string strOffer = JsonUtility.ToJson(nmsMessage);
 
+            m_bSessionDescriptionFinished = true;
+
             OnNegotiationMessageCreated?.Invoke(strOffer);
 
             int iIceCandidatesSent = 0;
@@ -110,12 +120,13 @@ namespace Networking
             //check state 
             if (State != PeerTransmitterState.New && State != PeerTransmitterState.Negotiating)
             {
+                Debug.Log("Error started making reply in non negotiation state");
                 yield break;
             }
 
             State = PeerTransmitterState.Negotiating;
 
-            Debug.Log($"making reply negotiation message");
+            Debug.Log($"connection {m_iTransmitterID} making reply negotiation message to {m_iTargetID}");
 
             yield return new WaitForSeconds(s_fOfferCreateTime);
 
@@ -127,11 +138,19 @@ namespace Networking
 
             string strOffer = JsonUtility.ToJson(nmsMessage);
 
+            m_bSessionDescriptionFinished = true;
+
             OnNegotiationMessageCreated?.Invoke(strOffer);
         }
 
         protected IEnumerator MakeIce()
         {
+            //wait for session description to finish
+            if(m_bSessionDescriptionFinished)
+            {
+                yield return null;
+            }
+
             yield return new WaitForSeconds(s_fIceCreateTime);
 
             if (State != PeerTransmitterState.Negotiating)
@@ -164,11 +183,11 @@ namespace Networking
 
         public bool ProcessNegotiationMessage(string strMessage)
         {
-            Debug.Log($"Processing message {strMessage}");
-
             NegotiationMessage nmsNegotiationMessage = JsonUtility.FromJson<NegotiationMessage>(strMessage);
 
-            if(nmsNegotiationMessage.m_iType == (int)NegotiationMessage.Type.Offer ||
+            Debug.Log($"Processing message {strMessage} Sender: {nmsNegotiationMessage.m_iSender}, Type: {nmsNegotiationMessage.m_iType}");
+
+            if (nmsNegotiationMessage.m_iType == (int)NegotiationMessage.Type.Offer ||
                 nmsNegotiationMessage.m_iType == (int)NegotiationMessage.Type.Reply)
             {
                 Debug.Log($" Target Transmitter ID:{nmsNegotiationMessage.m_iSender}");
@@ -185,7 +204,7 @@ namespace Networking
                 //update the number of ice candidates recieved
                 m_iIceCandidatesRecieved++;
 
-                Debug.Log($"{s_iConnectOnReturnIceCandidate - m_iIceCandidatesRecieved} Left to create connection !!!");
+                Debug.Log($"{s_iConnectOnReturnIceCandidate - m_iIceCandidatesRecieved} Left to create connection from {m_iTransmitterID}  to {m_iTargetID} !!!");
 
                 //if enough ice candidates have been recieved make connection
                 if(m_iIceCandidatesRecieved >= s_iConnectOnReturnIceCandidate)
@@ -200,6 +219,14 @@ namespace Networking
                             fwtTarget.MakeConnection();
                             OnConnectionEstablished?.Invoke();
                         }
+                        else
+                        {
+                            Debug.Log($"Unable to find target {m_iTargetID} on Transmitter {m_iTransmitterID}");
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log($"Error target id never recieved on Transmitter {m_iTransmitterID}");
                     }
                 }
             }

@@ -35,18 +35,18 @@ namespace GameManagers
         public ActiveGameState State { get; private set; } = ActiveGameState.GettingGateway;
 
         //the web interface 
-        protected WebInterface m_winWebInterface = null;
+        public WebInterface m_winWebInterface = null;
 
         //the game sim
-        protected SimManager m_smgSimManager = null;
+        public SimManager m_smgSimManager = null;
 
         //the peer to peer network
-        protected NetworkConnection m_ncnNetworkConnection;
+        public NetworkConnection m_ncnNetworkConnection;
 
         //the interface between the p2p network and the web API
-        protected NetworkGatewayManager m_ngmGatewayManager;
+        public NetworkGatewayManager m_ngmGatewayManager;
 
-        protected NetworkConnectionPropagatorProcessor m_ncpConnectionPropegator;
+        public NetworkConnectionPropagatorProcessor m_ncpConnectionPropegator;
 
         //the amount of time to wait to get gateway before timing out and starting again
         protected float m_fGettingGatewayTimeout = 30f;

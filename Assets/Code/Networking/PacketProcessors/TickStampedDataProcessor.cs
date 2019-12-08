@@ -70,13 +70,13 @@ namespace Networking
             m_iTick = iTick;
         }
 
-        public override void Update(Connection conConnection)
+        public override void Update()
         {
             //check if a ping packet is needed
             if (m_iTick - m_iLastPacketTickQueuedToSend >= TickStampedPacket.MaxTicksBetweenTickStampedPackets)
             {
                 //add a ping packet to send list to maintain connection
-                conConnection.QueuePacketToSend(new PingPacket());
+                ParentConnection.QueuePacketToSend(new PingPacket());
             }
         }
 

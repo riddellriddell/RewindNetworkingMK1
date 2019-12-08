@@ -12,7 +12,7 @@ namespace Networking
     {
         public NetworkConnection ParentNetworkConnection { get; private set; } = null;
 
-        protected Dictionary<long, T> ChildConnectionProcessors { get; } = new Dictionary<long, T>();
+        public Dictionary<long, T> ChildConnectionProcessors { get; } = new Dictionary<long, T>();
 
         protected virtual T NewConnectionProcessor()
         {

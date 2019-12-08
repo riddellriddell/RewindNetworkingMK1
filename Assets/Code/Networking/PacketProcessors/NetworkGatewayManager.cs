@@ -200,7 +200,7 @@ namespace Networking
         {
             get
             {
-                if(DateTime.UtcNow - TimeOfLastGatewayNotification < NetworkGatewayManager.GatewayTimeout )
+                if(m_tnpNetworkTime.BaseTime - TimeOfLastGatewayNotification < NetworkGatewayManager.GatewayTimeout )
                 {
                     return true;
                 }
@@ -228,19 +228,25 @@ namespace Networking
             m_tnpNetworkTime = m_tParentPacketProcessor.ParentNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
         }
 
-        public override void Update(Connection conConnection)
+        public override void Update()
         {
+            //check if connected
+            if(ParentConnection.Status != Connection.ConnectionStatus.Connected)
+            {
+                return;
+            }
+
             //check if user has active gateway
             if (m_tParentPacketProcessor.ParentNetworkConnection.m_bIsConnectedToSwarm && m_tParentPacketProcessor.NeedsOpenGateway)
             {
                 //check if gateway has timed out
-                if (DateTime.UtcNow - m_dtmTimeOfLastOpenGateNotification > NetworkGatewayManager.GatewayAnounceRate)
+                if (m_tnpNetworkTime.BaseTime - m_dtmTimeOfLastOpenGateNotification > NetworkGatewayManager.GatewayAnounceRate)
                 {
                     //create packet to send
-                    GatewayActiveAnouncePacket gapAnouncePacket = conConnection.m_cifPacketFactory.CreateType<GatewayActiveAnouncePacket>(GatewayActiveAnouncePacket.TypeID);
+                    GatewayActiveAnouncePacket gapAnouncePacket = ParentConnection.m_cifPacketFactory.CreateType<GatewayActiveAnouncePacket>(GatewayActiveAnouncePacket.TypeID);
 
                     //make new announcement 
-                    conConnection.QueuePacketToSend(gapAnouncePacket);
+                    ParentConnection.QueuePacketToSend(gapAnouncePacket);
 
                     //update the last time a gateway announce was sent 
                     m_dtmTimeOfLastOpenGateNotification = m_tnpNetworkTime.BaseTime;
@@ -249,13 +255,13 @@ namespace Networking
 
             if(HadTimeToRecieveGateNotification == false)
             {
-                if(conConnection.Status == Connection.ConnectionStatus.Connected && conConnection.m_dtmConnectionEstablishTime > m_tnpNetworkTime.BaseTime + NetworkGatewayManager.GatewayTimeout)
+                if(ParentConnection.Status == Connection.ConnectionStatus.Connected && ParentConnection.m_dtmConnectionEstablishTime > m_tnpNetworkTime.BaseTime + NetworkGatewayManager.GatewayTimeout)
                 {
                     HadTimeToRecieveGateNotification = true;
                 }
             }
 
-            base.Update(conConnection);
+            base.Update();
         }
 
         public override DataPacket ProcessReceivedPacket(Connection conConnection, DataPacket pktInputPacket)
@@ -266,7 +272,7 @@ namespace Networking
                 //check if time of gateway activation
 
                 //update the last time seeing a notification for a gateway
-                TimeOfLastGatewayNotification = DateTime.UtcNow;
+                TimeOfLastGatewayNotification = m_tnpNetworkTime.BaseTime;
 
                 return null;
             }

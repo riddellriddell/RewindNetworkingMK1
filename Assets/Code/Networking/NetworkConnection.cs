@@ -99,6 +99,8 @@ namespace Networking
 
         public Connection CreateNewConnection(DateTime dtmNegotiationStart, long lUserUniqueID)
         {
+            Debug.Log($"Creating connection: {lUserUniqueID}");
+
             //destroy any existing connection for this user 
             DestroyConnection(lUserUniqueID);
 
@@ -113,12 +115,14 @@ namespace Networking
 
             return conNewConnection;
         }
-        
+
         public void DestroyConnection(long lUserID)
         {
             //check if connection already exists for user 
             if (ConnectionList.TryGetValue(lUserID, out Connection conTargetConnection))
             {
+                Debug.Log($"Destroying connection: {lUserID}");
+
                 //destroy connection
                 conTargetConnection.DisconnectFromPeer();
 
@@ -126,7 +130,7 @@ namespace Networking
                 ConnectionList.Remove(lUserID);
 
                 //update all packet managers
-                foreach(BaseNetworkPacketProcessor bppProcessor in NetworkPacketProcessors)
+                foreach (BaseNetworkPacketProcessor bppProcessor in NetworkPacketProcessors)
                 {
                     //tell packet processor that user has disconnected
                     bppProcessor.OnConnectionDisconnect(conTargetConnection);
@@ -163,11 +167,11 @@ namespace Networking
 
         //send packet to all connected players 
         public void TransmitPacketToAll(DataPacket pktPacket)
-        {       
+        {
             foreach (Connection conConnection in ConnectionList.Values)
             {
                 //process packet for sending 
-                SendPackage(conConnection.m_lUserUniqueID, pktPacket);
+                SendPacket(conConnection, pktPacket);
             }
         }
 
@@ -193,29 +197,35 @@ namespace Networking
             return Time.timeSinceLevelLoad;
         }
 
-        //send a packet out to a specific connection 
-        public void SendPackage(long lPlayerID, DataPacket pktPacket)
+        public void SendPacket(long lPlayerID, DataPacket pktPacket)
         {
             //get connection for ID
             if (ConnectionList.TryGetValue(lPlayerID, out Connection conConnection))
             {
-                //process packet for sending 
-                pktPacket = SendingPacketNetworkProcesses(lPlayerID, pktPacket);
-
-                if (pktPacket == null)
-                {
-                    return;
-                }
-
-                conConnection.QueuePacketToSend(pktPacket);
+                SendPacket(conConnection, pktPacket);
             }
+        }
+
+        //send a packet out to a specific connection 
+        public void SendPacket(Connection conConnection, DataPacket pktPacket)
+        {
+            //process packet for sending 
+            pktPacket = SendingPacketNetworkProcesses(conConnection.m_lUserUniqueID, pktPacket);
+
+            if (pktPacket == null)
+            {
+                Debug.Log($"Sending of packet{pktPacket.ToString()} blocked by network process");
+                return;
+            }
+
+            conConnection.QueuePacketToSend(pktPacket);
         }
 
         [Obsolete]
         public void DestributeReceivedPackets()
         {
             //loop through all the connections 
-            foreach(Connection conConnection in ConnectionList.Values)
+            foreach (Connection conConnection in ConnectionList.Values)
             {
                 while (conConnection.ReceivedPackets.Count > 0)
                 {

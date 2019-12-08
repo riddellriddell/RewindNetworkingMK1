@@ -21,7 +21,7 @@ namespace Networking
 
         }
 
-        public virtual void Update(Connection conConnection)
+        public virtual void Update()
         {
 
         }
@@ -36,8 +36,7 @@ namespace Networking
             return pktOutputPacket;
         }
 
-        //called when a connection disconnects
-        public virtual void OnConnectionDisconnect()
+        public virtual void OnConnectionStateChange(Connection.ConnectionStatus cstOldState, Connection.ConnectionStatus cstNewState)
         {
 
         }

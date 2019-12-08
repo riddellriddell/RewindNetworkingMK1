@@ -89,7 +89,7 @@ namespace Networking
         //the current state of the connection
         public ConnectionStatus Status { get; private set; } = ConnectionStatus.Initializing;
 
-        protected IPeerTransmitter m_ptrTransmitter;
+        public  IPeerTransmitter m_ptrTransmitter;
 
         // list of all the packet processors 
         protected SortedSet<BaseConnectionPacketProcessor> OrderedPacketProcessorList { get; } = new SortedSet<BaseConnectionPacketProcessor>(new PacketProcessorComparer());
@@ -110,7 +110,7 @@ namespace Networking
         protected int m_iLastTickReceived;
 
         //the peer network this connection is being managed by
-        protected NetworkConnection m_ncnParetnNetworkConneciton;
+        protected NetworkConnection m_ncnParentNetworkConneciton;
 
         [Obsolete]
         public Connection(byte bConnectionID, ClassWithIDFactory cifPacketFactory)
@@ -133,10 +133,10 @@ namespace Networking
             m_conConnectionSetupStart = dtmNegotiationStart;
 
             m_dtmConnectionEstablishTime = DateTime.MinValue;
+                      
+            SetStatus(ConnectionStatus.Initializing);
 
-            Status = ConnectionStatus.Initializing;
-
-            m_ncnParetnNetworkConneciton = ncnParetnNetwork;
+            m_ncnParentNetworkConneciton = ncnParetnNetwork;
 
             m_lUserUniqueID = lUserUniqueID;
 
@@ -181,7 +181,7 @@ namespace Networking
         
         protected void OnNegoriationMessageFromTransmitter(string strMessageJson)
         {
-            Debug.Log($"Negotiation message:{strMessageJson} created by transmitter on peer {m_ncnParetnNetworkConneciton.m_lUserUniqueID}");
+            Debug.Log($"Negotiation message:{strMessageJson} created by transmitter on peer {m_ncnParentNetworkConneciton.m_lUserUniqueID}");
             TransmittionNegotiationMessages.Enqueue(strMessageJson);
         }
 
@@ -190,16 +190,26 @@ namespace Networking
             //check that we are transittioning from correct state
             if (Status == ConnectionStatus.Initializing)
             {
-                Status = ConnectionStatus.Connected;
+                SetStatus(ConnectionStatus.Connected);
             }
 
             //store the time connection was established 
-            m_dtmConnectionEstablishTime = m_ncnParetnNetworkConneciton.GetPacketProcessor<TimeNetworkProcessor>().BaseTime;
+            m_dtmConnectionEstablishTime = m_ncnParentNetworkConneciton.GetPacketProcessor<TimeNetworkProcessor>().BaseTime;
 
             //inform parent that now part of the swarm 
-            m_ncnParetnNetworkConneciton.m_bIsConnectedToSwarm = true;
+            m_ncnParentNetworkConneciton.m_bIsConnectedToSwarm = true;
         }
         #endregion
+
+
+        public void OnConnectionStateChange( Connection.ConnectionStatus cstOldState, Connection.ConnectionStatus cstNewState)
+        {
+            foreach(BaseConnectionPacketProcessor cppProcessor in OrderedPacketProcessorList)
+            {
+                cppProcessor.OnConnectionStateChange(cstOldState, cstNewState);
+            }
+        }
+
 
         //check if a ping packet is needed to keep the connection alive
         public void UpdateConnection()
@@ -255,7 +265,9 @@ namespace Networking
                 m_iPacketsQueuedToSendCount++;
 
                 return true;
-            }           
+            }
+
+            Debug.Log($"Sending of packet{pktPacket.ToString()} blocked by connection process");
 
             return false;
         }
@@ -297,7 +309,7 @@ namespace Networking
                 ReceivedPackets.Enqueue(pktPacket);
 
                 //send packets to network packet manager for further processing
-                m_ncnParetnNetworkConneciton.ProcessRecievedPacket(m_lUserUniqueID, pktPacket);
+                m_ncnParentNetworkConneciton.ProcessRecievedPacket(m_lUserUniqueID, pktPacket);
             }
         }
         
@@ -350,6 +362,12 @@ namespace Networking
 
         private void SendPackets()
         {
+            //check if connected and able to send packets
+            if(Status != ConnectionStatus.Connected)
+            {
+                return;
+            }
+
             //check if there is anything to send
             if (PacketsInFlight.Count == 0)
             {
@@ -379,7 +397,10 @@ namespace Networking
 
             //create packet wrapper 
             PacketWrapper pkwPacketWrappepr = new PacketWrapper(m_iTotalPacketsReceived, m_iPacketsQueuedToSendCount - PacketsInFlight.Count, m_iMaxBytesToSend);
-     
+
+            //TODO: Remove This
+            List<string> strPacketTypesInPacket = new List<string>();
+
             //add as many packets as possible without hitting the max send data limit
             for (int i = 0; i < PacketsInFlight.Count; i++)
             {
@@ -388,9 +409,21 @@ namespace Networking
                 if (pkwPacketWrappepr.WriteStream.BytesRemaining - pktPacketToSend.PacketTotalSize > 0)
                 {
                     pkwPacketWrappepr.AddDataPacket(pktPacketToSend);
+
+                    strPacketTypesInPacket.Add(pktPacketToSend.ToString());
                 }
                 else
                 {
+                    string strPacketDataInPacket = "";
+
+                    foreach(string strPacketDetails in strPacketTypesInPacket)
+                    {
+                        strPacketDataInPacket +=  ", "  + strPacketDetails;
+                    }
+
+
+                    Debug.Log($"Connection from User:{m_ncnParentNetworkConneciton.m_lUserUniqueID} to User:{m_lUserUniqueID} is Saturated with data: {strPacketDataInPacket}");
+
                     break;
                 }
             }
@@ -400,6 +433,9 @@ namespace Networking
             {
                 m_icsConnectionSim.SendPacket(pkwPacketWrappepr, m_conConnectionTarget);
             }
+
+            //send packet through transmitter
+            m_ptrTransmitter.SentData(pkwPacketWrappepr.WriteStream.GetData());
         }
 
         //takes the binary data in the packet wrapper and converts it to a data packet
@@ -432,8 +468,16 @@ namespace Networking
         {
             foreach(BaseConnectionPacketProcessor cppProcessor in OrderedPacketProcessorList)
             {
-                cppProcessor.Update(this);
+                cppProcessor.Update();
             }
+        }
+
+        private void SetStatus(ConnectionStatus cstNewStatus)
+        {
+            ConnectionStatus cstOldStatus = Status;
+            Status = cstNewStatus;
+
+            OnConnectionStateChange(cstOldStatus, Status);
         }
 
     }

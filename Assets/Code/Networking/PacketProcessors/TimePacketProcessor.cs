@@ -74,10 +74,10 @@ namespace Networking
 
             // generate an array of all the offsets for all conenctions 
             //loop through all the conenctions 
-            for (int i = 0; i < ChildConnectionProcessors.Count; i++)
+            foreach(TimeConnectionProcessor tcpConnectionTime in ChildConnectionProcessors.Values)
             {
                 //add offset to list
-                m_dtoTempTimeOffsets.Add(ChildConnectionProcessors[i].Offset);
+                m_dtoTempTimeOffsets.Add(tcpConnectionTime.Offset);
             }
 
             //add local offset
@@ -92,6 +92,7 @@ namespace Networking
 
             //calculate the range to take values from
             int iMin = Math.Max(0, (m_dtoTempTimeOffsets.Count / 2) - (iOffset + 1));
+
             //calculate the range to take values from
             int iMax = Math.Max(m_dtoTempTimeOffsets.Count, (m_dtoTempTimeOffsets.Count / 2) + (iOffset - 1));
 
@@ -191,7 +192,7 @@ namespace Networking
             m_dtmTimeOfLastUpdate = DateTime.MinValue;
         }
 
-        public override void Update(Connection conConnection)
+        public override void Update()
         {
             TimeSpan tspTimeSinceLastUpdate = m_tParentPacketProcessor.BaseTime - m_dtmTimeOfLastUpdate;
 
@@ -202,7 +203,7 @@ namespace Networking
                 m_bEchoSent = (byte)UnityEngine.Random.Range(byte.MinValue + 1, byte.MaxValue);
 
                 //generate echo data packet
-                NetTestSendPacket ntpEcho = conConnection.m_cifPacketFactory.CreateType<NetTestSendPacket>(NetTestSendPacket.TypeID);
+                NetTestSendPacket ntpEcho = ParentConnection.m_cifPacketFactory.CreateType<NetTestSendPacket>(NetTestSendPacket.TypeID);
 
                 //set echo value
                 ntpEcho.m_bEcho = m_bEchoSent;
@@ -211,7 +212,7 @@ namespace Networking
                 m_dtmTimeOfEchoSend = m_dtmTimeOfLastUpdate = m_tParentPacketProcessor.BaseTime;
 
                 //queue echo 
-                conConnection.QueuePacketToSend(ntpEcho);
+                ParentConnection.QueuePacketToSend(ntpEcho);
             }
         }
 
@@ -230,7 +231,7 @@ namespace Networking
                 ntpReply.m_bEcho = ntpEcho.m_bEcho;
 
                 //set local time 
-                ntpReply.m_lTicks = m_tParentPacketProcessor.BaseTime.Ticks;
+                ntpReply.m_lLocalBaseTimeTicks = m_tParentPacketProcessor.BaseTime.Ticks;
 
                 //schedule a reply packet 
                 conConnection.QueuePacketToSend(ntpReply);
@@ -258,7 +259,7 @@ namespace Networking
                     RTT = tspTimeSinceTestStart;
 
                     //the time on the other end of this connection when this message was sent
-                    DateTime dtmTimeOfReplySend = new DateTime(ntpEcho.m_lTicks, DateTimeKind.Utc);
+                    DateTime dtmTimeOfReplySend = new DateTime(ntpEcho.m_lLocalBaseTimeTicks, DateTimeKind.Utc);
 
                     //time adjusted for transmittion time
                     DateTime dtmPredictedTime = dtmTimeOfReplySend + (TimeSpan.FromTicks(RTT.Ticks / 2));

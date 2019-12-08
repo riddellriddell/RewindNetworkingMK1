@@ -1,10 +1,41 @@
 ﻿using Networking;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace GameManagers
 {
+    [Serializable]
+    public struct ActiveGameManagerSceneTesterConnection
+    {
+        [SerializeField]
+        public long m_lConnectionID;
+
+        [SerializeField]
+        public Connection.ConnectionStatus m_cnsConnectionState;
+
+        [SerializeField]
+        public PeerTransmitterState m_ptsTransmitterState;
+
+        [SerializeField]
+        public bool m_bMakingOffer;
+
+        [SerializeField]
+        public int m_iNumberOfIceCandidatesRecieved;
+
+        [SerializeField]
+        public List<long> m_lConnectedPeers;
+    }
+
+    [Serializable]
+    public struct ActiveGameManagerSceneTesterConnectionPeer
+    {
+        [SerializeField]
+        public long m_lPeerId;
+    }
+
     public class ActiveGameManagerSceneTester : MonoBehaviour
     {
         public string m_strUniqueDeviceID;
@@ -12,6 +43,12 @@ namespace GameManagers
         public WebInterface m_wbiWebInterface;
 
         public ActiveGameManager m_agmActiveGameManager;
+
+        [SerializeField]
+        public long m_lPeerID;
+
+        [SerializeField]
+        public List<ActiveGameManagerSceneTesterConnection> m_stcNetworkDebugData;
 
         // Start is called before the first frame update
         void Start()
@@ -33,6 +70,11 @@ namespace GameManagers
 
             m_wbiWebInterface = new WebInterface();
 
+            if(m_strUniqueDeviceID == string.Empty)
+            {
+                m_strUniqueDeviceID = $"User:{Random.Range(int.MinValue, int.MaxValue)}";
+            }
+
             m_wbiWebInterface.GetPlayerID(m_strUniqueDeviceID);
                         
 
@@ -51,9 +93,46 @@ namespace GameManagers
 
                 m_agmActiveGameManager.UpdateGame(Time.deltaTime);
 
+                UpdateNetworkDebug();
+
                 yield return null;
             }
 
         }
+
+        protected void UpdateNetworkDebug()
+        {
+            m_lPeerID = m_agmActiveGameManager.m_winWebInterface.PlayerID;
+
+            m_stcNetworkDebugData = new List<ActiveGameManagerSceneTesterConnection>();
+
+            NetworkLayoutProcessor nlpNetworkLayout = m_agmActiveGameManager.m_ncnNetworkConnection.GetPacketProcessor<NetworkLayoutProcessor>();
+
+            foreach (KeyValuePair<long,ConnectionNetworkLayoutProcessor> cnlConnectionLayout in nlpNetworkLayout.ChildConnectionProcessors)
+            {
+                ActiveGameManagerSceneTesterConnection stcConnection = new ActiveGameManagerSceneTesterConnection();
+
+                stcConnection.m_lConnectionID = cnlConnectionLayout.Key;
+
+                stcConnection.m_cnsConnectionState = cnlConnectionLayout.Value.ParentConnection.Status;
+
+                stcConnection.m_ptsTransmitterState = cnlConnectionLayout.Value.ParentConnection.m_ptrTransmitter.State;
+
+                stcConnection.m_bMakingOffer = (cnlConnectionLayout.Value.ParentConnection.m_ptrTransmitter as FakeWebRTCTransmitter).m_bMakingOffer;
+
+                stcConnection.m_iNumberOfIceCandidatesRecieved = (cnlConnectionLayout.Value.ParentConnection.m_ptrTransmitter as FakeWebRTCTransmitter).m_iIceCandidatesRecieved;
+
+                stcConnection.m_lConnectedPeers = new List<long>();
+
+
+                foreach (NetworkLayout.ConnectionState cnsConnectionState in cnlConnectionLayout.Value.m_nlaNetworkLayout.m_conConnectionDetails)
+                {
+                    stcConnection.m_lConnectedPeers.Add(cnsConnectionState.m_lConnectionID);
+                }
+
+                m_stcNetworkDebugData.Add(stcConnection);
+            }
+        }
+
     }
 }

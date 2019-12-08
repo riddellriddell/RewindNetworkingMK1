@@ -38,7 +38,7 @@ namespace Networking
 
         public override DataPacket ProcessReceivedPacket(long lUserID, DataPacket pktInputPacket)
         {
-            if(pktInputPacket is ConnectionNegotiationBasePacket)
+            if (pktInputPacket is ConnectionNegotiationBasePacket)
             {
                 //process connection negotiation packet
                 ProcessConnectionNegotiationMessage(pktInputPacket as ConnectionNegotiationBasePacket);
@@ -61,7 +61,7 @@ namespace Networking
             //check if peer has a connection to a peer not connected to this peer
             ConnectToMissingConnections();
         }
-        
+
         public void StartRequest(long lUserID)
         {
             DateTime dtmStartTime = m_tnpNetworkTime.BaseTime;
@@ -83,12 +83,12 @@ namespace Networking
             {
                 List<long> lMissingConnections = new List<long>(m_nlpNetworkLayout.MissingConnections);
 
-                foreach (long lUserID in lMissingConnections)
+                foreach (long lMissingUserID in lMissingConnections)
                 {
                     //check if connecting to this peer is blockd for some reason
 
                     //check if this is the correct peer to be making the connection attempt
-                    if (ShouldPeerStartConnection(ParentNetworkConnection.m_lUserUniqueID, lUserID) == false)
+                    if (ShouldPeerStartConnection(ParentNetworkConnection.m_lUserUniqueID, lMissingUserID) == false)
                     {
                         //skip user
                         continue;
@@ -96,11 +96,12 @@ namespace Networking
 
                     //start connection proccess by making new connection object and generating 
                     //connection offer negotiation message
-                    StartRequest(lUserID);
+                    Debug.Log($"Starting connection request from: {ParentNetworkConnection.m_lUserUniqueID} to {lMissingUserID}");
+                    StartRequest(lMissingUserID);
                 }
             }
         }
-        
+
         /// <summary>
         /// to connect 2 peers over the network one peer has to be selected to initiate the connection
         /// peer selection is done based on user id
@@ -144,24 +145,27 @@ namespace Networking
                         //pick a random open peer to send message through 
                         long lRelayConnection = lMutualPeers[Random.Range(0, lMutualPeers.Count)];
 
+
+                        Debug.Log($"Sending conneciton negotiation packet: {cnpPacket.m_iIndex} from peer {cnpPacket.m_lFrom} through peer {lRelayConnection} to peer {cnpPacket.m_lTo}");
+
                         //send packet to peer
-                        ParentNetworkConnection.SendPackage(lRelayConnection, cnpPacket);
+                        ParentNetworkConnection.SendPacket(lRelayConnection, cnpPacket);
                     }
                     //if no client exists check if user has active gateway or this is the first connection to the swarm
-                    else if (m_ngmGatewayManager.NeedsOpenGateway == true || ParentNetworkConnection.m_bIsConnectedToSwarm == false) 
+                    else if (m_ngmGatewayManager.NeedsOpenGateway == true || ParentNetworkConnection.m_bIsConnectedToSwarm == false)
                     {
                         m_ngmGatewayManager.ProcessMessageToGateway(cnpPacket.m_lTo, cnpPacket);
                     }
                     else //if there is no way to send message close connection negotiation
                     {
                         lConnectionsToRemove.Add(cnpPacket.m_lTo);
-                        break;                        
+                        break;
                     }
                 }
             }
 
             //check if there are any connections that should be removed 
-            for(int i = 0; i < lConnectionsToRemove.Count; i++)
+            for (int i = 0; i < lConnectionsToRemove.Count; i++)
             {
                 ParentNetworkConnection.DestroyConnection(lConnectionsToRemove[i]);
             }
@@ -178,7 +182,7 @@ namespace Networking
                 //this users public key for the target connection
 
                 //forward packet
-                ParentNetworkConnection.SendPackage(cnpPacket.m_lTo, cnpPacket);
+                ParentNetworkConnection.SendPacket(cnpPacket.m_lTo, cnpPacket);
 
                 //packet handled
                 return;
@@ -220,7 +224,7 @@ namespace Networking
             cppFromConnection.QueueNegotiationMessageForProcessing(cnpPacket);
 
         }
-        
+
         protected bool IsTargetForConnectionNegotiationMessage(ConnectionNegotiationBasePacket cnpPacket)
         {
             if (cnpPacket.m_lTo == ParentNetworkConnection.m_lUserUniqueID)
@@ -267,6 +271,8 @@ namespace Networking
         {
             if (ParentConnection.m_conConnectionSetupStart < cnpPacket.m_dtmNegotiationStart)
             {
+                Debug.Log("Conneciton Negotiation message invalidates connection ");
+
                 return true;
             }
 
@@ -282,6 +288,7 @@ namespace Networking
         {
             if (ParentConnection.m_conConnectionSetupStart > cnpPacket.m_dtmNegotiationStart)
             {
+                Debug.Log("Conneciton Negotiation message is outdated");
                 return true;
             }
 
@@ -294,15 +301,17 @@ namespace Networking
         /// <param name="cnpPacket"></param>
         public void QueueNegotiationMessageForProcessing(ConnectionNegotiationBasePacket cnpPacket)
         {
+            Debug.Log($"Queueing message: {cnpPacket.m_iIndex} from: {cnpPacket.m_lFrom} ");
+
             //add message to queue
             UnprocessedNegotiationPackets[cnpPacket.m_iIndex] = cnpPacket;
 
             //if process messages that have arrived in order /  are next to process
             ProcessNegotiationMessages();
         }
-               
+
         public void UpdateNegotiationMessagesToSend()
-        {           
+        {
             while (ParentConnection.TransmittionNegotiationMessages.Count > 0)
             {
                 string strMessage = ParentConnection.TransmittionNegotiationMessages.Dequeue();
@@ -338,6 +347,8 @@ namespace Networking
                 //send message to be processed
                 if (cnpPacket is ConnectionNegotiationMessagePacket)
                 {
+                    Debug.Log($"Processing Packet: {m_iProcessedMessagesHead} from {cnpPacket.m_lFrom}");
+
                     ProcessMessage(cnpPacket as ConnectionNegotiationMessagePacket);
                 }
             }
