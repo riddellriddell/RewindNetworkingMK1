@@ -9,9 +9,17 @@ namespace Networking
     /// </summary>
     public class NetworkdLargePacketTransferManager : ManagedNetworkPacketProcessor<ConnectionLargePacketTransferManager>
     {
+        public static int s_iStartBufferSize = 2000;
+
         public override int Priority { get; } = 12;
 
         public byte[] m_bSharedBuffer;
+
+        public override void OnAddToNetwork(NetworkConnection ncnNetwork)
+        {
+            m_bSharedBuffer = new byte[s_iStartBufferSize];
+            base.OnAddToNetwork(ncnNetwork);
+        }
 
         protected override void AddDependentPacketsToPacketFactory(ClassWithIDFactory cifPacketFactory)
         {
@@ -28,8 +36,10 @@ namespace Networking
         public override DataPacket ProcessPacketForSending(Connection conConnection, DataPacket pktOutputPacket)
         {
             //check is packet  larger than the mtu and will need splitting 
-            if ((pktOutputPacket is LargePacket) == false && pktOutputPacket.PacketTotalSize > conConnection.MaxPacketBytesToSend)
+            if ((pktOutputPacket is LargePacket) == false && pktOutputPacket.PacketTotalSize >= conConnection.MaxPacketBytesToSend)
             {
+                Debug.Log($"splitting large Packet: {pktOutputPacket.ToString()} of size:{pktOutputPacket.PacketTotalSize} ");
+
                 //split packet and reassemble at other end
                 List<LargePacket> lpkSplitPackets = SplitPacket(pktOutputPacket, conConnection.MaxPacketBytesToSend);
 
@@ -50,11 +60,16 @@ namespace Networking
         {
             if(pktInputPacket is LargePacket)
             {
+                Debug.Log($"Processing LargePacket From {ParentConnection.m_lUserUniqueID} of size: {(pktInputPacket as LargePacket).PacketPayloadSize}");
+
                 LargePacketSections.Add(pktInputPacket as LargePacket);
 
                 //check if all the packet segments have arrived and the large packet can be decoded
                 if (IsLargePacketListComplete(LargePacketSections))
                 {
+                    //
+                    Debug.Log($"LargePacket From {ParentConnection.m_lUserUniqueID} merging {LargePacketSections.Count} large packet segments into source datapacket");
+
                     //decode the large packet from array of sub packets 
                     DataPacket dpkReconstructedPacket = CombineSplitPackets(LargePacketSections);
 
@@ -127,7 +142,7 @@ namespace Networking
                 iReadStartIndex += iMTU;
 
                 //check that packet size is within spec
-                Debug.Assert(lpkLargePacket.PacketTotalSize <= iMaxPacketSize, $"Split packet size: {lpkLargePacket.PacketTotalSize} larger thatn allowd size{iMaxPacketSize}");
+                Debug.Assert(lpkLargePacket.PacketTotalSize <= iMaxPacketSize, $"Split packet size: {lpkLargePacket.PacketTotalSize} larger than allowd size{iMaxPacketSize}");
 
                 lpkOutput.Add(lpkLargePacket);
             }

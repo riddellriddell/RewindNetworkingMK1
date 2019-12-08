@@ -22,7 +22,7 @@ namespace Networking
             get
             {
                 int iSize = ByteStream.DataSize(m_bIsLastPacketInSequence);
-                iSize += 1; //the size of the byte array
+                iSize += sizeof(int); //the size of the byte array
                 iSize += TypeHeaderSize; //the type def for the entire packet
                 return iSize;
             }

@@ -164,6 +164,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_strUniqueDeviceID: 
+  m_lPeerID: 0
+  m_stcNetworkDebugData: []
 --- !u!1 &134139634
 GameObject:
   m_ObjectHideFlags: 0
@@ -271,7 +273,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &413836340
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -285,6 +287,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_strUniqueDeviceID: 
+  m_lPeerID: 0
+  m_stcNetworkDebugData: []
 --- !u!4 &413836341
 Transform:
   m_ObjectHideFlags: 0
@@ -315,7 +319,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &491351827
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -329,6 +333,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_strUniqueDeviceID: 
+  m_lPeerID: 0
+  m_stcNetworkDebugData: []
 --- !u!4 &491351828
 Transform:
   m_ObjectHideFlags: 0
@@ -387,6 +393,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_strUniqueDeviceID: 
+  m_lPeerID: 0
+  m_stcNetworkDebugData: []
 --- !u!1 &804547388
 GameObject:
   m_ObjectHideFlags: 0
@@ -402,7 +410,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &804547389
 Transform:
   m_ObjectHideFlags: 0
@@ -513,6 +521,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_strUniqueDeviceID: 
+  m_lPeerID: 0
+  m_stcNetworkDebugData: []
 --- !u!1 &1737021094
 GameObject:
   m_ObjectHideFlags: 0
@@ -596,6 +606,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_strUniqueDeviceID: user1
+  m_lPeerID: 0
+  m_stcNetworkDebugData: []
 --- !u!4 &1933776696
 Transform:
   m_ObjectHideFlags: 0

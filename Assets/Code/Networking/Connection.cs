@@ -41,13 +41,6 @@ namespace Networking
             }
         }
 
-        //values used for testing
-        [Obsolete]
-        public InternetConnectionSimulator m_icsConnectionSim;
-
-        [Obsolete]
-        public Connection m_conConnectionTarget;
-
         //the player id associated with this channel 
         [Obsolete]
         public byte m_bConnectionID;
@@ -255,12 +248,12 @@ namespace Networking
         public bool QueuePacketToSend(DataPacket pktPacket)
         {
 
-            pktPacket = SendingPacketConnectionProcesses(pktPacket);
+            DataPacket pktProcessedPacket = SendingPacketConnectionProcesses(pktPacket);
 
             //check if packet should be sent
-            if(pktPacket != null)
+            if(pktProcessedPacket != null)
             {
-                PacketsInFlight.Enqueue(pktPacket);
+                PacketsInFlight.Enqueue(pktProcessedPacket);
 
                 m_iPacketsQueuedToSendCount++;
 
@@ -406,7 +399,7 @@ namespace Networking
             {
                 DataPacket pktPacketToSend = PacketsInFlight[i];
 
-                if (pkwPacketWrappepr.WriteStream.BytesRemaining - pktPacketToSend.PacketTotalSize > 0)
+                if (pkwPacketWrappepr.WriteStream.BytesRemaining - pktPacketToSend.PacketTotalSize >= 0)
                 {
                     pkwPacketWrappepr.AddDataPacket(pktPacketToSend);
 
@@ -422,16 +415,10 @@ namespace Networking
                     }
 
 
-                    Debug.Log($"Connection from User:{m_ncnParentNetworkConneciton.m_lUserUniqueID} to User:{m_lUserUniqueID} is Saturated with data: {strPacketDataInPacket}");
+                    Debug.Log($"Connection from User:{m_ncnParentNetworkConneciton.m_lUserUniqueID} to User:{m_lUserUniqueID} is Saturated with data: {strPacketDataInPacket} , Bytes Remaining in packet : {pkwPacketWrappepr.WriteStream.BytesRemaining} Packet that failed to add is { pktPacketToSend.PacketTotalSize} bytes");
 
                     break;
                 }
-            }
-
-            //send packet through coms 
-            if (m_icsConnectionSim != null)
-            {
-                m_icsConnectionSim.SendPacket(pkwPacketWrappepr, m_conConnectionTarget);
             }
 
             //send packet through transmitter

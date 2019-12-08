@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -18,20 +19,30 @@ namespace Networking
                 Ice,
             }
 
+            [SerializeField]
             public int m_iType;
+
+            [SerializeField]
             public int m_iSender;
+
+            [SerializeField]
+            public string m_strExtraPadding;
 
         }
 
         public static Dictionary<int, FakeWebRTCTransmitter> TransmitterRegistery { get; } = new Dictionary<int, FakeWebRTCTransmitter>();
 
-        public static float s_fOfferCreateTime = 1f;
+        public static float s_fOfferCreateTime = 0.25f;
 
-        public static float s_fIceCreateTime = 0.5f;
+        public static float s_fIceCreateTime = 0.2f;
 
         public static int s_iNumberOfIceCandidates = 5;
 
         public static int s_iConnectOnReturnIceCandidate = 3;
+
+        public static int s_iDataPaddingMax = 1000;
+
+        public static int s_iDataPaddingMin = 400;
 
         protected int m_iTransmitterID = int.MinValue;
 
@@ -93,7 +104,8 @@ namespace Networking
             NegotiationMessage nmsMessage = new NegotiationMessage()
             {
                 m_iSender = m_iTransmitterID,
-                m_iType = (int)NegotiationMessage.Type.Offer
+                m_iType = (int)NegotiationMessage.Type.Offer,
+                m_strExtraPadding = GenerateRandomDataPadding()
             };
 
             string strOffer = JsonUtility.ToJson(nmsMessage);
@@ -133,7 +145,8 @@ namespace Networking
             NegotiationMessage nmsMessage = new NegotiationMessage()
             {
                 m_iSender = m_iTransmitterID,
-                m_iType = (int)NegotiationMessage.Type.Reply
+                m_iType = (int)NegotiationMessage.Type.Reply,
+                m_strExtraPadding = GenerateRandomDataPadding()
             };
 
             string strOffer = JsonUtility.ToJson(nmsMessage);
@@ -163,7 +176,8 @@ namespace Networking
             NegotiationMessage nmsMessage = new NegotiationMessage()
             {
                 m_iSender = m_iTransmitterID,
-                m_iType = (int)NegotiationMessage.Type.Ice
+                m_iType = (int)NegotiationMessage.Type.Ice,
+                m_strExtraPadding = GenerateRandomDataPadding()
             };
 
             string strOffer = JsonUtility.ToJson(nmsMessage);
@@ -272,7 +286,16 @@ namespace Networking
             m_iIceCandidatesRecieved = 0;
             InternetConnectionSimulator.Instance.StartCoroutine(MakeOffer());
         }
-            
+        
+        protected string GenerateRandomDataPadding()
+        {
+            int iCharacterNumber = Random.Range(s_iDataPaddingMin, s_iDataPaddingMax);
+
+            const string chars = "abcdefghijklmnopABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 |:_,.";
+            return new string(Enumerable.Repeat(chars, iCharacterNumber)
+              .Select(s => s[Random.Range(0,s.Length)]).ToArray());
+        }
+
         #endregion
     }
 }
