@@ -67,7 +67,51 @@ namespace Networking
             wbsStream.ReadWriteHead += DataSize(Input);
         }
         
-        //read and write number arrays 
+        //read and write number arrays
+        public static void Serialize(ReadByteStream rbsStream, ref Byte[] Output)
+        {
+            Int32 iItems = 0;
+
+            Serialize(rbsStream, ref iItems);
+
+            if (Output == null || Output.Length != iItems)
+            {
+                Output = new  Byte[iItems];
+            }
+            else 
+            {
+                Output = new Byte[0];
+            }
+
+            for (int i = 0; i < iItems; i++)
+            {
+                Byte value = 0;
+                Serialize(rbsStream, ref value);
+                Output[i] = value;
+            }
+        }
+
+        public static void Serialize(WriteByteStream wbsStream, ref Byte[] Input)
+        {
+            Int32 iItems = 0;
+
+            if (Input == null)
+            {
+                Serialize(wbsStream, ref iItems);
+            }
+
+            iItems = Input.Length;
+
+            Serialize(wbsStream, ref iItems);
+
+            for (int i = 0; i < iItems; i++)
+            {
+                Byte value = Input[i];
+                Serialize(wbsStream, ref value);
+            }
+        }
+
+
         public static void Serialize(ReadByteStream rbsStream, ref List<Byte> Output)
         {
             Int32 iItems = 0;
@@ -111,6 +155,51 @@ namespace Networking
             }
         }
 
+
+        public static void Serialize(ReadByteStream rbsStream, ref Int32[] Output)
+        {
+            Int32 iItems = 0;
+
+            Serialize(rbsStream, ref iItems);
+
+            if (Output == null || Output.Length != iItems)
+            {
+                Output = new Int32[iItems];
+            }
+            else
+            {
+                Output = new Int32[0];
+            }
+
+            for (int i = 0; i < iItems; i++)
+            {
+                Byte value = 0;
+                Serialize(rbsStream, ref value);
+                Output[i] = value;
+            }
+        }
+
+        public static void Serialize(WriteByteStream wbsStream, ref Int32[] Input)
+        {
+            Int32 iItems = 0;
+
+            if (Input == null)
+            {
+                Serialize(wbsStream, ref iItems);
+            }
+
+            iItems = Input.Length;
+
+            Serialize(wbsStream, ref iItems);
+
+            for (int i = 0; i < iItems; i++)
+            {
+                Int32 value = Input[i];
+                Serialize(wbsStream, ref value);
+            }
+        }
+
+
         public static void Serialize(ReadByteStream rbsStream, ref List<Int32> Output)
         {
             Int32 iItems = 0;
@@ -153,6 +242,51 @@ namespace Networking
                 Serialize(wbsStream, ref value);
             }
         }
+
+
+        public static void Serialize(ReadByteStream rbsStream, ref Int64[] Output)
+        {
+            Int32 iItems = 0;
+
+            Serialize(rbsStream, ref iItems);
+
+            if (Output == null || Output.Length != iItems)
+            {
+                Output = new Int64[iItems];
+            }
+            else
+            {
+                Output = new Int64[0];
+            }
+
+            for (int i = 0; i < iItems; i++)
+            {
+                Byte value = 0;
+                Serialize(rbsStream, ref value);
+                Output[i] = value;
+            }
+        }
+
+        public static void Serialize(WriteByteStream wbsStream, ref Int64[] Input)
+        {
+            Int32 iItems = 0;
+
+            if (Input == null)
+            {
+                Serialize(wbsStream, ref iItems);
+            }
+
+            iItems = Input.Length;
+
+            Serialize(wbsStream, ref iItems);
+
+            for (int i = 0; i < iItems; i++)
+            {
+                Int64 value = Input[i];
+                Serialize(wbsStream, ref value);
+            }
+        }
+
 
         public static void Serialize(ReadByteStream rbsStream, ref List<Int64> Output)
         {
@@ -239,6 +373,48 @@ namespace Networking
             return sizeof(Int64);
         }
 
+        public static int DataSize(Byte[] Input)
+        {
+            Int32 iItems = 0;
+
+            if (Input == null)
+            {
+                return DataSize(iItems);
+            }
+
+            iItems = Input.Length;
+
+            return DataSize(iItems) + (sizeof(Byte) * iItems);
+        }
+
+        public static int DataSize(Int32[] Input)
+        {
+            Int32 iItems = 0;
+
+            if (Input == null)
+            {
+                return DataSize(iItems);
+            }
+
+            iItems = Input.Length;
+
+            return DataSize(iItems) + (sizeof(Int32) * iItems);
+        }
+
+        public static int DataSize(Int64[] Input)
+        {
+            Int32 iItems = 0;
+
+            if (Input == null)
+            {
+                return DataSize(iItems);
+            }
+
+            iItems = Input.Length;
+
+            return DataSize(iItems) + (sizeof(Int64) * iItems);
+        }
+        
         public static int DataSize(List<Byte> Input)
         {
             Int32 iItems = 0;

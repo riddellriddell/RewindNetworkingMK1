@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
-public class RandomAccessQueue<T>
+public class RandomAccessQueue<T> : ICloneable
 {
     private List<T> m_lstStorage;
     private int m_iQueueEnter = 0;
@@ -61,7 +59,7 @@ public class RandomAccessQueue<T>
             //expand list
             ExpandList(itemToQueue);
         }
-        else if(m_iCount == 0)
+        else if (m_iCount == 0)
         {
             //set item 
             m_lstStorage[m_iQueueEnter] = itemToQueue;
@@ -128,10 +126,44 @@ public class RandomAccessQueue<T>
         m_iQueueExit = 0;
         m_iCount = 0;
 
-        for(int i = 0; i < m_lstStorage.Count; i++)
+        for (int i = 0; i < m_lstStorage.Count; i++)
         {
             m_lstStorage[i] = default(T);
         }
+    }
+
+    public object Clone()
+    {
+        //create clone of current list
+        RandomAccessQueue<T> raqClonedQueue = new RandomAccessQueue<T>(this.Capacity);
+
+        if (typeof(ICloneable).IsAssignableFrom(typeof(T)))
+        {
+            for (int i = 0; i < this.Count; i++)
+            {
+                T value = this[i];
+
+                if (value != null)
+                {
+                    raqClonedQueue.Enqueue((T)(value as ICloneable).Clone());
+                }
+                else
+                {
+                    raqClonedQueue.Enqueue(value);
+                }
+            }
+        }
+        else
+        {
+            //copy underlying storage
+            raqClonedQueue.m_lstStorage = new List<T>(this.m_lstStorage);
+            raqClonedQueue.m_iCount = this.Count;
+            raqClonedQueue.m_iQueueEnter = this.m_iQueueEnter;
+            raqClonedQueue.m_iQueueExit = this.m_iQueueExit;
+        }
+
+        return raqClonedQueue;
+
     }
 
     private int RemapIndex(int iIndex)
