@@ -26,6 +26,13 @@ namespace Networking
 
         }
 
+        // when target peer reconnects to local peer requiring
+        // all synced data to be flushed from connection to maintain determinism accross the connection
+        public virtual void OnConnectionReset()
+        {
+
+        }
+
         public virtual DataPacket ProcessReceivedPacket(Connection conConnection,DataPacket pktInputPacket)
         {
             return pktInputPacket;

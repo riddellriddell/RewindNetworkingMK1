@@ -190,5 +190,12 @@ namespace Networking
 
             return dpkOutputPacket;
         }
+
+        public override void OnConnectionReset()
+        {
+            LargePacketSections.Clear();
+
+            base.OnConnectionReset();
+        }
     }
 }

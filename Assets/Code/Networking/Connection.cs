@@ -41,10 +41,6 @@ namespace Networking
             }
         }
 
-        //the player id associated with this channel 
-        [Obsolete]
-        public byte m_bConnectionID;
-
         //a unique id used to identify a player before game starts
         public long m_lUserUniqueID;
 
@@ -66,10 +62,6 @@ namespace Networking
             }
         }
 
-        // list of all the packets that have been received but not yet processed 
-        [Obsolete]
-        public Queue<DataPacket> ReceivedPackets { get; } = new Queue<DataPacket>();
-
         // messages created by the transmittion system used to establish a connection to another peer
         public Queue<string> TransmittionNegotiationMessages { get; } = new Queue<string>();
 
@@ -82,6 +74,11 @@ namespace Networking
         //the current state of the connection
         public ConnectionStatus Status { get; private set; } = ConnectionStatus.Initializing;
 
+        //when the connection is created or a reconnection is triggered this is used to
+        //create a new peer transmitter
+        public IPeerTransmitterFactory m_ptfTransmitterFactory;
+
+        //the transmitter used to send data through the internet
         public  IPeerTransmitter m_ptrTransmitter;
 
         // list of all the packet processors 
@@ -105,23 +102,7 @@ namespace Networking
         //the peer network this connection is being managed by
         protected NetworkConnection m_ncnParentNetworkConneciton;
 
-        [Obsolete]
-        public Connection(byte bConnectionID, ClassWithIDFactory cifPacketFactory)
-        {
-            m_bConnectionID = bConnectionID;
-
-            m_cifPacketFactory = cifPacketFactory;
-
-            ReceivedPackets = new Queue<DataPacket>();
-            PacketsInFlight = new RandomAccessQueue<DataPacket>();
-            OrderedPacketProcessorList = new SortedSet<BaseConnectionPacketProcessor>(new PacketProcessorComparer());
-
-            m_iPacketsQueuedToSendCount = 0;
-            m_iLastAckPacketNumberSent = 0;
-            m_iTotalPacketsReceived = 0;
-        }
-
-        public Connection(DateTime dtmNegotiationStart, NetworkConnection ncnParetnNetwork, long lUserUniqueID, ClassWithIDFactory cifPacketFactory, IPeerTransmitter ptrPeerTransmitter )
+        public Connection(DateTime dtmNegotiationStart, NetworkConnection ncnParetnNetwork, long lUserUniqueID, ClassWithIDFactory cifPacketFactory, IPeerTransmitterFactory ptfPeerFactory )
         {
             m_conConnectionSetupStart = dtmNegotiationStart;
 
@@ -135,7 +116,9 @@ namespace Networking
 
             m_cifPacketFactory = cifPacketFactory;
 
-            m_ptrTransmitter = ptrPeerTransmitter;
+            m_ptfTransmitterFactory = ptfPeerFactory;
+
+            m_ptrTransmitter = m_ptfTransmitterFactory.CreatePeerTransmitter();
 
             //listen for negotiation messages
             m_ptrTransmitter.OnNegotiationMessageCreated += OnNegoriationMessageFromTransmitter;
@@ -149,6 +132,44 @@ namespace Networking
             m_iPacketsQueuedToSendCount = 0;
             m_iLastAckPacketNumberSent = 0;
             m_iTotalPacketsReceived = 0;
+        }
+
+        public void Reset(DateTime dtmResetTime)
+        {
+            //reset conneciton start time
+            m_conConnectionSetupStart = dtmResetTime;
+
+            //reset connection establish time
+            m_dtmConnectionEstablishTime = DateTime.MinValue;
+
+            //remove any stored date from previouse connection
+            //stored in packet processors 
+            OnConnectionReset();
+
+            SetStatus(ConnectionStatus.Initializing);
+
+            //reset the peer transmitter
+            m_ptrTransmitter = m_ptfTransmitterFactory.CreatePeerTransmitter();
+
+            //subscribe to new negotiation messages from new transmitter
+            m_ptrTransmitter.OnNegotiationMessageCreated += OnNegoriationMessageFromTransmitter;
+
+            //listen for data sent over the transmittion system
+            m_ptrTransmitter.OnDataReceive += ReceivePacket;
+
+            //listen for establishment of a connection to another peer
+            m_ptrTransmitter.OnConnectionEstablished += OnConnectionEstablished;
+
+            //reset sent packet tracking values
+            m_iPacketsQueuedToSendCount = 0;
+            m_iLastAckPacketNumberSent = 0;
+            m_iTotalPacketsReceived = 0;
+
+            //reset transmission negotiation messages
+            TransmittionNegotiationMessages.Clear();
+
+            //clear any packets in flight
+            PacketsInFlight.Clear();
         }
 
         #region TransmittionHandling
@@ -171,7 +192,7 @@ namespace Networking
         {
             m_ptrTransmitter.Disconnect();
         }
-        
+
         protected void OnNegoriationMessageFromTransmitter(string strMessageJson)
         {
             Debug.Log($"Negotiation message:{strMessageJson} created by transmitter on peer {m_ncnParentNetworkConneciton.m_lUserUniqueID}");
@@ -194,6 +215,13 @@ namespace Networking
         }
         #endregion
 
+        public void OnConnectionReset()
+        {
+            foreach (BaseConnectionPacketProcessor cppProcessor in OrderedPacketProcessorList)
+            {
+                cppProcessor.OnConnectionReset();
+            }
+        }
 
         public void OnConnectionStateChange( Connection.ConnectionStatus cstOldState, Connection.ConnectionStatus cstNewState)
         {
@@ -202,8 +230,7 @@ namespace Networking
                 cppProcessor.OnConnectionStateChange(cstOldState, cstNewState);
             }
         }
-
-
+               
         //check if a ping packet is needed to keep the connection alive
         public void UpdateConnection()
         {
@@ -298,9 +325,6 @@ namespace Networking
             //check if this packet should be passed on to be processed by the rest of the game 
             if (pktPacket != null)
             {
-                //queue up the packet (remove in future)
-                ReceivedPackets.Enqueue(pktPacket);
-
                 //send packets to network packet manager for further processing
                 m_ncnParentNetworkConneciton.ProcessRecievedPacket(m_lUserUniqueID, pktPacket);
             }

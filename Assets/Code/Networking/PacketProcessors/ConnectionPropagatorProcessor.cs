@@ -67,7 +67,7 @@ namespace Networking
             DateTime dtmStartTime = m_tnpNetworkTime.BaseTime;
 
             //make new connection
-            Connection conConnection = ParentNetworkConnection.CreateNewConnection(dtmStartTime, lUserID);
+            Connection conConnection = ParentNetworkConnection.CreateOrResetConnection(dtmStartTime, lUserID);
 
             //start making connection offer 
             conConnection.StartConnectionNegotiation();
@@ -198,7 +198,7 @@ namespace Networking
                 if (cppFromConnection.DoesNegotiationMessageInvalidateConnection(cnpPacket))
                 {
                     //replace connection with new one
-                    ParentNetworkConnection.CreateNewConnection(cnpPacket.m_dtmNegotiationStart, cnpPacket.m_lFrom);
+                    ParentNetworkConnection.CreateOrResetConnection(cnpPacket.m_dtmNegotiationStart, cnpPacket.m_lFrom);
 
                     //get new connection propegator 
                     ChildConnectionProcessors.TryGetValue(cnpPacket.m_lFrom, out cppFromConnection);
@@ -208,7 +208,7 @@ namespace Networking
             else
             {
                 //create new connection to handle connection negotiation 
-                ParentNetworkConnection.CreateNewConnection(cnpPacket.m_dtmNegotiationStart, cnpPacket.m_lFrom);
+                ParentNetworkConnection.CreateOrResetConnection(cnpPacket.m_dtmNegotiationStart, cnpPacket.m_lFrom);
 
                 //get new connection propegator
                 ChildConnectionProcessors.TryGetValue(cnpPacket.m_lFrom, out cppFromConnection);
@@ -332,6 +332,16 @@ namespace Networking
                 //update message index
                 m_iNextMessageIndex++;
             }
+        }
+
+        public override void OnConnectionReset()
+        {
+            NegotiationPacketsToSend.Clear();
+            UnprocessedNegotiationPackets.Clear();
+            m_iProcessedMessagesHead = 0;
+            m_iNextMessageIndex = 0;
+
+            base.OnConnectionReset();
         }
 
         /// <summary>

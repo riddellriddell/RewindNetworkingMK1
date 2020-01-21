@@ -9,6 +9,8 @@ namespace Networking
     //this class manages the public keys for all the peers in the swarm
     public class GlobalMessageKeyManager 
     {
+        public static int s_iKeySize = 512;
+
         public class PublicKey
         {
             //the user id this key belongs to
@@ -146,6 +148,12 @@ namespace Networking
                     //should not be here this means someone hacked the server
                 }
             }
+        }
+
+        //check if has key to decode message from peer
+        public bool ContainsKey(long lPeerID)
+        {
+            return m_plkPublicKeys.ContainsKey(lPeerID);
         }
 
         //create public key for local peer

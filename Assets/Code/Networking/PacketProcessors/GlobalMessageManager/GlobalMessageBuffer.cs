@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,155 +9,50 @@ namespace Networking
 {
     public class GlobalMessageBuffer
     {
-        //this class is used internally when getting subsets of the main buffer
-        private class PeerBoundry : IPeerMessageNode
-        {
-            public static PeerBoundry MinTimeInclusive(DateTime dtmMinTime)
-            {
-                PeerBoundry pbdMin = new PeerBoundry();
+        ////this class is used internally when getting subsets of the main buffer
+        //private class SortedMessageIndex : ISortedMessage
+        //{
+        //    public SortingValue SortingValue { get; set; }
 
-                pbdMin.SourcePeerID = long.MinValue;
-                pbdMin.MessageCreationTime = dtmMinTime;
-                pbdMin.TypeSorting = int.MinValue;
-                pbdMin.PeerMessageIndex = int.MinValue;
-                pbdMin.NodeHash = long.MinValue;
+        //    public static SortedMessageIndex FromSortingValueInclusive(SortingValue SortingValue)
+        //    {
+        //        SortedMessageIndex pbrReturnValue = new SortedMessageIndex();
+        //        pbrReturnValue.SortingValue = SortingValue;
 
-                return pbdMin;
-            }
+        //        return pbrReturnValue;
+        //    }
 
-            public static PeerBoundry MaxTimeExclusive(DateTime dtmMinTime)
-            {
-                PeerBoundry pbdMax = new PeerBoundry();
+        //    public static SortedMessageIndex FromSortingValueExclusive(SortingValue SortingValue)
+        //    {
+        //        SortedMessageIndex pbrReturnValue = new SortedMessageIndex();
+        //        SortingValue.NextSortValue();
+        //        pbrReturnValue.SortingValue = SortingValue;
+        //        return pbrReturnValue;
+        //    }
 
-                pbdMax.SourcePeerID = long.MaxValue;
-                pbdMax.MessageCreationTime = new DateTime(dtmMinTime.Ticks -1);
-                pbdMax.TypeSorting = int.MaxValue;
-                pbdMax.PeerMessageIndex = int.MaxValue;
-                pbdMax.NodeHash = long.MaxValue;
+        //    public static SortedMessageIndex MinTimeInclusive(DateTime dtmMinTime)
+        //    {
+        //        SortedMessageIndex pbrReturnValue = new SortedMessageIndex();
+        //        pbrReturnValue.SortingValue = new SortingValue(dtmMinTime);
 
-                return pbdMax;
-            }
+        //        return pbrReturnValue;
+        //    }
 
-            public long SourcePeerID { get; set;}
+        //    public static SortedMessageIndex MaxTimeExclusive(DateTime dtmMinTime)
+        //    {
+        //        SortedMessageIndex pbrReturnValue = new SortedMessageIndex();
+        //        pbrReturnValue.SortingValue = new SortingValue(dtmMinTime);
 
-            public DateTime MessageCreationTime { get; set; }
+        //        return pbrReturnValue;
+        //    }
+        //}
 
-            public int TypeSorting { get; set; }
 
-            public int PeerMessageIndex { get; set; }
-
-            public long NodeHash { get; set; }
-
-            public GlobalMessageBase GlobalMessage => throw new NotImplementedException();
-
-            public object Clone()
-            {
-                throw new NotImplementedException();
-            }
-
-            public bool Validate(IPeerMessageNode pmnPreviousNode, long lSourcePeer, Dictionary<long, byte[]> bPublicKeyDictionary, DateTime dtmNetworkTimeRecieved)
-            {
-                throw new NotImplementedException();
-            }
-
-            public int CompareTo(IPeerMessageNode pmnCompareTo)
-            {
-
-                if (pmnCompareTo  == null)
-                {
-                    return 1;
-                }
-
-                //sort items from oldest to youngest
-                if (MessageCreationTime < pmnCompareTo.MessageCreationTime)
-                {
-                    return -1;
-                }
-
-                if (MessageCreationTime > pmnCompareTo.MessageCreationTime)
-                {
-                    return 1;
-                }
-
-                //sort items for order
-                if (PeerMessageIndex < pmnCompareTo.PeerMessageIndex)
-                {
-                    return -1;
-                }
-
-                if (PeerMessageIndex > pmnCompareTo.PeerMessageIndex)
-                {
-                    return 1;
-                }
-
-                //sort items by type order
-                if (TypeSorting < pmnCompareTo.TypeSorting)
-                {
-                    return -1;
-                }
-
-                if (TypeSorting > pmnCompareTo.TypeSorting)
-                {
-                    return 1;
-                }
-
-                //sort by user 
-                if (SourcePeerID < pmnCompareTo.SourcePeerID)
-                {
-                    return -1;
-                }
-
-                if (SourcePeerID > pmnCompareTo.SourcePeerID)
-                {
-                    return 1;
-                }
-
-                //if all else is equal sort by hash
-                if (NodeHash < pmnCompareTo.NodeHash)
-                {
-                    return -1;
-                }
-                else if (NodeHash > pmnCompareTo.NodeHash)
-                {
-                    return 1;
-                }
-                else
-                {
-                    //must be same message 
-                    return 0;
-                }
-            }
-
-            public bool ValidateNodeSources(Dictionary<long, byte[]> bPublicKeyDictionary)
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        //sorts messages from all peers onto a timeline 
-        private class MessageComparer : IComparer<IPeerMessageNode>
-        {
-            public int Compare(IPeerMessageNode x, IPeerMessageNode y)
-            {
-                if(x == null && y == null)
-                {
-                    return 0;
-                }
-
-                if(x == null)
-                {
-                    return -1;
-                }
-
-                return x.CompareTo(y);
-            }
-        }
-               
         //a sorted array of all the unconfirmed messages from all the peers
-        public SortedSet<IPeerMessageNode> UnConfirmedMessageBuffer { get; } = new SortedSet<IPeerMessageNode>(new MessageComparer());
+        public SortedList<SortingValue, PeerMessageNode> UnConfirmedMessageBuffer { get; } = new SortedList<SortingValue, PeerMessageNode>();
 
         //tracks the most recent message recieved from a peer
-        public Dictionary<long, IPeerMessageNode> LastMessageRecievedFromPeer { get; } = new Dictionary<long, IPeerMessageNode>();
+        public Dictionary<long, PeerMessageNode> LastMessageRecievedFromPeer { get; } = new Dictionary<long, PeerMessageNode>();
 
         //the total number of messages that have ever been sent on this server up to the start of the 
         //unconfirmed message buffer
@@ -181,93 +75,138 @@ namespace Networking
         public int m_iDirtyNodeIndex;
 
         //function to add messages to buffer
-        public void AddMessageToBuffer(IPeerMessageNode pmnMessage,List<long> lTrackedPeers)
+        public void AddMessageToBuffer(PeerMessageNode pmnMessage, List<long> lTrackedPeers)
         {
             //check if buffer already has item
-            if (UnConfirmedMessageBuffer.Contains(pmnMessage) == false)
+            if (UnConfirmedMessageBuffer.ContainsKey(pmnMessage.m_svaMessageSortingValue) == false)
             {
-                //set message branch number
-                pmnMessage.GlobalBranchNumber = m_iBufferBranchNumber;
 
-                UnConfirmedMessageBuffer.Add(pmnMessage);
+                UnConfirmedMessageBuffer.Add(pmnMessage.m_svaMessageSortingValue, pmnMessage);
 
                 //re number message indexes in buffer
                 //TODO:: optimize this so it only happens when it needs to
                 ReNumberMessageIndexes();
 
                 //check if latest peer messages are being tracked
-                if (LastMessageRecievedFromPeer.TryGetValue(pmnMessage.SourcePeerID,out IPeerMessageNode pmnLastMessage))
+                if (LastMessageRecievedFromPeer.TryGetValue(pmnMessage.m_lPeerID, out PeerMessageNode pmnLastMessage))
                 {
-                    if(pmnLastMessage == null)
+                    if (pmnLastMessage == null)
                     {
-                        LastMessageRecievedFromPeer[pmnMessage.SourcePeerID] = pmnMessage;
-
-                        //increment branch number
-                        m_iBufferBranchNumber++;
-
-                        //flag all messages after index as branch
-                        MarkMessagesAsBranched(pmnMessage.GlobalMessageIndex, m_iBufferBranchNumber);
+                        LastMessageRecievedFromPeer[pmnMessage.m_lPeerID] = pmnMessage;
                     }
                     else
                     {
                         //check if new message is more recent than previouse message
-                        if(LastMessageRecievedFromPeer[pmnMessage.SourcePeerID].GlobalMessageIndex < pmnMessage.GlobalMessageIndex)
+                        if (LastMessageRecievedFromPeer[pmnMessage.m_lPeerID].m_lGlobalMessageIndex < pmnMessage.m_lGlobalMessageIndex)
                         {
-                            LastMessageRecievedFromPeer[pmnMessage.SourcePeerID] = pmnMessage;
-
-                            m_iRecieveAllHeadIndex = GlobalIndexOfLastRecievedMessagesFromAllPeers(lTrackedPeers);
-                        }
-                        else
-                        {
-                            //Flag all messages after added message as branch
-                            
-                            //increment branch number
-                            m_iBufferBranchNumber++;
-
-                            //flag all messages after index as branch
-                            MarkMessagesAsBranched(pmnMessage.GlobalMessageIndex, m_iBufferBranchNumber);
+                            LastMessageRecievedFromPeer[pmnMessage.m_lPeerID] = pmnMessage;
                         }
                     }
                 }
-
-                //check if message is a kick message 
-
+                else
+                {
+                    LastMessageRecievedFromPeer[pmnMessage.m_lPeerID] = pmnMessage;
+                }
             }
+        }
+
+        //returns a subset of the message buffer that is older than the get message sort value but
+        //still contains messages recieved from all active channels excluding channes that have 
+        //timed out and are being treated as disconnected or disabled
+        public List<PeerMessageNode> GetChainLinkMessages(SortingValue msvGetMessagesFrom, TimeSpan tspConnectionTimeOutTime, DateTime dtmLinkEndTime)
+        {
+            List<PeerMessageNode> pmnOutput = new List<PeerMessageNode>();
+
+            //get the start index
+            int iStartIndex = UnConfirmedMessageBuffer.IndexOfKey(msvGetMessagesFrom) + 1;
+
+            //if start message does not exist
+            if (iStartIndex == -1)
+            {
+                iStartIndex = 0;
+            }
+
+            //get the last message in time band 
+            PeerMessageNode pmnLastMessage = UnConfirmedMessageBuffer.Values[UnConfirmedMessageBuffer.Values.Count -1];
+
+            //if no messages for a channel have been recieved for more than tspTreatAsLatestIfOlderThan
+            //treat that channel as disconnected / inactive and dont wait to recieve more messages
+            //from it before including it in the node list 
+            SortingValue msvConnectionTimeOutTime = PeerMessageNode.SortingValueForTime(dtmLinkEndTime - tspConnectionTimeOutTime);
+
+            SortingValue msvOldestActiveChannel = SortingValue.MinValue;
+
+            //get the last time messages were recieved for all channels 
+            //excluding the channels being treated as disconnected;
+            for (int i = 0; i < pmnLastMessage.m_gmsState.m_gmcMessageChannels.Count; i++)
+            {
+                GlobalMessageChannelState mcsState = pmnLastMessage.m_gmsState.m_gmcMessageChannels[i];
+
+                //check if channel is being treated as disconnected
+                if (mcsState.m_msvLastSortValue.CompareTo(msvConnectionTimeOutTime) > 0)
+                {
+                    //check when the last channel activity was recorded
+                    if (msvOldestActiveChannel.CompareTo(mcsState.m_msvLastSortValue) > 0)
+                    {
+                        //set the new oldest time / sorting value
+                        msvOldestActiveChannel = mcsState.m_msvLastSortValue;
+                    }
+                }
+            }
+
+            //try and get buffer index associated with that time
+            int iIndexOfLastValidMessage = UnConfirmedMessageBuffer.IndexOfKey(msvOldestActiveChannel);
+
+            //check if there are any nodes inside that range 
+            if (iIndexOfLastValidMessage <= iStartIndex)
+            {
+                return pmnOutput;
+            }
+
+            for (int i = iStartIndex; i <= iIndexOfLastValidMessage; i++)
+            {
+                PeerMessageNode pmnMessage = UnConfirmedMessageBuffer.Values[i];
+
+                //make sure no messages past the end of the link are added 
+                if (pmnMessage.m_dtmMessageCreationTime > dtmLinkEndTime.Ticks)
+                {
+                    break;
+                }
+
+                pmnOutput.Add(pmnMessage);
+            }
+
+            return pmnOutput;
+
         }
 
         //the last global index that messages were recieved from all peers that are being tracked 
         public int GlobalIndexOfLastRecievedMessagesFromAllPeers(List<long> lTrackedPeers)
         {
-            int iGlobalIndex = int.MaxValue; 
+            int iGlobalIndex = int.MaxValue;
 
-            foreach(long lPeerID in lTrackedPeers)
+            foreach (long lPeerID in lTrackedPeers)
             {
-                if(LastMessageRecievedFromPeer.TryGetValue(lPeerID,out IPeerMessageNode pmnNode))
+                if (LastMessageRecievedFromPeer.TryGetValue(lPeerID, out PeerMessageNode pmnNode))
                 {
                     iGlobalIndex = Mathf.Min(iGlobalIndex, pmnNode.GlobalMessageIndex);
                 }
             }
 
-            if(iGlobalIndex == int.MaxValue)
+            if (iGlobalIndex == int.MaxValue)
             {
                 iGlobalIndex = m_iBufferStartIndex;
             }
 
             return iGlobalIndex;
         }
-               
-        //function to pull messages from buffer 
-        public SortedSet<IPeerMessageNode> GetMessagesBetweenTimes(DateTime dtmStartInclusive, DateTime dtmEndExclusive)
-        {
-           return UnConfirmedMessageBuffer.GetViewBetween(PeerBoundry.MinTimeInclusive(dtmStartInclusive), PeerBoundry.MaxTimeExclusive(dtmEndExclusive));
-        }
 
         //function to remove messages upto point in buffer 
-        public void RemoveItemsUpTo(IPeerMessageNode pmnRemoveToo)
+        public void RemoveItemsUpTo(SortingValue msvRemoveToo)
         {
-            UnConfirmedMessageBuffer.RemoveWhere(pmnMessage => pmnRemoveToo.CompareTo(pmnMessage) > 0);
+            UnConfirmedMessageBuffer.RemoveWhere(pmnMessage => msvRemoveToo.CompareTo(pmnMessage) > 0);
         }
-               
+
         //update the hash for the buffer
         //public void UpdateBufferHash(List<long> lPlayersInGame)
         //{
@@ -318,10 +257,16 @@ namespace Networking
         {
             int iStartNumber = m_iBufferStartIndex;
 
-            foreach(IPeerMessageNode pmnNode in UnConfirmedMessageBuffer)
+            foreach (ISortedMessage pmnNode in UnConfirmedMessageBuffer.Values)
             {
                 iStartNumber++;
-                pmnNode.GlobalMessageIndex = iStartNumber;
+
+                if (pmnNode is IPeerMessageNode)
+                {
+                    IPeerMessageNode pmnMessageNode = pmnNode as IPeerMessageNode;
+
+                    pmnMessageNode.GlobalMessageIndex = iStartNumber;
+                }
             }
         }
 
@@ -331,10 +276,10 @@ namespace Networking
         protected void MarkMessagesAsBranched(int iStartIndex, int iBranchNumber)
         {
             //loop through all messages 
-            foreach(IPeerMessageNode pmnMessage in UnConfirmedMessageBuffer)
+            foreach (IPeerMessageNode pmnMessage in UnConfirmedMessageBuffer)
             {
                 //check if node is before branch
-                if(pmnMessage.GlobalMessageIndex < iStartIndex)
+                if (pmnMessage.GlobalMessageIndex < iStartIndex)
                 {
                     //skip message
                     continue;
@@ -345,15 +290,15 @@ namespace Networking
             }
         }
 
-        protected bool CheckHash(int iStartIndex, int iEndIndex,long lHash)
+        protected bool CheckHash(int iStartIndex, int iEndIndex, long lHash)
         {
-
+            return false;
         }
 
         //generate hash for range
         public long GetShortHashForRange(int iStartIndex, int iEndIndex)
         {
-
+            return 0;
         }
 
         //calculate node hash

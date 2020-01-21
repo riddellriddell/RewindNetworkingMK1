@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,6 +8,7 @@ using UnityEngine;
 /// </summary>
 namespace Networking
 {
+    [Obsolete]
     public class TickStampedDataNetworkProcessor : ManagedNetworkPacketProcessor<TickStampedDataConnectionProcessor>
     {
         public override int Priority
@@ -36,9 +38,11 @@ namespace Networking
 
     }
 
+
     /// <summary>
     /// this keeps track of the current tick of the connection 
     /// </summary>
+    [Obsolete]
     public class TickStampedDataConnectionProcessor : ManagedConnectionPacketProcessor<TickStampedDataNetworkProcessor>
     {
         public override int Priority

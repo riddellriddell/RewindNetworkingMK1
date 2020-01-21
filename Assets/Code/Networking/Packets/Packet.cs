@@ -131,7 +131,7 @@ namespace Networking
         {
             get
             {
-                return +1;
+                return 1;
             }
         }
 
@@ -155,10 +155,5 @@ namespace Networking
 
         public abstract void EncodePacket(WriteByteStream wbsByteStream);
 
-        //applys an offset to the data read for the byte used for packet type
-        public virtual int ApplyDataReadOffset(int iDataReadHead)
-        {
-            return iDataReadHead;
-        }
     }
 }

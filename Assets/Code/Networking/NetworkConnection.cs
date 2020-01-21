@@ -90,30 +90,43 @@ namespace Networking
             return default(T);
         }
 
-        //when connection is first made default to the connection Tick 
-        [Obsolete]
-        public void MakeFirstConnection(int startTick)
+        public Connection CreateOrResetConnection(DateTime dtmNegotiationStart, long lPeerID)
         {
+            if(ConnectionList.TryGetValue(lPeerID,out Connection conConnection))
+            {
+                ResetConnection(dtmNegotiationStart, lPeerID);
 
+                return conConnection;
+            }
+            else
+            {
+                return CreateNewConnection(dtmNegotiationStart, lPeerID);
+            }
         }
 
-        public Connection CreateNewConnection(DateTime dtmNegotiationStart, long lUserUniqueID)
+        public Connection CreateNewConnection(DateTime dtmNegotiationStart, long lPeerID)
         {
-            Debug.Log($"Creating connection: {lUserUniqueID}");
+            Debug.Log($"Creating connection: {lPeerID}");
 
             //destroy any existing connection for this user 
-            DestroyConnection(lUserUniqueID);
-
-            //create new peer connection
-            IPeerTransmitter ptrPeerTransmitter = m_ptfPeerTransmitterFactory.CreatePeerTransmitter();
+            DestroyConnection(lPeerID);
 
             //create new connection
-            Connection conNewConnection = new Connection(dtmNegotiationStart, this, lUserUniqueID, PacketFactory, ptrPeerTransmitter);
+            Connection conNewConnection = new Connection(dtmNegotiationStart, this, lPeerID, PacketFactory, m_ptfPeerTransmitterFactory);
 
             //register with network manager
             RegisterConnection(conNewConnection);
 
             return conNewConnection;
+        }
+
+        public void ResetConnection(DateTime dtmResetTime, long lPeerID)
+        {
+            //try and get the target connection
+            if(ConnectionList.TryGetValue(lPeerID, out Connection conConnection))
+            {
+                conConnection.Reset(dtmResetTime);
+            }            
         }
 
         public void DestroyConnection(long lUserID)
@@ -219,45 +232,6 @@ namespace Networking
             }
 
             conConnection.QueuePacketToSend(pktPacket);
-        }
-
-        [Obsolete]
-        public void DestributeReceivedPackets()
-        {
-            //loop through all the connections 
-            foreach (Connection conConnection in ConnectionList.Values)
-            {
-                while (conConnection.ReceivedPackets.Count > 0)
-                {
-                    DataPacket pktPacket = conConnection.ReceivedPackets.Dequeue();
-
-                    ProcessPacket(conConnection.m_bConnectionID, pktPacket);
-                }
-            }
-        }
-
-        [Obsolete]
-        public Connection MakeConnectionOffer()
-        {
-            Connection conOffer = new Connection(m_bPlayerID, PacketFactory);
-
-            return conOffer;
-        }
-
-        [Obsolete]
-        public Connection MakeReply(Connection conConnectionOffer)
-        {
-            RegisterConnection(conConnectionOffer);
-
-            Connection conOffer = new Connection(m_bPlayerID, PacketFactory);
-
-            return conOffer;
-        }
-
-        [Obsolete]
-        public void RecieveConnectionReply(Connection conConnectionReply)
-        {
-            RegisterConnection(conConnectionReply);
         }
 
         public void ProcessRecievedPacket(long lUserID, DataPacket pktPacket)

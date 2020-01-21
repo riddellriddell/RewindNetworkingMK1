@@ -190,7 +190,9 @@ namespace GameManagers
             State = ActiveGameState.ConnectingThroughGateway;
             m_dtmConnectThroughGateStart = DateTime.UtcNow;
 
-            //tell p2p network to start a new connection for gateway
+            //tell p2p network to start a new connection through gateway
+
+            //get the gateway peer
             long lConnectionID = m_winWebInterface.ExternalGateway.Value.m_lOwningPlayerId;
 
             //tell the connection propegator who to try to connect to
@@ -289,6 +291,8 @@ namespace GameManagers
 
             if (bIsSimSetup)
             {
+                //tell network layer global messaging system that it is the first peer in the 
+                //global networking system
 
                 //activate network layer to start looking for new connections
                 m_ncnNetworkConnection.m_bIsConnectedToSwarm = true;

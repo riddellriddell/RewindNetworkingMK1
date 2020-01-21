@@ -235,7 +235,7 @@ namespace Sim
         public void RefreshServerInput()
         {
             //send out stored packets 
-            m_ntcNetworkConnection.DestributeReceivedPackets();
+           // m_ntcNetworkConnection.DestributeReceivedPackets();
         }
 
         public void HandleInputFromNetwork(byte bPlayerID, DataPacket pktPacket)

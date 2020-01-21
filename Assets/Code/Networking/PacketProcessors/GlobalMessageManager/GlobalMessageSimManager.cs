@@ -27,7 +27,7 @@ namespace Networking
         {           
             MessageNode mndNode = new MessageNode(gmbMessage, lSource);
 
-            MessageBuffer.AddMessageToBuffer(mndNode);
+            // MessageBuffer.AddMessageToBuffer(mndNode);
         }
 
         //compute hash from last confirmed chain head to recieve all head
@@ -59,12 +59,14 @@ namespace Networking
 
         public long NodeHash { get; protected set; }
 
+        public int GlobalBranchNumber { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
         public MessageNode(GlobalMessageBase gmbSourceMessage, long lSourcePeer)
         {
             SourcePeerID = lSourcePeer;
             GlobalMessage = gmbSourceMessage;
             MessageCreationTime = new DateTime(gmbSourceMessage.m_lTimeOfMessage);
-            PeerMessageIndex = gmbSourceMessage.m_sigSignatureData.m_iPeerChainIndex;
+            PeerMessageIndex = gmbSourceMessage.m_sigSignatureData.m_iPeerChannelIndex;
 
             //TODO:: get propper message node hash
             NodeHash = 0;

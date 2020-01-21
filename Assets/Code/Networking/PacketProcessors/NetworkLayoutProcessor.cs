@@ -360,9 +360,20 @@ namespace Networking
             return pktInputPacket;
         }
 
+        public override void OnConnectionReset()
+        {
+            //reset time of connection 
+            m_dtmBaseTimeOfConnection = m_tnpNetworkTime.BaseTime;
+
+            m_nlaNetworkLayout = new NetworkLayout(0);
+
+            base.OnConnectionReset();
+        }
+
         public override void OnConnectionStateChange(Connection.ConnectionStatus cstOldState, Connection.ConnectionStatus cstNewState)
         {
             m_tParentPacketProcessor.m_bShouldUpdatePeers = true;
         }
+        
     }
 }

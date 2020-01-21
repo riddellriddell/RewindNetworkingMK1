@@ -1,8 +1,6 @@
 ﻿using Assets.Code.Utility;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 
 namespace Networking
@@ -12,7 +10,7 @@ namespace Networking
     /// server and if no gateway exists decides if it wants to become a gateway 
     /// </summary>
     public class NetworkGatewayManager : ManagedNetworkPacketProcessor<ConnectionGatewayManager>
-    {      
+    {
         /// <summary>
         /// how many secconds between anouncing you currently have a gateway running
         /// </summary>
@@ -60,7 +58,7 @@ namespace Networking
             if (ParentNetworkConnection.m_bIsConnectedToSwarm == true && NeedsOpenGateway == false)
             {
                 //check if there is any connections this client is missing
-                if(m_nlpNetworkLayoutProcessor.MissingConnections.Count > 0)
+                if (m_nlpNetworkLayoutProcessor.MissingConnections.Count > 0)
                 {
                     return;
                 }
@@ -72,9 +70,9 @@ namespace Networking
 
 
                 //check if there is a client that has an open gateway
-                foreach(ConnectionGatewayManager cgmConnection in ChildConnectionProcessors.Values)
+                foreach (ConnectionGatewayManager cgmConnection in ChildConnectionProcessors.Values)
                 {
-                    if(cgmConnection.HasActiveGateway)
+                    if (cgmConnection.HasActiveGateway)
                     {
                         bActiveGate = true;
                         break;
@@ -95,7 +93,7 @@ namespace Networking
                     //check if this user is highest user ID and should open gate 
                     foreach (long userID in ChildConnectionProcessors.Keys)
                     {
-                        if(userID > ParentNetworkConnection.m_lUserUniqueID)
+                        if (userID > ParentNetworkConnection.m_lUserUniqueID)
                         {
                             bShouldOpenGate = false;
 
@@ -103,7 +101,7 @@ namespace Networking
                         }
                     }
 
-                    if(bShouldOpenGate)
+                    if (bShouldOpenGate)
                     {
                         Debug.Log($"User:{ParentNetworkConnection.m_lUserUniqueID} Opening Gateway");
 
@@ -111,7 +109,7 @@ namespace Networking
                         NeedsOpenGateway = true;
                     }
                 }
-            }           
+            }
         }
 
         //code to handle messages sent and recieved throught the WebInterface
@@ -141,12 +139,12 @@ namespace Networking
             //add to send message list
             MessagesToSend.Enqueue(smcSendMessageCommand);
         }
-        
+
         //process message from matchmaking server
         public void ProcessMessageFromGateway(UserMessage usmMessage)
         {
             //check message type
-            switch(usmMessage.m_iMessageType)
+            switch (usmMessage.m_iMessageType)
             {
                 case (int)MessageType.GatewayMessage:
 
@@ -200,7 +198,7 @@ namespace Networking
         {
             get
             {
-                if(m_tnpNetworkTime.BaseTime - TimeOfLastGatewayNotification < NetworkGatewayManager.GatewayTimeout )
+                if (m_tnpNetworkTime.BaseTime - TimeOfLastGatewayNotification < NetworkGatewayManager.GatewayTimeout)
                 {
                     return true;
                 }
@@ -231,12 +229,12 @@ namespace Networking
         public override void Update()
         {
             //check if connected
-            if(ParentConnection.Status != Connection.ConnectionStatus.Connected)
+            if (ParentConnection.Status != Connection.ConnectionStatus.Connected)
             {
                 return;
             }
 
-            //check if user has active gateway
+            //check if local peer has active gateway
             if (m_tParentPacketProcessor.ParentNetworkConnection.m_bIsConnectedToSwarm && m_tParentPacketProcessor.NeedsOpenGateway)
             {
                 //check if gateway has timed out
@@ -253,9 +251,9 @@ namespace Networking
                 }
             }
 
-            if(HadTimeToRecieveGateNotification == false)
+            if (HadTimeToRecieveGateNotification == false)
             {
-                if(ParentConnection.Status == Connection.ConnectionStatus.Connected && ParentConnection.m_dtmConnectionEstablishTime > m_tnpNetworkTime.BaseTime + NetworkGatewayManager.GatewayTimeout)
+                if (ParentConnection.Status == Connection.ConnectionStatus.Connected && ParentConnection.m_dtmConnectionEstablishTime > m_tnpNetworkTime.BaseTime + NetworkGatewayManager.GatewayTimeout)
                 {
                     HadTimeToRecieveGateNotification = true;
                 }
@@ -267,7 +265,7 @@ namespace Networking
         public override DataPacket ProcessReceivedPacket(Connection conConnection, DataPacket pktInputPacket)
         {
             //check if packet is gateway announcement
-            if(pktInputPacket.GetTypeID == GatewayActiveAnouncePacket.TypeID)
+            if (pktInputPacket.GetTypeID == GatewayActiveAnouncePacket.TypeID)
             {
                 //check if time of gateway activation
 
@@ -278,6 +276,20 @@ namespace Networking
             }
 
             return base.ProcessReceivedPacket(conConnection, pktInputPacket);
+        }
+
+        public override void OnConnectionReset()
+        {
+            //has enough time passed for the peer to send an open gate notification
+            HadTimeToRecieveGateNotification = false;
+
+            TimeOfLastGatewayNotification = DateTime.MinValue;
+
+            TimeOfFistGatewatActivation = DateTime.MinValue;
+
+            m_dtmTimeOfLastOpenGateNotification = DateTime.MinValue;
+
+            base.OnConnectionReset();
         }
     }
 }

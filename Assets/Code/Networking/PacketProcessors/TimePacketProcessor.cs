@@ -159,9 +159,9 @@ namespace Networking
             }
         }
 
-        public TimeSpan Offset { get; private set; }
+        public TimeSpan Offset { get; private set; } = TimeSpan.Zero;
 
-        public TimeSpan RTT { get; private set; } = TimeSpan.FromSeconds(0);
+        public TimeSpan RTT { get; private set; } = TimeSpan.Zero;
 
         //the value of the echo sent to check the rtt of the connection
         protected byte m_bEchoSent = 0;
@@ -276,6 +276,16 @@ namespace Networking
             }
 
             return pktInputPacket;
+        }
+
+        public override void OnConnectionReset()
+        {
+            //reset connection values 
+            RTT = TimeSpan.Zero;
+            Offset = TimeSpan.Zero;
+            m_bEchoSent = byte.MinValue;
+            m_dtmTimeOfEchoSend = DateTime.MinValue;
+            m_dtmTimeOfLastUpdate = DateTime.MinValue;
         }
     }
 }

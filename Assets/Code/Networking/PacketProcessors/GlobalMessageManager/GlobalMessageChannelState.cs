@@ -63,13 +63,22 @@ namespace Networking
         //list of all the active votes by this channel on other channels
         public List<ChannelVote> m_chvVotes;
 
-        public GlobalMessageChannelState(int iNumberOfPeers)
+        //the hash of the last valid node processed for this channel
+        public long m_lHashOfLastNodeProcessed;
+
+        //the index of the last valid message processed 
+        public UInt32 m_iLastMessageIndexProcessed;
+            
+        //the message sort value of the last valid message processed by this channel
+        public SortingValue m_msvLastSortValue;
+
+        public GlobalMessageChannelState(int iMaxNumberOfPeers)
         {
-            Init(iNumberOfPeers);
+            Init(iMaxNumberOfPeers);
         }
 
         //setup
-        public void Init(int iMaxPlayerCount)
+        public void Init(int iMaxPeerCount)
         {
             //mark channel as empty
             m_lChannelPeer = long.MinValue;
@@ -78,7 +87,7 @@ namespace Networking
 
             m_dtmVoteStartTime = DateTime.MinValue;
 
-            m_chvVotes = new List<ChannelVote>(iMaxPlayerCount);
+            m_chvVotes = new List<ChannelVote>(iMaxPeerCount);
 
             for(int i = 0; i < m_chvVotes.Count; i++)
             {
@@ -89,6 +98,11 @@ namespace Networking
                     m_vtpVoteType = ChannelVote.VoteType.None
                 });
             }
+
+            m_lHashOfLastNodeProcessed = 0;
+            m_iLastMessageIndexProcessed = 0;
+            m_msvLastSortValue = SortingValue.MinValue;
+
         }
 
         //process channel change message
@@ -124,6 +138,10 @@ namespace Networking
             m_lChannelPeer = long.MinValue;
             m_dtmVoteStartTime = DateTime.MinValue;
             m_staState = State.Empty;
+
+            //reset hash head
+            m_lHashOfLastNodeProcessed = 0;
+            m_iLastMessageIndexProcessed = 0;
         }
 
         //clear all votes by channel
@@ -199,8 +217,7 @@ namespace Networking
                 ClearVotesForChannelIndex(iIndex);
             }
         }
-
-
+               
         public object Clone()
         {
             throw new NotImplementedException();

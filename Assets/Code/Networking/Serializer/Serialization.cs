@@ -39,6 +39,21 @@ namespace Networking
             wbsStream.ReadWriteHead += DataSize(Input);
         }
 
+
+        // read and write int
+        public static void Serialize(ReadByteStream rbsStream, ref UInt32 Output)
+        {
+            Output = BitConverter.ToUInt32(rbsStream.m_bData, rbsStream.ReadWriteHead);
+            rbsStream.ReadWriteHead += DataSize(Output);
+        }
+
+        public static void Serialize(WriteByteStream wbsStream, ref UInt32 Input)
+        {
+            Array.Copy(BitConverter.GetBytes(Input), 0, wbsStream.m_bData, wbsStream.ReadWriteHead, DataSize(Input));
+            wbsStream.ReadWriteHead += DataSize(Input);
+        }
+
+
         // read and write long
         public static void Serialize(ReadByteStream rbsStream, ref Int64 Output)
         {
@@ -98,6 +113,8 @@ namespace Networking
             if (Input == null)
             {
                 Serialize(wbsStream, ref iItems);
+
+                return;
             }
 
             iItems = Input.Length;
@@ -142,6 +159,8 @@ namespace Networking
             if (Input == null)
             {
                 Serialize(wbsStream, ref iItems);
+
+                return;
             }
 
             iItems = Input.Count;
@@ -186,6 +205,8 @@ namespace Networking
             if (Input == null)
             {
                 Serialize(wbsStream, ref iItems);
+
+                return;
             }
 
             iItems = Input.Length;
@@ -230,6 +251,8 @@ namespace Networking
             if (Input == null)
             {
                 Serialize(wbsStream,ref iItems);
+
+                return;
             }
 
             iItems = Input.Count;
@@ -274,6 +297,8 @@ namespace Networking
             if (Input == null)
             {
                 Serialize(wbsStream, ref iItems);
+
+                return;
             }
 
             iItems = Input.Length;
@@ -318,6 +343,8 @@ namespace Networking
             if (Input == null)
             {
                 Serialize(wbsStream, ref iItems);
+
+                return;
             }
 
             iItems = Input.Count;
@@ -330,6 +357,66 @@ namespace Networking
                 Serialize(wbsStream, ref value);
             }
         }
+        
+        //read and write fixed array sizes 
+
+        public static void Serialize(ReadByteStream rbsStream, ref Byte[] Output, Int32 iItems)
+        {
+            if (Output == null || Output.Length != iItems)
+            {
+                Output = new Byte[iItems];
+            }
+            else
+            {
+                Output = new Byte[0];
+            }
+
+            for (int i = 0; i < iItems; i++)
+            {
+                Byte value = 0;
+                Serialize(rbsStream, ref value);
+                Output[i] = value;
+            }
+        }
+
+        public static void Serialize(WriteByteStream wbsStream, ref Byte[] Input, Int32 iItems)
+        {
+            for (int i = 0; i < iItems; i++)
+            {
+                Byte value = Input[i];
+                Serialize(wbsStream, ref value);
+            }
+        }
+
+
+        public static void Serialize(ReadByteStream rbsStream, ref List<Byte> Output, Int32 iItems)
+        {
+            if (Output == null)
+            {
+                Output = new List<Byte>(iItems);
+            }
+            else
+            {
+                Output.Clear();
+            }
+
+            for (int i = 0; i < iItems; i++)
+            {
+                Byte value = 0;
+                Serialize(rbsStream, ref value);
+                Output.Add(value);
+            }
+        }
+
+        public static void Serialize(WriteByteStream wbsStream, ref List<Byte> Input, Int32 iItems)
+        {
+            for (int i = 0; i < iItems; i++)
+            {
+                Byte value = Input[i];
+                Serialize(wbsStream, ref value);
+            }
+        }
+
 
         //read and write string
         public static void Serialize(ReadByteStream rbsStream, ref string Output)
@@ -353,22 +440,22 @@ namespace Networking
         #endregion
 
         #region DataSize 
-        public static int DataSize(Byte input)
+        public static int DataSize(Byte Input)
         {
             return sizeof(Byte);
         }
 
-        public static int DataSize(Int32 input)
+        public static int DataSize(Int32 Input)
         {
             return sizeof(Int32);
         }
 
-        public static int DataSize(Int64 input)
+        public static int DataSize(Int64 Input)
         {
             return sizeof(Int64);
         }
 
-        public static int DataSize(DateTime input)
+        public static int DataSize(DateTime Input)
         {
             return sizeof(Int64);
         }
