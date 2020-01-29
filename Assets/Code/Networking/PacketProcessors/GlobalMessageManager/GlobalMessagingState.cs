@@ -30,6 +30,11 @@ namespace Networking
         {
             Init(iNumberOfItems);
 
+            AssignFirstPeer(lFirstPeer);
+        }
+
+        public void AssignFirstPeer(long lFirstPeer)
+        {
             m_gmcMessageChannels[0].AssignPeerToChannel(lFirstPeer);
         }
 
@@ -89,6 +94,15 @@ namespace Networking
 
             iIndex = 0;
             return false;
+        }
+
+        public void ResetToState(GlobalMessagingState gmsState)
+        {
+            for (int i = 0; i < m_gmcMessageChannels.Count; i++)
+            {
+                m_gmcMessageChannels[i].ResetToState(gmsState.m_gmcMessageChannels[i]);
+            }
+            m_svaLastMessageSortValue = gmsState.m_svaLastMessageSortValue;
         }
 
         //setup channel for a global messenging system with a maximum number of peers

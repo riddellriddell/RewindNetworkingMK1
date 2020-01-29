@@ -292,10 +292,10 @@ namespace GameManagers
             if (bIsSimSetup)
             {
                 //tell network layer global messaging system that it is the first peer in the 
-                //global networking system
+                m_ncnNetworkConnection.OnFirstPeerInSwarm();
 
                 //activate network layer to start looking for new connections
-                m_ncnNetworkConnection.m_bIsConnectedToSwarm = true;
+                m_ncnNetworkConnection.OnConnectToSwarm();
 
                 //enter run game state 
                 EnterRunningGame();
@@ -424,6 +424,7 @@ namespace GameManagers
             }
             else
             {
+                //check if getting messages from server when you dont need to be
                 if (m_winWebInterface.IsGettingMessagesFromServer())
                 {
                     Debug.Log($"User:{m_winWebInterface.PlayerID} stopping getting messages from server");
@@ -447,7 +448,8 @@ namespace GameManagers
 
             m_ncpConnectionPropegator = new NetworkConnectionPropagatorProcessor();
             m_ncnNetworkConnection.AddPacketProcessor(m_ncpConnectionPropegator);
-           
+
+            m_ncnNetworkConnection.AddPacketProcessor(new NetworkGlobalMessengerProcessor());
 
         }
     }

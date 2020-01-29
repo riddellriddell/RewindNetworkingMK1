@@ -5,6 +5,16 @@ namespace Networking
 {
     public class NetworkGlobalMessengerProcessor : ManagedNetworkPacketProcessor<ConnectionGlobalMessengerProcessor>
     {
+        public enum State
+        {
+            WaitingForConnection,
+            ConnectAsFirstPeer,
+            ConnectAsAdditionalPeer,
+            Connected,
+            Error,
+            Disconnected,
+        }
+
         public override int Priority
         {
             get
@@ -23,6 +33,11 @@ namespace Networking
             }
         }
 
+        //fixed max player count but in future will be dynamic? 
+        public static int MaxPlayerCount { get; } = 32;
+
+        //the state of the global message system
+        public State m_staState = State.WaitingForConnection;
 
         //bufer of all the valid messages recieved from all peers through the global message system
         protected GlobalMessageBuffer m_gmbMessageBuffer;
@@ -44,62 +59,120 @@ namespace Networking
 
         protected GlobalMessageKeyManager m_gkmKeyManager;
 
-        public void Initalize(int iMaxPlayerCount)
+        public NetworkGlobalMessengerProcessor() :base()
+        {
+            Initalize();
+        }
+
+        public void Initalize()
         {
             //setup the chain manager for the max player count 
-            m_chmChainManager = new ChainManager(iMaxPlayerCount);
+            m_chmChainManager = new ChainManager(MaxPlayerCount);
+            m_gmbMessageBuffer = new GlobalMessageBuffer();
+        }
+
+        public override void OnAddToNetwork(NetworkConnection ncnNetwork)
+        {
+            base.OnAddToNetwork(ncnNetwork);
+
+            m_tnpNetworkTime = ParentNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();            
         }
 
         public override void Update()
         {
             base.Update();
 
+            switch(m_staState)
+            {
+                case State.WaitingForConnection:
+
+                    break;
+
+                case State.ConnectAsFirstPeer:
+                    StartAsFirstPeerInSystem();
+
+                    m_staState = State.Connected;
+                    break;
+                case State.ConnectAsAdditionalPeer:
+                    break;
+
+                case State.Connected:
+                    MakeNewChainLinkIfTimeTo();
+                    break;
+            }           
+        }
+
+        public override void OnFirstPeerInSwarm()
+        {
+            m_staState = State.ConnectAsFirstPeer;
+        }
+
+        public override void OnConnectToSwarm()
+        {
+            if(m_staState != State.ConnectAsFirstPeer)
+            {
+                m_staState = State.ConnectAsAdditionalPeer;
+            }
+        }
+
+        public void MakeNewChainLinkIfTimeTo()
+        {
             //check if chain manager has a base to build chain links off
             if (m_chmChainManager.m_staState == ChainManager.State.Ready)
             {
-
                 //get network time
                 DateTime dtmNetworkTime = m_tnpNetworkTime.NetworkTime;
 
                 if (CheckIfShouldCreateChainLink(dtmNetworkTime))
                 {
                     //create the next link by peer
-                    ChainLink chlNextLink = CreateChainLink(dtmNetworkTime);
+                    ChainLink chlNextLink = CreateChainLink(m_iNextLinkIndex);
 
                     //update the next time this peer should create a link
                     SetTimeOfNextPeerChainLink(dtmNetworkTime);
 
-                    //send link to peers
-
                     //add link to local link tracker 
+                    m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, chlNextLink, m_gkmKeyManager, m_gmbMessageBuffer);
+                    
+                    //send link to peers
 
                 }
             }
         }
-        
+
         //set this peer as the first in the global message system
         //and start producing input chain links
         public void StartAsFirstPeerInSystem()
         {
             //setup the inital state of the chain
-            m_chmChainManager.m_gmsChainStartState = new GlobalMessagingState(m_chmChainManager.m_iChannelCount, ParentNetworkConnection.m_lUserUniqueID);
+            m_chmChainManager.SetStartState(ParentNetworkConnection.m_lPeerID); 
 
-            //setup the chain peer selection system
-            m_chmChainManager.SetRandomFullCycleIncrement();
+            DateTime dtmNetworkTime = m_tnpNetworkTime.NetworkTime;
+
+            //get current chain link
+            uint iCurrentChainLink = m_chmChainManager.GetChainlinkCycleIndexForTime(
+                dtmNetworkTime, 
+                ChainManager.TimeBetweenLinks, 
+                m_chmChainManager.m_dtmSystemStartTime);
 
             //get the last time that this peer should have created a chain link
-            uint iLastChainLinkForPeer = m_chmChainManager.GetLastChainLinkForChannel(
+            m_chmChainManager.GetPreviousChainLinkForChannel(
                 0,
                 m_chmChainManager.m_iChannelCount,
-                m_tnpNetworkTime.NetworkTime,
+                iCurrentChainLink,
                 ChainManager.TimeBetweenLinks,
-                ChainManager.GetChainBaseTime(m_tnpNetworkTime.NetworkTime));
+                ChainManager.GetChainBaseTime(m_tnpNetworkTime.NetworkTime),
+                out DateTime m_dtmTimeOfPreviousLink,
+                out uint iLastChainLinkForPeer);
 
             //create base chain link
             ChainLink chlLink = CreateFirstChainLink(iLastChainLinkForPeer);
 
+            //update the time of the next chian link
+            SetTimeOfNextPeerChainLink(dtmNetworkTime);
+
             //add link to chain manager
-            m_chmChainManager.AddFirstChainLink(chlLink);
+            m_chmChainManager.AddFirstChainLink(ParentNetworkConnection.m_lPeerID, chlLink);
         }
 
         public void StartAsConnectorToSystem()
@@ -110,28 +183,26 @@ namespace Networking
         public ChainLink CreateFirstChainLink(uint iChainCycleIndex)
         {
             ChainLink chlChainLink = new ChainLink();
-
-            chlChainLink.m_sigSignatureData = new ChainLink.SignedData();
-
-            chlChainLink.m_sigSignatureData.m_iLinkIndex = iChainCycleIndex;
-
-            chlChainLink.m_sigSignatureData.m_bHashOfChainLink = new byte[0];
-
+            chlChainLink.Init(new List<PeerMessageNode>(0), ParentNetworkConnection.m_lPeerID, iChainCycleIndex,0); 
             return chlChainLink;
         }
 
         public void SetTimeOfNextPeerChainLink(DateTime dtmCurrentTime)
         {
-            //get the channel that correxsponds to peer id
-            if (m_chmChainManager.m_chlChainBase.m_gmsState.TryGetIndexForPeer(ParentNetworkConnection.m_lUserUniqueID, out int iPeerChannel))
+            //get the channel that corresponds to peer id
+            //may change this to use state at end of message buffer
+            if (m_chmChainManager.m_gmsChainStartState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iPeerChannel))
             {
+                //get current chain link
+                uint iCurrentChainLink = m_chmChainManager.GetChainlinkCycleIndexForTime(dtmCurrentTime, ChainManager.TimeBetweenLinks, m_chmChainManager.m_dtmSystemStartTime);
+
                 //get the next time the channel will be addding a chain link
-                m_chmChainManager.TimeAndIndexOfNextLinkFromChannel(
+                m_chmChainManager.GetNextChainLinkForChannel(
                     iPeerChannel,
                     m_chmChainManager.m_iChannelCount,
-                    dtmCurrentTime,
+                    iCurrentChainLink,
                     ChainManager.TimeBetweenLinks,
-                    ChainManager.GetChainBaseTime(dtmCurrentTime),
+                    m_chmChainManager.m_dtmSystemStartTime,
                     out m_dtmNextLinkBuildTime,
                     out m_iNextLinkIndex
                     );
@@ -158,28 +229,21 @@ namespace Networking
             }
         }
 
-        public ChainLink CreateChainLink(DateTime dtmNetworkTime)
+        public ChainLink CreateChainLink(UInt32 iChainLinkIndex)
         {
-
             //get all inputs from head to latest
-            List<IPeerMessageNode> pmnLinkMessages = m_gmbMessageBuffer.GetChainLinkMessages(
-                m_chmChainManager.m_chlBestChainHead.m_gmsState.m_msvLastMessageSortValue,
+            List<PeerMessageNode> pmnLinkMessages = m_gmbMessageBuffer.GetChainLinkMessages(
+                m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue,
                 ChannelTimeOutTime,
                 m_dtmNextLinkBuildTime);
 
             //create chain link
             ChainLink chlNewLink = new ChainLink();
 
-            chlNewLink.m_pmnMessages = pmnLinkMessages;
-            chlNewLink.m_lPeerID = ParentNetworkConnection.m_lUserUniqueID;
-            chlNewLink.m_sigSignatureData.m_iLinkIndex = m_iNextLinkIndex;
-            chlNewLink.m_chlParentChainLink = m_chmChainManager.m_chlBestChainHead;
-
-            //encript chan link components
-            chlNewLink.Encript(m_gkmKeyManager);
+            //setup new link to link to best chain head and to have all messages that have happened since chain head 
+            chlNewLink.Init(pmnLinkMessages, ParentNetworkConnection.m_lPeerID, iChainLinkIndex, m_chmChainManager.m_chlBestChainHead.m_lLinkPayloadHash);
 
             return chlNewLink;
-
         }
     }
 

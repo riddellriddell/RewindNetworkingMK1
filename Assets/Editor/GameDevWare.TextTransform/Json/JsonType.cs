@@ -7,6 +7,6 @@ namespace Assets.Editor.GameDevWare.TextTransform.Json
 		Number,
 		Object,
 		Array,
-	
-	}
+        Boolean
+    }
 }

@@ -88,7 +88,7 @@ namespace Networking
                     //check if connecting to this peer is blockd for some reason
 
                     //check if this is the correct peer to be making the connection attempt
-                    if (ShouldPeerStartConnection(ParentNetworkConnection.m_lUserUniqueID, lMissingUserID) == false)
+                    if (ShouldPeerStartConnection(ParentNetworkConnection.m_lPeerID, lMissingUserID) == false)
                     {
                         //skip user
                         continue;
@@ -96,7 +96,7 @@ namespace Networking
 
                     //start connection proccess by making new connection object and generating 
                     //connection offer negotiation message
-                    Debug.Log($"Starting connection request from: {ParentNetworkConnection.m_lUserUniqueID} to {lMissingUserID}");
+                    Debug.Log($"Starting connection request from: {ParentNetworkConnection.m_lPeerID} to {lMissingUserID}");
                     StartRequest(lMissingUserID);
                 }
             }
@@ -227,7 +227,7 @@ namespace Networking
 
         protected bool IsTargetForConnectionNegotiationMessage(ConnectionNegotiationBasePacket cnpPacket)
         {
-            if (cnpPacket.m_lTo == ParentNetworkConnection.m_lUserUniqueID)
+            if (cnpPacket.m_lTo == ParentNetworkConnection.m_lPeerID)
             {
                 return true;
             }
@@ -316,13 +316,13 @@ namespace Networking
             {
                 string strMessage = ParentConnection.TransmittionNegotiationMessages.Dequeue();
 
-                Debug.Log($"Connection:{ParentConnection.m_lUserUniqueID} Processing Negotiation messages:{strMessage} to send to user:{ParentConnection.m_lUserUniqueID} from User {m_tParentPacketProcessor.ParentNetworkConnection.m_lUserUniqueID}");
+                Debug.Log($"Connection:{ParentConnection.m_lUserUniqueID} Processing Negotiation messages:{strMessage} to send to user:{ParentConnection.m_lUserUniqueID} from User {m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID}");
 
                 ConnectionNegotiationMessagePacket cnmPacket = ParentConnection.m_cifPacketFactory.CreateType<ConnectionNegotiationMessagePacket>(ConnectionNegotiationMessagePacket.TypeID);
 
                 cnmPacket.m_dtmNegotiationStart = ParentConnection.m_conConnectionSetupStart;
                 cnmPacket.m_iIndex = m_iNextMessageIndex;
-                cnmPacket.m_lFrom = m_tParentPacketProcessor.ParentNetworkConnection.m_lUserUniqueID;
+                cnmPacket.m_lFrom = m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID;
                 cnmPacket.m_lTo = ParentConnection.m_lUserUniqueID;
                 cnmPacket.m_strConnectionNegotiationMessage = strMessage;
 

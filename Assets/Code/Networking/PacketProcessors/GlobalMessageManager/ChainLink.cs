@@ -37,7 +37,7 @@ namespace Networking
         #endregion
 
         #region CalculatedValues
-
+        #region CalculatedFromLinkValues
         //the hash of this links payload
         public long m_lLinkPayloadHash;
 
@@ -46,6 +46,12 @@ namespace Networking
 
         //value used to sort chain links 
         public SortingValue m_svaChainSortingValue;
+
+        //the global messaging state at the end of processing this message
+        public GlobalMessagingState m_gmsState;
+
+        #endregion
+        #region CalculatedUsingChanAndMessageBuffers 
 
         //the parent chain link
         public ChainLink m_chlParentChainLink;
@@ -61,8 +67,26 @@ namespace Networking
 
         // is this branch accepted by channel as the true branch
         public List<bool> m_bIsChannelBranch;
-
         #endregion
+        #endregion
+
+        public void Init(List<PeerMessageNode> pmnMessagesInLink,long lCreatingPeer,uint iLinkIndex,long lPreviousLinkHash)
+        {
+            //store key values
+            m_pmnMessages = pmnMessagesInLink;
+            m_lPeerID = lCreatingPeer;
+            m_iLinkIndex = iLinkIndex;
+            m_lPreviousLinkHash = lPreviousLinkHash;
+
+            //build payload array 
+            BuildPayloadArray();
+            //get the hash from payload
+            BuildPayloadHash();
+            //use hash to sign link
+            SignData();
+            //use hash to calcuate sorting order
+            CalculateSortingValue();
+        }
 
         //this should be moved into a byte stream Data Size Function
         public int LinkDataSize()
@@ -168,6 +192,22 @@ namespace Networking
             for (int i = 0; i < iCount; i++)
             {
                 m_pmnMessages[i].DecodePacket(rbsByteStream);
+            }
+        }
+
+        public void CaluclateGlobalMessagingStateAtEndOflink(long lLocalPeerID, GlobalMessagingState gmsStateAtLinkStart)
+        {
+            if(m_gmsState == null)
+            {
+                int iMaxChannels = gmsStateAtLinkStart.m_gmcMessageChannels.Count;
+                m_gmsState = new GlobalMessagingState(iMaxChannels);
+            }
+
+            m_gmsState.ResetToState(gmsStateAtLinkStart);
+
+            for(int i = 0; i < m_pmnMessages.Count; i++)
+            {
+                m_gmsState.ProcessMessage(lLocalPeerID, m_pmnMessages[i]);
             }
         }
 

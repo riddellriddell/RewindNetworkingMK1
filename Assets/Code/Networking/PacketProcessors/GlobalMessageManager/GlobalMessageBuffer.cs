@@ -117,6 +117,11 @@ namespace Networking
         {
             List<PeerMessageNode> pmnOutput = new List<PeerMessageNode>();
 
+            if (UnConfirmedMessageBuffer.Count == 0 )
+            {
+                return pmnOutput;
+            }
+
             //get the start index
             int iStartIndex = UnConfirmedMessageBuffer.IndexOfKey(msvGetMessagesFrom) + 1;
 
@@ -168,7 +173,7 @@ namespace Networking
                 PeerMessageNode pmnMessage = UnConfirmedMessageBuffer.Values[i];
 
                 //make sure no messages past the end of the link are added 
-                if (pmnMessage.m_dtmMessageCreationTime > dtmLinkEndTime.Ticks)
+                if (pmnMessage.m_dtmMessageCreationTime > dtmLinkEndTime)
                 {
                     break;
                 }
@@ -181,30 +186,30 @@ namespace Networking
         }
 
         //the last global index that messages were recieved from all peers that are being tracked 
-        public int GlobalIndexOfLastRecievedMessagesFromAllPeers(List<long> lTrackedPeers)
+        public long GlobalIndexOfLastRecievedMessagesFromAllPeers(List<long> lTrackedPeers)
         {
-            int iGlobalIndex = int.MaxValue;
+            long lGlobalIndex = long.MaxValue;
 
             foreach (long lPeerID in lTrackedPeers)
             {
                 if (LastMessageRecievedFromPeer.TryGetValue(lPeerID, out PeerMessageNode pmnNode))
                 {
-                    iGlobalIndex = Mathf.Min(iGlobalIndex, pmnNode.GlobalMessageIndex);
+                    lGlobalIndex = Math.Min(lGlobalIndex, pmnNode.m_lGlobalMessageIndex);
                 }
             }
 
-            if (iGlobalIndex == int.MaxValue)
+            if (lGlobalIndex == int.MaxValue)
             {
-                iGlobalIndex = m_iBufferStartIndex;
+                lGlobalIndex = m_iBufferStartIndex;
             }
 
-            return iGlobalIndex;
+            return lGlobalIndex;
         }
 
         //function to remove messages upto point in buffer 
         public void RemoveItemsUpTo(SortingValue msvRemoveToo)
         {
-            UnConfirmedMessageBuffer.RemoveWhere(pmnMessage => msvRemoveToo.CompareTo(pmnMessage) > 0);
+            //UnConfirmedMessageBuffer.re(pmnMessage => msvRemoveToo.CompareTo(pmnMessage) > 0);
         }
 
         //update the hash for the buffer
@@ -267,26 +272,6 @@ namespace Networking
 
                     pmnMessageNode.GlobalMessageIndex = iStartNumber;
                 }
-            }
-        }
-
-        //when a message is recieved that is out of order / before a message recieved from the same peer
-        //it causes a branch / change in the acknowledged message timeline. these branches are numbered 
-        //to keep track of what messages need to be echoed to which peers 
-        protected void MarkMessagesAsBranched(int iStartIndex, int iBranchNumber)
-        {
-            //loop through all messages 
-            foreach (IPeerMessageNode pmnMessage in UnConfirmedMessageBuffer)
-            {
-                //check if node is before branch
-                if (pmnMessage.GlobalMessageIndex < iStartIndex)
-                {
-                    //skip message
-                    continue;
-                }
-
-                //change message branch number
-                pmnMessage.GlobalBranchNumber = iBranchNumber;
             }
         }
 

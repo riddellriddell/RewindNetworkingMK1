@@ -77,6 +77,26 @@ namespace Networking
             Init(iMaxNumberOfPeers);
         }
 
+        //changes the data in this class to match that of the passed channel state 
+        public void ResetToState(GlobalMessageChannelState chsChannelState)
+        {
+            m_lChannelPeer = chsChannelState.m_lChannelPeer;
+
+            m_dtmVoteStartTime = chsChannelState.m_dtmVoteStartTime;
+
+            m_staState = chsChannelState.m_staState;
+
+            //copy across votes 
+            for (int i = 0; i < m_chvVotes.Count; i++)
+            {
+                m_chvVotes[i] = chsChannelState.m_chvVotes[i];
+            }
+
+            m_lHashOfLastNodeProcessed = chsChannelState.m_lHashOfLastNodeProcessed;
+
+            m_iLastMessageIndexProcessed = chsChannelState.m_iLastMessageIndexProcessed;
+        }
+
         //setup
         public void Init(int iMaxPeerCount)
         {

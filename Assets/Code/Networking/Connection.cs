@@ -195,7 +195,7 @@ namespace Networking
 
         protected void OnNegoriationMessageFromTransmitter(string strMessageJson)
         {
-            Debug.Log($"Negotiation message:{strMessageJson} created by transmitter on peer {m_ncnParentNetworkConneciton.m_lUserUniqueID}");
+            Debug.Log($"Negotiation message:{strMessageJson} created by transmitter on peer {m_ncnParentNetworkConneciton.m_lPeerID}");
             TransmittionNegotiationMessages.Enqueue(strMessageJson);
         }
 
@@ -211,7 +211,7 @@ namespace Networking
             m_dtmConnectionEstablishTime = m_ncnParentNetworkConneciton.GetPacketProcessor<TimeNetworkProcessor>().BaseTime;
 
             //inform parent that now part of the swarm 
-            m_ncnParentNetworkConneciton.m_bIsConnectedToSwarm = true;
+            m_ncnParentNetworkConneciton.OnConnectToSwarm();
         }
         #endregion
 
@@ -439,7 +439,7 @@ namespace Networking
                     }
 
 
-                    Debug.Log($"Connection from User:{m_ncnParentNetworkConneciton.m_lUserUniqueID} to User:{m_lUserUniqueID} is Saturated with data: {strPacketDataInPacket} , Bytes Remaining in packet : {pkwPacketWrappepr.WriteStream.BytesRemaining} Packet that failed to add is { pktPacketToSend.PacketTotalSize} bytes");
+                    Debug.Log($"Connection from User:{m_ncnParentNetworkConneciton.m_lPeerID} to User:{m_lUserUniqueID} is Saturated with data: {strPacketDataInPacket} , Bytes Remaining in packet : {pkwPacketWrappepr.WriteStream.BytesRemaining} Packet that failed to add is { pktPacketToSend.PacketTotalSize} bytes");
 
                     break;
                 }

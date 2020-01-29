@@ -1,16 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 public class ClassWithIDFactory
-{   
+{
     public ClassWithIDFactory()
     {
         SetupTypes();
+    }
+
+    //adds new type and returns index
+    public int AddType<T>()
+    {
+        Type typType = typeof(T);
+
+        m_tipTypeIDs.Add(typType);
+
+        return m_tipTypeIDs.Count - 1;
     }
 
     public void AddType<T>(int iID)

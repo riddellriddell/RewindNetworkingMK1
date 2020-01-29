@@ -37,6 +37,22 @@ namespace Networking
 
         }
 
+        //gets called before on connect to swarm 
+        //indicates this peer is the only peer in the swarm and mostlikely started the system
+        public virtual void OnFirstPeerInSwarm()
+        {
+
+        }
+
+        //gets called when the peer connects to another peer
+        //or when a peer first starts a game
+        public virtual void OnConnectToSwarm()
+        {
+
+        }
+
+
+
         public virtual DataPacket ProcessReceivedPacket(long lFromUserID, DataPacket pktInputPacket)
         {
             return pktInputPacket;

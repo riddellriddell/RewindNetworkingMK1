@@ -32,6 +32,9 @@ namespace Networking
             }
         }
 
+        //is this peer the first peer in the swarm
+        public bool m_bIsFirstPeer = false;
+
         //is this peer connected to a swarm
         public bool m_bIsConnectedToSwarm = false;
 
@@ -41,12 +44,8 @@ namespace Networking
         //all the connections 
         public Dictionary<long, Connection> ConnectionList { get; } = new Dictionary<long, Connection>();
 
-        //the local id of the player
-        [Obsolete]
-        public byte m_bPlayerID;
-
         //the unique id for this player
-        public long m_lUserUniqueID;
+        public long m_lPeerID;
 
         public delegate void PacketDataIn(byte bPlayerID, DataPacket pktInput);
         public event PacketDataIn m_evtPacketDataIn;
@@ -61,7 +60,7 @@ namespace Networking
             //generate a unique ID
             // m_lPlayerUniqueID = SystemInfo.deviceUniqueIdentifier.GetHashCode();
             //m_lUserUniqueID = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
-            m_lUserUniqueID = lUserID;
+            m_lPeerID = lUserID;
 
             m_ptfPeerTransmitterFactory = ptfPeerTransmitterFactory;
 
@@ -208,6 +207,24 @@ namespace Networking
         public float NetworkTime()
         {
             return Time.timeSinceLevelLoad;
+        }
+        
+        public void OnFirstPeerInSwarm()
+        {
+            foreach(BaseNetworkPacketProcessor nppProcessor in NetworkPacketProcessors)
+            {
+                m_bIsFirstPeer = true;
+                nppProcessor.OnFirstPeerInSwarm();
+            }
+        }
+
+        public void OnConnectToSwarm()
+        {
+            foreach (BaseNetworkPacketProcessor nppProcessor in NetworkPacketProcessors)
+            {
+                m_bIsConnectedToSwarm = true;
+                nppProcessor.OnConnectToSwarm();
+            }
         }
 
         public void SendPacket(long lPlayerID, DataPacket pktPacket)

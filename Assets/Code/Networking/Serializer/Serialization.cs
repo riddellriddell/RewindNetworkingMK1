@@ -450,6 +450,11 @@ namespace Networking
             return sizeof(Int32);
         }
 
+        public static int DataSize(UInt32 Input)
+        {
+            return sizeof(UInt32);
+        }
+
         public static int DataSize(Int64 Input)
         {
             return sizeof(Int64);

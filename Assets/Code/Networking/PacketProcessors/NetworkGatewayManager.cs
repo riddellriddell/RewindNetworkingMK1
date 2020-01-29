@@ -93,7 +93,7 @@ namespace Networking
                     //check if this user is highest user ID and should open gate 
                     foreach (long userID in ChildConnectionProcessors.Keys)
                     {
-                        if (userID > ParentNetworkConnection.m_lUserUniqueID)
+                        if (userID > ParentNetworkConnection.m_lPeerID)
                         {
                             bShouldOpenGate = false;
 
@@ -103,7 +103,7 @@ namespace Networking
 
                     if (bShouldOpenGate)
                     {
-                        Debug.Log($"User:{ParentNetworkConnection.m_lUserUniqueID} Opening Gateway");
+                        Debug.Log($"User:{ParentNetworkConnection.m_lPeerID} Opening Gateway");
 
                         //open gate 
                         NeedsOpenGateway = true;
@@ -131,7 +131,7 @@ namespace Networking
             SendMessageCommand smcSendMessageCommand = new SendMessageCommand()
             {
                 m_iType = (int)MessageType.GatewayMessage,
-                m_lFromID = ParentNetworkConnection.m_lUserUniqueID,
+                m_lFromID = ParentNetworkConnection.m_lPeerID,
                 m_lToID = lTargetUserID,
                 m_strMessage = JsonUtility.ToJson(new JsonByteArrayWrapper(wbsWriteStream.GetData()))
             };

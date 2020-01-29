@@ -23,7 +23,8 @@ namespace Networking
         //each chain is based off the start of the year
         public static DateTime GetChainBaseTime(DateTime dtmCurrentNetworkTime)
         {
-            return new DateTime(dtmCurrentNetworkTime.Year, 0, 0);
+            int iYear = dtmCurrentNetworkTime.Year;
+            return new DateTime(iYear, 1, 1);
         }
 
         //the stage the state machine is in
@@ -47,16 +48,13 @@ namespace Networking
         //the time the global message system started
         public DateTime m_dtmSystemStartTime;
 
-        //the coprime offset used to do a full cycle random
-        public int m_iFullCycleRandomIncrement;
-
         public void SetStartState(long lFirstPeerID)
         {
             //set the state and the first peer
-            m_gmsChainStartState = new GlobalMessagingState(m_iChannelCount,lFirstPeerID);
+            m_gmsChainStartState.AssignFirstPeer(lFirstPeerID);
         }
 
-        public void AddFirstChainLink(ChainLink chkChainLink)
+        public void AddFirstChainLink(long lLocalPeerID, ChainLink chkChainLink)
         {
             //add chain links to buffer 
             ChainLinks.Add(chkChainLink.m_svaChainSortingValue, chkChainLink);
@@ -64,12 +62,29 @@ namespace Networking
             //set as base chain link
             m_chlChainBase = chkChainLink;
 
-            m_chlBestChainHead = chkChainLink;         
+            m_chlBestChainHead = chkChainLink;
 
-            ReprocessAllChainLinks();
+            chkChainLink.m_bIsConnectedToBase = true;
+
+            //calculate chain state 
+            chkChainLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, m_gmsChainStartState);
+
+            //setup acknoledgements 
+            chkChainLink.m_bIsChannelBranch = new List<bool>(m_iChannelCount);
+
+            //set acknowledgement of first link
+            //this assumes the inital peer is at position 0;
+            for(int i = 0; i< m_iChannelCount; i++)
+            {
+                chkChainLink.m_bIsChannelBranch.Add(false);
+            }
+
+            chkChainLink.m_bIsChannelBranch[0] = true;
+
+            m_staState = State.Ready;
         }
 
-        public void AddChainLink(ChainLink chlLink, GlobalMessageKeyManager gkmKeyManager,GlobalMessageBuffer gmbGlobalMessageBuffer)
+        public void AddChainLink(long lLocalPeerID, ChainLink chlLink, GlobalMessageKeyManager gkmKeyManager,GlobalMessageBuffer gmbGlobalMessageBuffer)
         {
             //check that chain link is valid 
             ValidateChainSource(chlLink, gkmKeyManager);
@@ -91,7 +106,7 @@ namespace Networking
             MergeChainLinkMessagesIntoBuffer(chlLink, gmbGlobalMessageBuffer);
                        
             //recalculate chain values
-            ReprocessAllChainLinks();
+            ReprocessAllChainLinks(lLocalPeerID);
 
             //update the best chain
             m_chlBestChainHead = FindBestHeadChainLink();
@@ -128,7 +143,7 @@ namespace Networking
             //and acknowledge new branch
             for(int i = ChainLinks.Count -1; i > -1; i-- )
             {
-                if(ChainLinks.Values[i] == chlAcknowledgedLink)
+                if(ChainLinks.Values[i] == chlAcknowledgedLink && chlAcknowledgedLink != null)
                 {
                     //mark link as part of branch
                     ChainLinks.Values[i].m_bIsChannelBranch[iChannelIndex] = true;
@@ -151,9 +166,34 @@ namespace Networking
         }
 
         //get parent for chain link if it has not already been found, update chain length 
-        public void ProceesChainLink(ChainLink chlLink)
+        public void ProceesChainLink(long lLocalPeerID, ChainLink chlLink)
         {
-            //check if link needs to find parent
+            //skip if base link as it should have been processed already 
+            if(chlLink == m_chlChainBase)
+            {
+                return;
+            }
+
+            //check if acknowledgements need setting up
+            if (chlLink.m_bIsChannelBranch == null)
+            {
+                //create ack array
+                chlLink.m_bIsChannelBranch = new List<bool>(m_iChannelCount);
+
+                for (int i = 0; i < m_iChannelCount; i++)
+                {
+                    chlLink.m_bIsChannelBranch.Add(false);
+                }
+
+                //set peer as acknowledging chain 
+                if (m_gmsChainStartState.TryGetIndexForPeer(chlLink.m_lPeerID, out int iChannelIndex))
+                {
+                    //set acknowledgement for peer 
+                    SetChannelAcknowledgements(iChannelIndex, chlLink);
+                }
+            }
+
+            //check if link needs to find parent and is not base which will have no parent
             if (chlLink.m_chlParentChainLink == null)
             {
                 //get the chain link index to start at 
@@ -193,56 +233,58 @@ namespace Networking
                 chlLink.m_bIsConnectedToBase = false;
             }
 
+            //check if state needs to be calculated 
+            if(chlLink.m_bIsConnectedToBase && chlLink.m_gmsState == null)
+            {
+                chlLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, chlLink.m_chlParentChainLink.m_gmsState);
+            }
+
+
+
             //calculate chain length
             chlLink.m_lChainMessageCount = chlLink.m_chlParentChainLink.m_lChainMessageCount + (ulong)chlLink.m_pmnMessages.Count;
             chlLink.m_iChainLength = chlLink.m_chlParentChainLink.m_iChainLength + 1;
+
+            Debug.Log($"Processed new chain link with length {chlLink.m_iChainLength}");
         }
 
         //reprocess all the chain links
-        public void ReprocessAllChainLinks()
+        public void ReprocessAllChainLinks(long lLocalPeerID)
         {
             for(int i = 0; i <ChainLinks.Count; i++)
             {
-                ProceesChainLink(ChainLinks.Values[i]);
+                ProceesChainLink(lLocalPeerID,ChainLinks.Values[i]);
             }
         }
+        
         //perform inital setup
         public ChainManager(int iMaxPlayerCount)
         {
             m_iChannelCount = iMaxPlayerCount;
+            m_gmsChainStartState = new GlobalMessagingState(m_iChannelCount);
         }
 
-        public void SetRandomFullCycleIncrement()
+        //get chain link for time
+        public uint GetChainlinkCycleIndexForTime(DateTime dtmTargetTime, TimeSpan tspTimePerChain, DateTime dtmSystemStartTime)
         {
-            List<int> iIncrementOptions = HelperFunctions.CoPrimes(m_iChannelCount, m_iChannelCount);
+            //get time elapsed
+            TimeSpan tspElapsedTime = dtmTargetTime - dtmSystemStartTime;
 
-            m_iFullCycleRandomIncrement = iIncrementOptions[Random.Range(0, iIncrementOptions.Count)];
+            return (uint)(tspElapsedTime.Ticks / tspTimePerChain.Ticks);
         }
 
-        //given a start time get the last chain cycle this channel could have created a link 
-        public uint GetLastChainLinkForChannel(int iChannel, int iChannelCount, DateTime dtmTargetTime, TimeSpan tspTimePerChain, DateTime dtmSystemStartTime)
+        // returns the channel that will create the chain link for a given cycle index
+        public int GetCreatorForLinkCycle(uint iChainLinkCycleIndex, int iChannelCount)
         {
-            //get the channel index for target time
-            uint iCycleIndex = ChainlinkCycleIndexForTime(dtmTargetTime, tspTimePerChain, dtmSystemStartTime);
-            
-            //check for underflow
-            if(iCycleIndex < iChannelCount)
-            {
-                iCycleIndex += (uint)iChannelCount;
-            }
+            return (int)(iChainLinkCycleIndex % iChannelCount);
+        }
+        
 
-            for (uint i = 0; i < iChannelCount; i++)
-            {
-                int iChannelForCycle = ChainLinkCreator(iCycleIndex - i, iChannelCount);
-
-                if (iChannelForCycle == iChannel)
-                {
-                    return iCycleIndex - i;
-                }
-            }
-
-            //shound not have gotten here
-            throw new Exception("Should have found a cycle for target channel before reaching this point in code");
+        // the time of the most recent message that can be included in 
+        // a chain link of cycle x
+        public DateTime GetEndTimeForChainLink(uint iChainLinkCycleIndex, TimeSpan tspTimePerChain, DateTime dtmSystemStartTime)
+        {
+            return dtmSystemStartTime + TimeSpan.FromTicks(tspTimePerChain.Ticks * iChainLinkCycleIndex);
         }
         
         //build a chain
@@ -251,30 +293,49 @@ namespace Networking
             return null;
         }
 
-        //get the next time a peer should build a chain link
-        public void TimeAndIndexOfNextLinkFromChannel(int iChannel, int iChannelCount, DateTime dtmCurrentTime, TimeSpan tspTimePerChain, DateTime dtmSystemStartTime, out DateTime dtmTimeOfChainLink, out uint iLinkCycleIndex)
+        public void GetNextChainLinkForChannel(int iChannel, int iChannelCount, uint iCurrentChainLink, TimeSpan tspTimePerChain, DateTime dtmSystemStartTime, out DateTime dtmTimeOfChainLink, out uint iLinkCycleIndex)
         {
-            //get current cycle index
-            uint iCycleIndex = ChainlinkCycleIndexForTime(dtmCurrentTime, tspTimePerChain, dtmSystemStartTime);
-
-            //loop through random number generator to get next time
-            for(uint i = 0; i < iChannelCount; i++)
+            //TODO: Replace with something that is not brute force
+            //loop forwards to find next chain link that matches 
+            for (uint i = 0; i < iChannelCount; i++)
             {
-                int iLinkCreatorChannelForIndex = ChainLinkCreator(iCycleIndex + i, iChannelCount);
+                iLinkCycleIndex = iCurrentChainLink + i + 1;
 
-                if (iLinkCreatorChannelForIndex == iChannel)
+                //get channel for chain link
+                int iCurrentChannel = GetCreatorForLinkCycle(iLinkCycleIndex, iChannelCount);
+
+                if (iCurrentChannel == iChannel)
                 {
-                    iLinkCycleIndex = iCycleIndex + i;
-                    dtmTimeOfChainLink = ChainLinkEndTime(iLinkCycleIndex, tspTimePerChain, dtmSystemStartTime);
-
+                    dtmTimeOfChainLink = GetEndTimeForChainLink(iLinkCycleIndex, tspTimePerChain, dtmSystemStartTime);
                     return;
                 }
             }
 
-            //should not be here the only way this happens if the passed channel 
-            //is not in the channel count range
-            dtmTimeOfChainLink = DateTime.MinValue;
-            iLinkCycleIndex = 0;
+            //should not be here
+            throw new Exception("Should have found chain link index for next channel link");
+        }
+
+        //excluding the current link index when was the last time this channel should have created a link
+        public void GetPreviousChainLinkForChannel(int iChannel, int iChannelCount, uint iCurrentChainLink, TimeSpan tspTimePerChain, DateTime dtmSystemStartTime, out DateTime dtmTimeOfChainLink, out uint iLinkCycleIndex)
+        {
+            //TODO: Replace with something that is not brute force
+            //loop forwards to find next chain link that matches 
+            for (uint i = 0; i < iChannelCount; i++)
+            {
+                iLinkCycleIndex = iCurrentChainLink - (i + 1);
+
+                //get channel for chain link
+                int iCurrentChannel = GetCreatorForLinkCycle(iLinkCycleIndex, iChannelCount);
+
+                if (iCurrentChannel == iChannel)
+                {
+                    dtmTimeOfChainLink = GetEndTimeForChainLink(iLinkCycleIndex, tspTimePerChain, dtmSystemStartTime);
+                    return;
+                }
+            }
+
+            //should not be here
+            throw new Exception("Should have found chain link index for next channel link");
         }
 
         //put the messages in the chain link into the main buffer and replce any messages
@@ -285,15 +346,15 @@ namespace Networking
             for (int i = 0; i < chlChain.m_pmnMessages.Count; i++)
             {
                 //check if message has already been added
-                if (gmbBuffer.UnConfirmedMessageBuffer.TryGetValue(chlChain.m_pmnMessages[i].SortingValue, out ISortedMessage smsMessage))
+                if (gmbBuffer.UnConfirmedMessageBuffer.TryGetValue(chlChain.m_pmnMessages[i].m_svaMessageSortingValue, out PeerMessageNode pmsMessage))
                 {
                     //replace chain message with the one thats already in the buffer
-                    chlChain.m_pmnMessages[i] = smsMessage as IPeerMessageNode;
+                    chlChain.m_pmnMessages[i] = pmsMessage;
                 }
                 else
                 {
                     //add message to the buffer
-                    gmbBuffer.UnConfirmedMessageBuffer.Add(chlChain.m_pmnMessages[i].SortingValue, chlChain.m_pmnMessages[i]);
+                    gmbBuffer.UnConfirmedMessageBuffer.Add(chlChain.m_pmnMessages[i].m_svaMessageSortingValue, chlChain.m_pmnMessages[i]);
                 }
             }
         }
@@ -309,9 +370,9 @@ namespace Networking
             {
                 int iScore = ScoreChainLink(ChainLinks.Values[i]);
 
-                if(iScore <= iBestChainLink)
+                if(iBestChainLink <= iScore)
                 {
-                    iScore = iBestChainLink;
+                    iBestChainLink = iScore;
 
                     chlBestLink = ChainLinks.Values[i];
                 }
@@ -389,28 +450,7 @@ namespace Networking
             return -(int)Math.Min(iLatestCycleIndex - chlLink.m_iLinkIndex, int.MaxValue);
         }
 
-        //get chain link for time
-        protected uint ChainlinkCycleIndexForTime(DateTime dtmTargetTime, TimeSpan tspTimePerChain, DateTime dtmSystemStartTime)
-        {
-            //get time elapsed
-            TimeSpan tspElapsedTime = dtmTargetTime - dtmSystemStartTime;
 
-            return (uint)(tspElapsedTime.Ticks / tspTimePerChain.Ticks);
-        }
 
-        // returns the channel that will create the chain link for a given cycle index
-        protected int ChainLinkCreator(uint iChainLinkCycleIndex, int iChannelCount)
-        {
-            long lIncrementScaledIndex = ((long)iChainLinkCycleIndex) * ((long)m_iFullCycleRandomIncrement);
-
-            return (int)(lIncrementScaledIndex % m_iChannelCount);
-        }
-
-        // the time of the most recent message that can be included in 
-        // a chain link of cycle x
-        protected DateTime ChainLinkEndTime(uint iChainLinkCycleIndex, TimeSpan tspTimePerChain, DateTime dtmSystemStartTime)
-        {
-            return dtmSystemStartTime + TimeSpan.FromTicks(tspTimePerChain.Ticks * iChainLinkCycleIndex);
-        }
     }
 }

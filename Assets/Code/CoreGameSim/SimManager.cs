@@ -219,7 +219,7 @@ namespace Sim
                     //send input to other connections 
                     m_ntcNetworkConnection.TransmitPacketToAll(new InputPacket(m_uigInputGenerator.m_bCurrentInput, m_simGameSim.m_iLatestTick));
 
-                    AddInputToSim(m_ntcNetworkConnection.m_bPlayerID, new InputKeyFrame() { m_iInput = m_uigInputGenerator.m_bCurrentInput, m_iTick = m_simGameSim.m_iLatestTick });
+                    //AddInputToSim(m_ntcNetworkConnection.m_bPlayerID, new InputKeyFrame() { m_iInput = m_uigInputGenerator.m_bCurrentInput, m_iTick = m_simGameSim.m_iLatestTick });
                 }
             }
 
@@ -393,8 +393,6 @@ namespace Sim
             m_conGameData = new ConstData(bPlayerCharacters);
 
             m_simGameSim = new GameSimulation(m_setSettings, m_conGameData);
-
-            m_simGameSim.m_iDebugNetConnectionID = m_ntcNetworkConnection.m_bPlayerID;
 
             m_simGameSim.m_bEnableDebugHashChecks = m_setSettings.RunHashChecks;
 
