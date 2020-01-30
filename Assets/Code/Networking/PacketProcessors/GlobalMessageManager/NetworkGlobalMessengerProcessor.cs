@@ -152,8 +152,8 @@ namespace Networking
             //get current chain link
             uint iCurrentChainLink = m_chmChainManager.GetChainlinkCycleIndexForTime(
                 dtmNetworkTime, 
-                ChainManager.TimeBetweenLinks, 
-                m_chmChainManager.m_dtmSystemStartTime);
+                ChainManager.TimeBetweenLinks,
+                ChainManager.GetChainBaseTime(dtmNetworkTime));
 
             //get the last time that this peer should have created a chain link
             m_chmChainManager.GetPreviousChainLinkForChannel(
@@ -187,14 +187,14 @@ namespace Networking
             return chlChainLink;
         }
 
-        public void SetTimeOfNextPeerChainLink(DateTime dtmCurrentTime)
+        public void SetTimeOfNextPeerChainLink(DateTime dtmCurrentNetworkTime)
         {
             //get the channel that corresponds to peer id
             //may change this to use state at end of message buffer
             if (m_chmChainManager.m_gmsChainStartState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iPeerChannel))
             {
                 //get current chain link
-                uint iCurrentChainLink = m_chmChainManager.GetChainlinkCycleIndexForTime(dtmCurrentTime, ChainManager.TimeBetweenLinks, m_chmChainManager.m_dtmSystemStartTime);
+                uint iCurrentChainLink = m_chmChainManager.GetChainlinkCycleIndexForTime(dtmCurrentNetworkTime, ChainManager.TimeBetweenLinks, ChainManager.GetChainBaseTime(dtmCurrentNetworkTime));
 
                 //get the next time the channel will be addding a chain link
                 m_chmChainManager.GetNextChainLinkForChannel(
@@ -202,7 +202,7 @@ namespace Networking
                     m_chmChainManager.m_iChannelCount,
                     iCurrentChainLink,
                     ChainManager.TimeBetweenLinks,
-                    m_chmChainManager.m_dtmSystemStartTime,
+                    ChainManager.GetChainBaseTime(dtmCurrentNetworkTime),
                     out m_dtmNextLinkBuildTime,
                     out m_iNextLinkIndex
                     );

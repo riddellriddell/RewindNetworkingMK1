@@ -62,9 +62,6 @@ namespace Networking
         //max number of peers in the global message system at once 
         public int m_iChannelCount;
 
-        //the time the global message system started
-        public DateTime m_dtmSystemStartTime;
-
         public void SetStartState(long lFirstPeerID)
         {
             //set the state and the first peer
@@ -166,6 +163,12 @@ namespace Networking
 
         public void SetChannelAcknowledgements(int iChannelIndex, ChainLink chlAcknowledgedLink)
         {
+            //check if alreadty acked 
+            if(chlAcknowledgedLink.m_bIsChannelBranch[iChannelIndex])
+            {
+                return;
+            }
+
             //clear out existing acknowledements 
             //and acknowledge new branch
             for(int i = ChainLinks.Count -1; i > -1; i-- )
@@ -210,13 +213,6 @@ namespace Networking
                 for (int i = 0; i < m_iChannelCount; i++)
                 {
                     chlLink.m_bIsChannelBranch.Add(false);
-                }
-
-                //set peer as acknowledging chain 
-                if (m_gmsChainStartState.TryGetIndexForPeer(chlLink.m_lPeerID, out int iChannelIndex))
-                {
-                    //set acknowledgement for peer 
-                    SetChannelAcknowledgements(iChannelIndex, chlLink);
                 }
             }
 
@@ -270,7 +266,14 @@ namespace Networking
                 chlLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, chlLink.m_chlParentChainLink.m_gmsState);
             }
 
-
+            //TODO: do this in a more efficient way that is not redone for every link when a new link is 
+            //accepted 
+            //set peer as acknowledging chain 
+            if (m_gmsChainStartState.TryGetIndexForPeer(chlLink.m_lPeerID, out int iChannelIndex))
+            {
+                //set acknowledgement for peer 
+                SetChannelAcknowledgements(iChannelIndex, chlLink);
+            }
 
             //calculate chain length
             chlLink.m_lChainMessageCount = chlLink.m_chlParentChainLink.m_lChainMessageCount + (ulong)chlLink.m_pmnMessages.Count;
