@@ -105,6 +105,23 @@ namespace Networking
             m_svaLastMessageSortValue = gmsState.m_svaLastMessageSortValue;
         }
 
+        //TODO: track chanel activation and store in an int
+        //instead of recalculating every time
+        public int ActiveChannelCount()
+        {
+            int iActiveChannels = 0;
+
+            for(int i = 0; i < m_gmcMessageChannels.Count;i++)
+            {
+                if(m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Assigned)
+                {
+                    iActiveChannels++;
+                }
+            }
+
+            return iActiveChannels;
+        }
+
         //setup channel for a global messenging system with a maximum number of peers
         protected void Init(int iMaxChannelCount)
         {

@@ -18,6 +18,21 @@ namespace Networking
             Broken //something is wrong, peer has desynced 
         }
 
+        #region LinkRebasing
+        //the percent of active peers that need to acknowledge a link to make it 
+        //a valid base link candidate
+        public static float PercentOfAcknowledgementsToRebase { get; } = 0.50f;
+
+        public static uint MinCycleAge { get; } = 10;
+
+        public static uint MaxCycleAge { get; } = 100;
+
+        public static int MinChainLenght { get; } = 5;
+       
+        #endregion
+
+
+        #region LinkTiming
         public static TimeSpan TimeBetweenLinks { get; } = TimeSpan.FromSeconds(0.1f);
 
         //each chain is based off the start of the year
@@ -26,6 +41,8 @@ namespace Networking
             int iYear = dtmCurrentNetworkTime.Year;
             return new DateTime(iYear, 1, 1);
         }
+        #endregion
+
 
         //the stage the state machine is in
         public State m_staState;
@@ -108,8 +125,18 @@ namespace Networking
             //recalculate chain values
             ReprocessAllChainLinks(lLocalPeerID);
 
+            //store the old chain head
+            ChainLink chlOldHead = m_chlBestChainHead;
+
             //update the best chain
             m_chlBestChainHead = FindBestHeadChainLink();
+
+            //check that chain head changed 
+            if (m_chlBestChainHead != chlOldHead)
+            {
+                //remove old items from the chain 
+                UpdateBaseLink();
+            }
         }
 
         //find a link searching back from iStartIndex that matches bHash
@@ -208,11 +235,15 @@ namespace Networking
                 //get parent of chain link
                 ChainLink chlParentLink = FindLink(iIndex, chlLink.m_lPreviousLinkHash);
 
-                //set linkage in chain 
-                chlLink.m_chlParentChainLink = chlParentLink;
+                //check if valid parent that was created before link was created
+                if(chlParentLink != null && chlParentLink.m_iLinkIndex < chlLink.m_iLinkIndex)
+                {
+                    //set linkage in chain 
+                    chlLink.m_chlParentChainLink = chlParentLink;
+                }             
 
                 //check if parent link was found 
-                if (chlParentLink == null)
+                if (chlLink.m_chlParentChainLink == null)
                 {
                     chlLink.m_bIsConnectedToBase = false;
                     chlLink.m_iChainLength = 0;
@@ -279,7 +310,6 @@ namespace Networking
             return (int)(iChainLinkCycleIndex % iChannelCount);
         }
         
-
         // the time of the most recent message that can be included in 
         // a chain link of cycle x
         public DateTime GetEndTimeForChainLink(uint iChainLinkCycleIndex, TimeSpan tspTimePerChain, DateTime dtmSystemStartTime)
@@ -449,8 +479,121 @@ namespace Networking
 
             return -(int)Math.Min(iLatestCycleIndex - chlLink.m_iLinkIndex, int.MaxValue);
         }
+        
+        //checks the link chain and removes links that are "aggread upon "
+        protected void UpdateBaseLink()
+        {            
+            
 
+            ChainLink chlNewBase = m_chlBestChainHead.m_chlParentChainLink;
 
+            //check if parent is base
+            if (chlNewBase == m_chlChainBase)
+            {
+                return;
+            }
 
+            //get the first new base in chain history
+            for ( int i = 0; i < ChainLinks.Count; i++)
+            {
+                if(chlNewBase == null)
+                {
+                    break;
+                }
+
+                //check if valid base 
+                if(IsValidBaseLink(chlNewBase, m_chlBestChainHead))
+                {
+                    break;
+                }
+
+                //check if forces base 
+                if(IsForcedBase(chlNewBase,m_chlBestChainHead))
+                {
+                    break;
+                }
+
+                //move to previous chain link
+                chlNewBase = chlNewBase.m_chlParentChainLink;
+
+            }
+
+            //check that this is a new base
+            if(chlNewBase == null || chlNewBase == m_chlChainBase)
+            {
+                return;
+            }
+
+            //perform rebase 
+            DoRebase(chlNewBase);
+        }
+
+        protected bool IsValidBaseLink(ChainLink chlBaseCandidate, ChainLink chlCurrentHead)
+        {
+            //check if it has enough acks 
+            //TODO:: Move this to the channel link to match active channle count
+            float fAcks = 0; 
+            for(int i = 0; i < chlBaseCandidate.m_bIsChannelBranch.Count; i++)
+            {
+                if(chlBaseCandidate.m_bIsChannelBranch[i])
+                {
+                    fAcks++;
+                }
+            }
+
+            if( (float)fAcks / chlBaseCandidate.m_gmsState.ActiveChannelCount() <  PercentOfAcknowledgementsToRebase)
+            {
+                return false;
+            }
+
+            //check if enough links have been attached
+            if(chlCurrentHead.m_iChainLength - chlBaseCandidate.m_iChainLength < MinChainLenght)
+            {
+                return false;
+            }
+
+            //check if enough cycles have passed 
+            if(chlCurrentHead.m_iLinkIndex - chlBaseCandidate.m_iLinkIndex < MinCycleAge)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        //check if parent link is too old and has to be removed
+        protected bool IsForcedBase(ChainLink chlBaseCandidate, ChainLink chlCurrentHead)
+        {
+            //check if has parent / is base
+            if (chlBaseCandidate.m_chlParentChainLink == null)
+            {
+                return true;
+            }
+
+            if(chlCurrentHead.m_iLinkIndex - chlBaseCandidate.m_chlParentChainLink.m_iLinkIndex > MaxCycleAge)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        protected void DoRebase(ChainLink chlNewBase)
+        {
+            //set base state
+            m_gmsChainStartState.ResetToState(chlNewBase.m_chlParentChainLink.m_gmsState);
+            
+            //set new base
+            m_chlChainBase = chlNewBase;
+
+            //remove outdated chain links
+            //TODO: do this with a better algorithm that doesn't produce piles of garbage
+            while(ChainLinks.Count > 0 && ChainLinks.Values[0] != chlNewBase)
+            {
+                ChainLinks.RemoveAt(0);
+            }
+
+            //TODO:: remove old messages ?
+        }
     }
 }
