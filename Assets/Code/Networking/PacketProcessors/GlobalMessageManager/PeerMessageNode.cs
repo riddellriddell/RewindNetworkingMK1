@@ -26,6 +26,9 @@ namespace Networking
         //the signed hash of this message plus additional packed data 
         public Byte[] m_bSignature;
 
+        //the hash of the "Best" Chain Link the peer had when it created this message 
+        public long m_lChainLinkHeadHash;
+
         //the order number of this message from this peer
         public uint m_iPeerMessageIndex;
 
@@ -50,7 +53,7 @@ namespace Networking
         public long m_lMessagePayloadHash;
 
         //the index of this peer in the entire chain
-        public long m_lGlobalMessageIndex;
+        //public long m_lGlobalMessageIndex;
 
         //value used to sort all messages
         public SortingValue m_svaMessageSortingValue;
@@ -84,6 +87,9 @@ namespace Networking
             //create write stream
             WriteByteStream wbsWriteBuffer = new WriteByteStream(m_bPayload);
 
+            //serialize the chain link head hash
+            ByteStream.Serialize(wbsWriteBuffer, ref m_lChainLinkHeadHash);
+
             //serialize the message index
             ByteStream.Serialize(wbsWriteBuffer, ref m_iPeerMessageIndex);
 
@@ -101,10 +107,13 @@ namespace Networking
 
         }
 
-        public void DecodePayloadArray()
+        public void DecodePayloadArray(ClassWithIDFactory cifClassFactory)
         {
             //create write stream
             ReadByteStream rbsReadBuffer = new ReadByteStream(m_bPayload);
+
+            //serialize the chain link head hash
+            ByteStream.Serialize(rbsReadBuffer, ref m_lChainLinkHeadHash);
 
             //serialize the message index
             ByteStream.Serialize(rbsReadBuffer, ref m_iPeerMessageIndex);
@@ -117,6 +126,9 @@ namespace Networking
 
             //serialize message type
             ByteStream.Serialize(rbsReadBuffer, ref m_bMessageType);
+
+            //create correct payload message type using class factory 
+            m_gmbMessage = cifClassFactory.CreateType<GlobalMessageBase>(m_bMessageType);
 
             //serialize message
             ByteStream.Serialize(rbsReadBuffer, ref m_gmbMessage);
@@ -216,7 +228,7 @@ namespace Networking
 
             int iStartIndex = 0;
 
-            //store the peer id
+            //store the message creation time
             Array.Copy(BitConverter.GetBytes(m_dtmMessageCreationTime.Ticks), 0, bSortingValue, iStartIndex, sizeof(Int64));
 
             iStartIndex += sizeof(Int64);

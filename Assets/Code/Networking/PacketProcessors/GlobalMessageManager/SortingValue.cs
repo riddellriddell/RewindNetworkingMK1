@@ -127,5 +127,27 @@ namespace Networking
                 return 0;
             }
         }
+
+    }
+
+    public partial class ByteStream
+    {
+        //read and write a byte
+        public static void Serialize(ReadByteStream rbsStream, ref SortingValue Output)
+        {
+            Serialize(rbsStream,ref Output.m_lSortValueA);
+            Serialize(rbsStream, ref Output.m_lSortValueB);
+        }
+
+        public static void Serialize(WriteByteStream wbsByteStream, ref SortingValue Input)
+        {
+            Serialize(wbsByteStream, ref Input.m_lSortValueA);
+            Serialize(wbsByteStream, ref Input.m_lSortValueB);
+        }
+
+        public static int DataSize(SortingValue Input)
+        {
+            return DataSize(Input.m_lSortValueA) + DataSize(Input.m_lSortValueB);
+        }
     }
 }

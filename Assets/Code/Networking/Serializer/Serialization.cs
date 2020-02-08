@@ -67,6 +67,18 @@ namespace Networking
             wbsStream.ReadWriteHead += DataSize(Input);
         }
 
+        public static void Serialize(ReadByteStream rbsStream, ref UInt64 Output)
+        {
+            Output = BitConverter.ToUInt64(rbsStream.m_bData, rbsStream.ReadWriteHead);
+            rbsStream.ReadWriteHead += DataSize(Output);
+        }
+
+        public static void Serialize(WriteByteStream wbsStream, ref UInt64 Input)
+        {
+            Array.Copy(BitConverter.GetBytes(Input), 0, wbsStream.m_bData, wbsStream.ReadWriteHead, DataSize(Input));
+            wbsStream.ReadWriteHead += DataSize(Input);
+        }
+
         //read and write utc time
         public static void Serialize(ReadByteStream rbsStream, ref DateTime Output)
         {
@@ -366,10 +378,6 @@ namespace Networking
             {
                 Output = new Byte[iItems];
             }
-            else
-            {
-                Output = new Byte[0];
-            }
 
             for (int i = 0; i < iItems; i++)
             {
@@ -378,7 +386,7 @@ namespace Networking
                 Output[i] = value;
             }
         }
-
+        //TODO: Oprimize with an array copy of some kind
         public static void Serialize(WriteByteStream wbsStream, ref Byte[] Input, Int32 iItems)
         {
             for (int i = 0; i < iItems; i++)
@@ -459,7 +467,12 @@ namespace Networking
         {
             return sizeof(Int64);
         }
-
+        
+        public static int DataSize(UInt64 Input)
+        {
+            return sizeof(UInt64);
+        }
+        
         public static int DataSize(DateTime Input)
         {
             return sizeof(Int64);

@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Networking
 {
@@ -19,7 +17,7 @@ namespace Networking
         //any votes that are associated with this channel
         public struct ChannelVote
         {
-            public enum VoteType: byte
+            public enum VoteType : byte
             {
                 None, //no active vote for channel
                 Kick, //kick the player 
@@ -34,9 +32,9 @@ namespace Networking
             //the target peer
             public long m_lPeerID;
 
-            public bool IsActive(DateTime dtmCurrentTime,TimeSpan tspTimeOutTime)
+            public bool IsActive(DateTime dtmCurrentTime, TimeSpan tspTimeOutTime)
             {
-                if(dtmCurrentTime < m_dtmVoteTime)
+                if (dtmCurrentTime < m_dtmVoteTime)
                 {
                     //should not get into this state 
                     return false;
@@ -45,7 +43,7 @@ namespace Networking
                 if (dtmCurrentTime - m_dtmVoteTime > tspTimeOutTime)
                 {
                     return false;
-                }                
+                }
 
                 return true;
             }
@@ -68,7 +66,10 @@ namespace Networking
 
         //the index of the last valid message processed 
         public UInt32 m_iLastMessageIndexProcessed;
-            
+        
+        //the chain link head this peer is using in the last valid message 
+        public long m_lChainLinkHeadHash;
+        
         //the message sort value of the last valid message processed by this channel
         public SortingValue m_msvLastSortValue;
 
@@ -95,6 +96,8 @@ namespace Networking
             m_lHashOfLastNodeProcessed = chsChannelState.m_lHashOfLastNodeProcessed;
 
             m_iLastMessageIndexProcessed = chsChannelState.m_iLastMessageIndexProcessed;
+
+            m_lChainLinkHeadHash = chsChannelState.m_lChainLinkHeadHash;
         }
 
         //setup
@@ -109,7 +112,7 @@ namespace Networking
 
             m_chvVotes = new List<ChannelVote>(iMaxPeerCount);
 
-            for(int i = 0; i < m_chvVotes.Count; i++)
+            for (int i = 0; i < m_chvVotes.Count; i++)
             {
                 m_chvVotes.Add(new ChannelVote()
                 {
@@ -126,7 +129,7 @@ namespace Networking
         }
 
         //process channel change message
-        public void AddKickVote(int iPeerChannelIndex, DateTime dtmCreationTime,long lTargetPeerID)
+        public void AddKickVote(int iPeerChannelIndex, DateTime dtmCreationTime, long lTargetPeerID)
         {
             //channel vote 
             m_chvVotes[iPeerChannelIndex] = new ChannelVote()
@@ -138,7 +141,7 @@ namespace Networking
         }
 
         //add connection vote
-        public void AddConnectionVote(int iPeerChannelIndex,DateTime dtmCreationTime,long lTargetPeerID)
+        public void AddConnectionVote(int iPeerChannelIndex, DateTime dtmCreationTime, long lTargetPeerID)
         {
             //channel vote 
             m_chvVotes[iPeerChannelIndex] = new ChannelVote()
@@ -178,7 +181,7 @@ namespace Networking
                 };
             }
         }
-        
+
         //start vote on channel to assign peer to it
         public void StartVoteForPeer(long lPeerID, DateTime dtmVoteStartTime)
         {
@@ -216,7 +219,7 @@ namespace Networking
 
             return false;
         }
-        
+
         //clear votes on channel
         //this happens when a vote on a channel is completed 
         public void ClearVotesForChannelIndex(int iChannelToClearVotesFor)
@@ -232,15 +235,136 @@ namespace Networking
         //clear connect votes for peer
         public void ClearVoteForPeer(long lTargetPeerID)
         {
-            if(TryGetVoteForPeer(lTargetPeerID, out int iIndex, out ChannelVote chvVote))
-            { 
+            if (TryGetVoteForPeer(lTargetPeerID, out int iIndex, out ChannelVote chvVote))
+            {
                 ClearVotesForChannelIndex(iIndex);
             }
         }
-               
+
         public object Clone()
         {
             throw new NotImplementedException();
+        }
+
+    }
+
+    public partial class ByteStream
+    {
+        //read and write one vote
+        public static void Serialize(ReadByteStream rbsByteStream, ref GlobalMessageChannelState.ChannelVote Output)
+        {
+            byte bVoteType = 0;
+
+            Serialize(rbsByteStream, ref bVoteType);
+
+            Output.m_vtpVoteType = (GlobalMessageChannelState.ChannelVote.VoteType)bVoteType;
+
+            Serialize(rbsByteStream, ref Output.m_dtmVoteTime);
+
+            Serialize(rbsByteStream, ref Output.m_lPeerID);
+        }
+
+        public static void Serialize(WriteByteStream wbsByteStream, ref GlobalMessageChannelState.ChannelVote Input)
+        {
+            byte bVoteType = (byte)Input.m_vtpVoteType;
+
+            Serialize(wbsByteStream, ref bVoteType);
+
+            Serialize(wbsByteStream, ref Input.m_dtmVoteTime);
+
+            Serialize(wbsByteStream, ref Input.m_lPeerID);
+        }
+
+        public static int DataSize(GlobalMessageChannelState.ChannelVote Input)
+        {
+            int iSize = 0;
+            iSize += DataSize(Input.m_dtmVoteTime);
+            iSize += DataSize(Input.m_lPeerID);
+            iSize += DataSize((byte)Input.m_vtpVoteType);
+            return iSize;
+        }
+
+        //serialize guns
+        public static void Serialize(ReadByteStream rbsByteStream, ref GlobalMessageChannelState Output)
+        {
+            int iPlayerCount = 0;
+
+            Serialize(rbsByteStream, ref iPlayerCount);
+
+            if(Output == null)
+            {
+                Output = new GlobalMessageChannelState(iPlayerCount);
+            }
+
+            Output.m_chvVotes = new List<GlobalMessageChannelState.ChannelVote>(iPlayerCount);
+
+            for(int i = 0; i < iPlayerCount; i++)
+            {
+                GlobalMessageChannelState.ChannelVote cvhtVote = new GlobalMessageChannelState.ChannelVote();
+
+                Serialize(rbsByteStream, ref cvhtVote);
+
+                Output.m_chvVotes.Add(cvhtVote);
+            }
+
+            Serialize(rbsByteStream, ref Output.m_lChainLinkHeadHash);
+            Serialize(rbsByteStream, ref Output.m_dtmVoteStartTime);
+            Serialize(rbsByteStream, ref Output.m_iLastMessageIndexProcessed);
+            Serialize(rbsByteStream, ref Output.m_lChannelPeer);
+            Serialize(rbsByteStream, ref Output.m_lHashOfLastNodeProcessed);
+            Serialize(rbsByteStream, ref Output.m_msvLastSortValue);
+
+            byte bState = 0;
+
+            Serialize(rbsByteStream, ref bState);
+
+            Output.m_staState = (GlobalMessageChannelState.State)bState;
+        }
+
+        public static void Serialize(WriteByteStream wbsByteStream, ref GlobalMessageChannelState Input)
+        {
+            int iPlayerCount = Input.m_chvVotes.Count;
+
+            Serialize(wbsByteStream, ref iPlayerCount);
+
+            for (int i = 0; i < iPlayerCount; i++)
+            {
+                GlobalMessageChannelState.ChannelVote chvVote = Input.m_chvVotes[i];
+
+                Serialize(wbsByteStream, ref chvVote);
+            }
+
+            Serialize(wbsByteStream, ref Input.m_lChainLinkHeadHash);
+            Serialize(wbsByteStream, ref Input.m_dtmVoteStartTime);
+            Serialize(wbsByteStream, ref Input.m_iLastMessageIndexProcessed);
+            Serialize(wbsByteStream, ref Input.m_lChannelPeer);
+            Serialize(wbsByteStream, ref Input.m_lHashOfLastNodeProcessed);
+            Serialize(wbsByteStream, ref Input.m_msvLastSortValue);
+
+            byte bState = (byte)Input.m_staState;
+
+            Serialize(wbsByteStream, ref bState);
+        }
+
+        public static int DataSize(GlobalMessageChannelState Input)
+        {
+            int iSize = 0;
+            iSize += DataSize(Input.m_chvVotes.Count);
+
+            for(int i = 0; i < Input.m_chvVotes.Count; i++)
+            {
+                iSize += DataSize(Input.m_chvVotes[i]);
+            }
+
+            iSize += DataSize(Input.m_lChainLinkHeadHash);
+            iSize += DataSize(Input.m_dtmVoteStartTime);
+            iSize += DataSize(Input.m_iLastMessageIndexProcessed);
+            iSize += DataSize(Input.m_lChannelPeer);
+            iSize += DataSize(Input.m_lHashOfLastNodeProcessed);
+            iSize += DataSize(Input.m_msvLastSortValue);
+            iSize += DataSize((byte)Input.m_staState);
+
+            return iSize;
         }
     }
 }

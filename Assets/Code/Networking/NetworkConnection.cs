@@ -220,10 +220,14 @@ namespace Networking
 
         public void OnConnectToSwarm()
         {
-            foreach (BaseNetworkPacketProcessor nppProcessor in NetworkPacketProcessors)
+            if (m_bIsConnectedToSwarm == false)
             {
                 m_bIsConnectedToSwarm = true;
-                nppProcessor.OnConnectToSwarm();
+
+                foreach (BaseNetworkPacketProcessor nppProcessor in NetworkPacketProcessors)
+                {
+                    nppProcessor.OnConnectToSwarm();
+                }
             }
         }
 

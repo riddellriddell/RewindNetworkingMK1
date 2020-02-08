@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 /// <summary>
 /// this class global messages and stores them in a time arranged buffer
@@ -75,7 +74,7 @@ namespace Networking
         public int m_iDirtyNodeIndex;
 
         //function to add messages to buffer
-        public void AddMessageToBuffer(PeerMessageNode pmnMessage, List<long> lTrackedPeers)
+        public void AddMessageToBuffer(PeerMessageNode pmnMessage)
         {
             //check if buffer already has item
             if (UnConfirmedMessageBuffer.ContainsKey(pmnMessage.m_svaMessageSortingValue) == false)
@@ -85,7 +84,7 @@ namespace Networking
 
                 //re number message indexes in buffer
                 //TODO:: optimize this so it only happens when it needs to
-                ReNumberMessageIndexes();
+                //ReNumberMessageIndexes();
 
                 //check if latest peer messages are being tracked
                 if (LastMessageRecievedFromPeer.TryGetValue(pmnMessage.m_lPeerID, out PeerMessageNode pmnLastMessage))
@@ -97,7 +96,7 @@ namespace Networking
                     else
                     {
                         //check if new message is more recent than previouse message
-                        if (LastMessageRecievedFromPeer[pmnMessage.m_lPeerID].m_lGlobalMessageIndex < pmnMessage.m_lGlobalMessageIndex)
+                        if (LastMessageRecievedFromPeer[pmnMessage.m_lPeerID].m_svaMessageSortingValue.CompareTo(pmnMessage.m_svaMessageSortingValue) < 0)
                         {
                             LastMessageRecievedFromPeer[pmnMessage.m_lPeerID] = pmnMessage;
                         }
@@ -117,7 +116,7 @@ namespace Networking
         {
             List<PeerMessageNode> pmnOutput = new List<PeerMessageNode>();
 
-            if (UnConfirmedMessageBuffer.Count == 0 )
+            if (UnConfirmedMessageBuffer.Count == 0)
             {
                 return pmnOutput;
             }
@@ -132,7 +131,7 @@ namespace Networking
             }
 
             //get the last message in time band 
-            PeerMessageNode pmnLastMessage = UnConfirmedMessageBuffer.Values[UnConfirmedMessageBuffer.Values.Count -1];
+            PeerMessageNode pmnLastMessage = UnConfirmedMessageBuffer.Values[UnConfirmedMessageBuffer.Values.Count - 1];
 
             //if no messages for a channel have been recieved for more than tspTreatAsLatestIfOlderThan
             //treat that channel as disconnected / inactive and dont wait to recieve more messages
@@ -185,26 +184,26 @@ namespace Networking
 
         }
 
-        //the last global index that messages were recieved from all peers that are being tracked 
-        public long GlobalIndexOfLastRecievedMessagesFromAllPeers(List<long> lTrackedPeers)
-        {
-            long lGlobalIndex = long.MaxValue;
-
-            foreach (long lPeerID in lTrackedPeers)
-            {
-                if (LastMessageRecievedFromPeer.TryGetValue(lPeerID, out PeerMessageNode pmnNode))
-                {
-                    lGlobalIndex = Math.Min(lGlobalIndex, pmnNode.m_lGlobalMessageIndex);
-                }
-            }
-
-            if (lGlobalIndex == int.MaxValue)
-            {
-                lGlobalIndex = m_iBufferStartIndex;
-            }
-
-            return lGlobalIndex;
-        }
+        ////the last global index that messages were recieved from all peers that are being tracked 
+        //public long GlobalIndexOfLastRecievedMessagesFromAllPeers(List<long> lTrackedPeers)
+        //{
+        //    long lGlobalIndex = long.MaxValue;
+        //
+        //    foreach (long lPeerID in lTrackedPeers)
+        //    {
+        //        if (LastMessageRecievedFromPeer.TryGetValue(lPeerID, out PeerMessageNode pmnNode))
+        //        {
+        //            lGlobalIndex = Math.Min(lGlobalIndex, pmnNode.m_lGlobalMessageIndex);
+        //        }
+        //    }
+        //
+        //    if (lGlobalIndex == int.MaxValue)
+        //    {
+        //        lGlobalIndex = m_iBufferStartIndex;
+        //    }
+        //
+        //    return lGlobalIndex;
+        //}
 
         //function to remove messages upto point in buffer 
         public void RemoveItemsUpTo(SortingValue msvRemoveToo)
@@ -258,22 +257,18 @@ namespace Networking
         //}
 
         //adds the correct buffer index numbers 
-        protected void ReNumberMessageIndexes()
-        {
-            int iStartNumber = m_iBufferStartIndex;
-
-            foreach (ISortedMessage pmnNode in UnConfirmedMessageBuffer.Values)
-            {
-                iStartNumber++;
-
-                if (pmnNode is IPeerMessageNode)
-                {
-                    IPeerMessageNode pmnMessageNode = pmnNode as IPeerMessageNode;
-
-                    pmnMessageNode.GlobalMessageIndex = iStartNumber;
-                }
-            }
-        }
+        //protected void ReNumberMessageIndexes()
+        //{
+        //    int iStartNumber = m_iBufferStartIndex;
+        //
+        //    foreach (PeerMessageNode pmnNode in UnConfirmedMessageBuffer.Values)
+        //    {
+        //        iStartNumber++;
+        //
+        //        pmnNode.m_lGlobalMessageIndex = iStartNumber;
+        //
+        //    }
+        //}
 
         protected bool CheckHash(int iStartIndex, int iEndIndex, long lHash)
         {

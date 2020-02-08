@@ -19,8 +19,13 @@ public class ClassWithIDFactory
         return m_tipTypeIDs.Count - 1;
     }
 
-    public void AddType<T>(int iID)
+    public int AddType<T>(int iID)
     {
+        if(iID == int.MinValue)
+        {
+            return AddType<T>();
+        }
+
         Type typType = typeof(T);
 
         while (m_tipTypeIDs.Count <= iID)
@@ -28,13 +33,25 @@ public class ClassWithIDFactory
             m_tipTypeIDs.Add(null);
         }
 
-        Debug.Assert(m_tipTypeIDs[iID] == null, "Two types have the same indexes");
+        if(m_tipTypeIDs[iID] != null && m_tipTypeIDs[iID].Equals(typType))
+        {
+            return iID;
+        }
+
+       // Debug.Assert(m_tipTypeIDs[iID] == null, $"Two types {m_tipTypeIDs[iID].ToString()}, {typType.ToString()} have the same index {iID}");
 
         m_tipTypeIDs[iID] = typType;
+
+        return iID;
     }
 
     public T CreateType<T>(int iID)
     {
+        if (iID < 0 || iID >= m_tipTypeIDs.Count)
+        {
+            throw new Exception($"ID {iID} does not exists in factory");
+        }
+
         return (T)Activator.CreateInstance(m_tipTypeIDs[iID]);
     }
 

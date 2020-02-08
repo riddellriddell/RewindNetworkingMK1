@@ -31,7 +31,7 @@ namespace Networking
     //this message indicates a peer is voting to kick another peer
     public class VoteMessage : GlobalMessageBase
     {
-        public static int TypeID { get; private set; } = int.MinValue;
+        public static int TypeID { get; set; } = int.MinValue;
 
         public override bool AddedToClassFactory
         {

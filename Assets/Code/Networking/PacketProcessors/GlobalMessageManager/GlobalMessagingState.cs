@@ -122,6 +122,84 @@ namespace Networking
             return iActiveChannels;
         }
 
+        //perform join
+        public void AddPeerToGlobalMessenger(int iChannelIndex)
+        {
+            //assign peer to channel
+            m_gmcMessageChannels[iChannelIndex].AssignPeerToChannel(m_gmcMessageChannels[iChannelIndex].m_lChannelPeer);
+
+            //clear any votes on channel
+            for (int i = 0; i < m_gmcMessageChannels.Count; i++)
+            {
+                m_gmcMessageChannels[i].ClearVotesForChannelIndex(iChannelIndex);
+            }
+        }
+
+        //check for failed votes and reset 
+        public void RemoveFailedVotes(DateTime dtmTime)
+        {
+            //get list of all votes in action
+            List<int> iVotesInAction = new List<int>();
+            List<int> iActivePeers = new List<int>();
+            for (int i = 0; i < m_gmcMessageChannels.Count; i++)
+            {
+                if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Voting)
+                {
+                    iVotesInAction.Add(i);
+                }
+                else if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Assigned)
+                {
+                    iActivePeers.Add(i);
+                }
+            }
+
+            //check if anyone is still voting on peer
+            for (int i = 0; i < iVotesInAction.Count; i++)
+            {
+                bool bIsActive = false;
+
+                for (int j = 0; j < iActivePeers.Count; j++)
+                {
+                    //get vote for peer
+                    GlobalMessageChannelState.ChannelVote cvtVote = m_gmcMessageChannels[iActivePeers[j]].m_chvVotes[iVotesInAction[i]];
+
+                    //check if vote is to add peer and is still active
+                    if (cvtVote.m_vtpVoteType == GlobalMessageChannelState.ChannelVote.VoteType.Add &&
+                        cvtVote.IsActive(dtmTime, s_tspVoteTimeout) &&
+                        m_gmcMessageChannels[iVotesInAction[i]].m_lChannelPeer == cvtVote.m_lPeerID)
+                    {
+                        bIsActive = true;
+                        break;
+                    }
+                }
+
+                //check if anyone still actively voting to add peer
+                if (bIsActive == false)
+                {
+                    //removre peer
+                    m_gmcMessageChannels[iVotesInAction[i]].ClearChannel();
+
+                    //clear any votes for peer
+                    for (int j = 0; j < m_gmcMessageChannels.Count; j++)
+                    {
+                        m_gmcMessageChannels[j].ClearVotesForChannelIndex(iVotesInAction[i]);
+                    }
+                }
+            }
+        }
+
+        //encode 
+        public void Encode(WriteByteStream wbsByteStream)
+        {
+
+        }
+
+        //decode 
+        public void Decode(ReadByteStream rbsByteStream)
+        {
+
+        }
+
         //setup channel for a global messenging system with a maximum number of peers
         protected void Init(int iMaxChannelCount)
         {
@@ -180,6 +258,9 @@ namespace Networking
             //update the hash head for this channel
             m_gmcMessageChannels[iMessageChannel].m_lHashOfLastNodeProcessed = lMessageParentHash;
             m_gmcMessageChannels[iMessageChannel].m_iLastMessageIndexProcessed = iMessageChannelIndex;
+
+            //update the chain link this channel is using as head 
+            m_gmcMessageChannels[iMessageChannel].m_lChainLinkHeadHash = pmnMessageNode.m_lChainLinkHeadHash;
 
             //flag node as valid?
             return true;
@@ -424,71 +505,64 @@ namespace Networking
                 }
             }
         }
+  
+    }
 
-        //perform join
-        public void AddPeerToGlobalMessenger(int iChannelIndex)
+    public partial class ByteStream
+    {
+        public static void Serialize(ReadByteStream rbsByteStream, ref GlobalMessagingState Output)
         {
-            //assign peer to channel
-            m_gmcMessageChannels[iChannelIndex].AssignPeerToChannel(m_gmcMessageChannels[iChannelIndex].m_lChannelPeer);
 
-            //clear any votes on channel
-            for (int i = 0; i < m_gmcMessageChannels.Count; i++)
+            if (Output == null)
             {
-                m_gmcMessageChannels[i].ClearVotesForChannelIndex(iChannelIndex);
+                Output = new GlobalMessagingState();
             }
+
+            int iPlayerCount = 0;
+            Serialize(rbsByteStream, ref iPlayerCount);
+
+            Output.m_gmcMessageChannels = new List<GlobalMessageChannelState>(iPlayerCount);
+
+            for (int i = 0; i < iPlayerCount; i++)
+            {
+                GlobalMessageChannelState gmcChannelState = null;
+
+                Serialize(rbsByteStream, ref gmcChannelState);
+
+                Output.m_gmcMessageChannels.Add(gmcChannelState);                   
+            }
+
+            Serialize(rbsByteStream, ref Output.m_svaLastMessageSortValue);
         }
 
-        //check for failed votes and reset 
-        public void RemoveFailedVotes(DateTime dtmTime)
+        public static void Serialize(WriteByteStream wbsByteStream, ref GlobalMessagingState Input)
         {
-            //get list of all votes in action
-            List<int> iVotesInAction = new List<int>();
-            List<int> iActivePeers = new List<int>();
-            for (int i = 0; i < m_gmcMessageChannels.Count; i++)
+            int iPlayerCount = Input.m_gmcMessageChannels.Count;
+            Serialize(wbsByteStream, ref iPlayerCount);
+
+            for (int i = 0; i < iPlayerCount; i++)
             {
-                if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Voting)
-                {
-                    iVotesInAction.Add(i);
-                }
-                else if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Assigned)
-                {
-                    iActivePeers.Add(i);
-                }
+                GlobalMessageChannelState gmcChannelState = Input.m_gmcMessageChannels[i];
+
+                Serialize(wbsByteStream, ref gmcChannelState);
             }
 
-            //check if anyone is still voting on peer
-            for (int i = 0; i < iVotesInAction.Count; i++)
+            Serialize(wbsByteStream, ref Input.m_svaLastMessageSortValue);
+        }
+
+        public static int DataSize(GlobalMessagingState Input)
+        {
+            int iSize = 0;
+            iSize += DataSize(Input.m_gmcMessageChannels.Count);
+            
+            for(int i = 0; i < Input.m_gmcMessageChannels.Count; i++)
             {
-                bool bIsActive = false;
-
-                for (int j = 0; j < iActivePeers.Count; j++)
-                {
-                    //get vote for peer
-                    GlobalMessageChannelState.ChannelVote cvtVote = m_gmcMessageChannels[iActivePeers[j]].m_chvVotes[iVotesInAction[i]];
-
-                    //check if vote is to add peer and is still active
-                    if (cvtVote.m_vtpVoteType == GlobalMessageChannelState.ChannelVote.VoteType.Add &&
-                        cvtVote.IsActive(dtmTime, s_tspVoteTimeout) &&
-                        m_gmcMessageChannels[iVotesInAction[i]].m_lChannelPeer == cvtVote.m_lPeerID)
-                    {
-                        bIsActive = true;
-                        break;
-                    }
-                }
-
-                //check if anyone still actively voting to add peer
-                if (bIsActive == false)
-                {
-                    //removre peer
-                    m_gmcMessageChannels[iVotesInAction[i]].ClearChannel();
-
-                    //clear any votes for peer
-                    for (int j = 0; j < m_gmcMessageChannels.Count; j++)
-                    {
-                        m_gmcMessageChannels[j].ClearVotesForChannelIndex(iVotesInAction[i]);
-                    }
-                }
+                iSize += DataSize(Input.m_gmcMessageChannels[i]);
             }
+
+            iSize += DataSize(Input.m_svaLastMessageSortValue);
+
+            return iSize;
         }
     }
 }

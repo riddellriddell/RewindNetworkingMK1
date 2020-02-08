@@ -88,7 +88,7 @@ namespace Networking
             CalculateSortingValue();
         }
 
-        //this should be moved into a byte stream Data Size Function
+        //TODO: this should be moved into a byte stream Data Size Function
         public int LinkDataSize()
         {
             int iSize = ByteStream.DataSize(m_lPeerID);
@@ -146,6 +146,17 @@ namespace Networking
             ByteStream.Serialize(rbsByteStream, ref m_bPayload, iPayloadSize);
         }
 
+        public void CalculateLocalValuesForRecievedLink(ClassWithIDFactory cifClassFactory)
+        {
+            VerifySignature();
+
+            DecodePayloadArray(cifClassFactory);
+
+            BuildPayloadHash();
+
+            CalculateSortingValue();
+        }
+
         //converts messages and link details to a single byte array
         public void BuildPayloadArray()
         {
@@ -170,9 +181,9 @@ namespace Networking
                  m_pmnMessages[i].EncodePacket(wbsByteStream);
             }
         }
-
+               
         //converts a byte array back to messages and link details
-        public void DecodePayloadArray()
+        public void DecodePayloadArray(ClassWithIDFactory cifClassFactory)
         {
             ReadByteStream rbsByteStream = new ReadByteStream(m_bPayload);
 
@@ -192,9 +203,11 @@ namespace Networking
             for (int i = 0; i < iCount; i++)
             {
                 m_pmnMessages[i].DecodePacket(rbsByteStream);
+                m_pmnMessages[i].DecodePayloadArray(cifClassFactory);
             }
-        }
 
+        }
+               
         public void CaluclateGlobalMessagingStateAtEndOflink(long lLocalPeerID, GlobalMessagingState gmsStateAtLinkStart)
         {
             if(m_gmsState == null)
