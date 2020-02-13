@@ -461,7 +461,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd042984fdc5efe4f816380a203dea68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_fLatncy: 0.3
+  m_fLatncy: 0.05
   m_fTimeOutChance: 0
   m_fTimeOutTime: 5
   m_fActionErrorChance: 0

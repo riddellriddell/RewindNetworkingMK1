@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 namespace Networking
 {
@@ -21,9 +19,9 @@ namespace Networking
         public static uint MaxCycleAge { get; } = 100;
 
         public static int MinChainLenght { get; } = 5;
-       
+
         #endregion
-        
+
         #region LinkTiming
         public static TimeSpan TimeBetweenLinks { get; } = TimeSpan.FromSeconds(0.1f);
 
@@ -37,10 +35,10 @@ namespace Networking
 
         //list of all the potential starting states for the global message system
         //this is used when the peer is connecting to the system for the first time 
-        public  Dictionary<long, GlobalMessageStartStateCandidate> StartStateCandidates { get; } = new Dictionary<long, GlobalMessageStartStateCandidate>();
+        public Dictionary<long, GlobalMessageStartStateCandidate> StartStateCandidates { get; } = new Dictionary<long, GlobalMessageStartStateCandidate>();
 
         //buffer of all recieved chain links
-        public SortedList<SortingValue,ChainLink> ChainLinks { get; } = new SortedList<SortingValue, ChainLink>();
+        public SortedList<SortingValue, ChainLink> ChainLinks { get; } = new SortedList<SortingValue, ChainLink>();
 
         //the starting connection state for the chain
         public GlobalMessagingState m_gmsChainStartState;
@@ -54,10 +52,9 @@ namespace Networking
         //max number of peers in the global message system at once 
         public int m_iChannelCount;
 
-        public void SetStartState(long lFirstPeerID)
+        public void SetStartState(long lFirstPeerID, int iMaxPeerCount)
         {
-            //set the state and the first peer
-            m_gmsChainStartState.AssignFirstPeer(lFirstPeerID);
+            m_gmsChainStartState = new GlobalMessagingState(iMaxPeerCount, lFirstPeerID);
         }
 
         public void AddFirstChainLink(long lLocalPeerID, ChainLink chkChainLink)
@@ -80,7 +77,7 @@ namespace Networking
 
             //set acknowledgement of first link
             //this assumes the inital peer is at position 0;
-            for(int i = 0; i< m_iChannelCount; i++)
+            for (int i = 0; i < m_iChannelCount; i++)
             {
                 chkChainLink.m_bIsChannelBranch.Add(false);
             }
@@ -88,16 +85,18 @@ namespace Networking
             chkChainLink.m_bIsChannelBranch[0] = true;
         }
 
-        public void AddChainLink(long lLocalPeerID, ChainLink chlLink, GlobalMessageKeyManager gkmKeyManager,GlobalMessageBuffer gmbGlobalMessageBuffer)
+        public void AddChainLink(long lLocalPeerID, ChainLink chlLink, GlobalMessageKeyManager gkmKeyManager, GlobalMessageBuffer gmbGlobalMessageBuffer, out bool bDirtyUnconfirmedMessageBufferState)
         {
+            bDirtyUnconfirmedMessageBufferState = false;
+
             //check that chain link is valid 
             ValidateChainSource(chlLink, gkmKeyManager);
-                       
+
             //get the chain link index to start at 
             SortingValue svaLinkSortValue = chlLink.m_svaChainSortingValue;
 
             //check if link already exists in buffer
-            if(ChainLinks.ContainsKey(svaLinkSortValue))
+            if (ChainLinks.ContainsKey(svaLinkSortValue))
             {
                 //dont double add chain link
                 return;
@@ -107,8 +106,9 @@ namespace Networking
             ChainLinks.Add(svaLinkSortValue, chlLink);
 
             //merge messages into the message buffer 
-            MergeChainLinkMessagesIntoBuffer(chlLink, gmbGlobalMessageBuffer);
-                       
+            //bIsDirty is true if new messages were added
+            MergeChainLinkMessagesIntoBuffer(chlLink, gmbGlobalMessageBuffer, out bool bIsDirty);
+
             //recalculate chain values
             ReprocessAllChainLinks(lLocalPeerID);
 
@@ -116,26 +116,30 @@ namespace Networking
             ChainLink chlOldHead = m_chlBestChainHead;
 
             //update the best chain
-            m_chlBestChainHead = FindBestHeadChainLink();
+            bool bDidHeadChange = UpdateBestHeadChainLink(gmbGlobalMessageBuffer);
 
             //check that chain head changed 
-            if (m_chlBestChainHead != chlOldHead)
+            if (bDidHeadChange)
             {
                 //remove old items from the chain 
-                UpdateBaseLink();
+                UpdateBaseLink(lLocalPeerID, gmbGlobalMessageBuffer);
+
+                bDirtyUnconfirmedMessageBufferState = true;
             }
+
+            bDirtyUnconfirmedMessageBufferState = bIsDirty;
         }
 
         //find a link searching back from iStartIndex that matches bHash
         public ChainLink FindLink(int iStartIndex, long lHash)
-        {         
+        {
             // loop backwards through chain links and try and find parent link
             for (int i = iStartIndex; i > -1; i--)
             {
                 ChainLink chlLink = ChainLinks.Values[i];
 
                 //check if link matches target hash
-                if ( chlLink.m_lLinkPayloadHash == lHash)
+                if (chlLink.m_lLinkPayloadHash == lHash)
                 {
                     return chlLink;
                 }
@@ -153,7 +157,7 @@ namespace Networking
 
         public void SetChannelAcknowledgements(int iChannelIndex, ChainLink chlAcknowledgedLink)
         {
-            
+
 
             //check if alreadty acked 
             if (chlAcknowledgedLink.m_bIsChannelBranch[iChannelIndex])
@@ -163,7 +167,7 @@ namespace Networking
 
             //clear out existing acknowledements 
             //and acknowledge new branch
-            for(int i = ChainLinks.Count -1; i > -1; i-- )
+            for (int i = ChainLinks.Count - 1; i > -1; i--)
             {
                 //check if acknowledgements need setting up
                 if (ChainLinks.Values[i].m_bIsChannelBranch == null || ChainLinks.Values[i].m_bIsChannelBranch.Count != m_iChannelCount)
@@ -197,7 +201,7 @@ namespace Networking
         public void ProceesChainLink(long lLocalPeerID, ChainLink chlLink)
         {
             //skip if base link as it should have been processed already 
-            if(chlLink == m_chlChainBase)
+            if (chlLink == m_chlChainBase)
             {
                 return;
             }
@@ -207,7 +211,7 @@ namespace Networking
             {
                 SetupChannelAckArray(chlLink, m_iChannelCount);
             }
-            
+
 
             //check if link needs to find parent and is not base which will have no parent
             if (chlLink.m_chlParentChainLink == null)
@@ -229,7 +233,7 @@ namespace Networking
             }
 
             //check if parent link is connected to base
-            if(chlLink.m_chlParentChainLink.m_bIsConnectedToBase == true || m_chlChainBase == chlLink.m_chlParentChainLink)
+            if (chlLink.m_chlParentChainLink.m_bIsConnectedToBase == true || m_chlChainBase == chlLink.m_chlParentChainLink)
             {
                 chlLink.m_bIsConnectedToBase = true;
             }
@@ -239,7 +243,7 @@ namespace Networking
             }
 
             //check if state needs to be calculated 
-            if(chlLink.m_bIsConnectedToBase && chlLink.m_gmsState == null)
+            if (chlLink.m_bIsConnectedToBase && chlLink.m_gmsState == null)
             {
                 chlLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, chlLink.m_chlParentChainLink.m_gmsState);
             }
@@ -318,7 +322,7 @@ namespace Networking
             foreach (GlobalMessageStartStateCandidate sscCandidate in StartStateCandidates.Values)
             {
                 //check if not oldest start state in chain 
-                if(sscCandidate.m_bIsOldestStateOnChain == false)
+                if (sscCandidate.m_bIsOldestStateOnChain == false)
                 {
                     continue;
                 }
@@ -343,7 +347,7 @@ namespace Networking
                 int iStartIndex = ChainLinks.IndexOfKey(sscCandidate.m_chlNextLink.m_svaChainSortingValue);
 
                 //check if chain link is in main chain 
-                if(iStartIndex < 0)
+                if (iStartIndex < 0)
                 {
                     continue;
                 }
@@ -351,12 +355,12 @@ namespace Networking
                 GlobalMessagingState gmsPreviousLinkEndState = sscCandidate.m_gmsStateCandidate;
 
                 //reprocess all chain links
-                for ( int i = iStartIndex; i < ChainLinks.Count; i++)
+                for (int i = iStartIndex; i < ChainLinks.Count; i++)
                 {
                     //reset state 
                     ChainLinks.Values[i].m_gmsState = null;
 
-                    
+
 
                     if (i != iStartIndex)
                     {
@@ -370,7 +374,7 @@ namespace Networking
                             {
                                 continue;
                             }
-                        }                                              
+                        }
 
                         //check if link is linking to before the current state 
                         if (ChainLinks.Values[i].m_chlParentChainLink.m_svaChainSortingValue.CompareTo(sscCandidate.m_chlNextLink.m_svaChainSortingValue) < 0)
@@ -379,7 +383,7 @@ namespace Networking
                         }
 
                         //check that parent state has a valid end state
-                        if(ChainLinks.Values[i].m_chlParentChainLink.m_gmsState == null)
+                        if (ChainLinks.Values[i].m_chlParentChainLink.m_gmsState == null)
                         {
                             continue;
                         }
@@ -390,7 +394,7 @@ namespace Networking
                         //check if a start candidate exists for chain link
                         long lHashForLinkState = GlobalMessageStartStateCandidate.GenerateHash(gmsPreviousLinkEndState, ChainLinks.Values[i].m_lLinkPayloadHash);
 
-                        if(StartStateCandidates.TryGetValue(lHashForLinkState, out GlobalMessageStartStateCandidate sscChildStartStateCandidate))
+                        if (StartStateCandidates.TryGetValue(lHashForLinkState, out GlobalMessageStartStateCandidate sscChildStartStateCandidate))
                         {
                             sscChildStartStateCandidate.m_bIsOldestStateOnChain = false;
 
@@ -403,7 +407,7 @@ namespace Networking
                 }
             }
         }
-        
+
         //Pick Best Start Candidate 
         //returns true if best state passes threshold 
         public bool GetBestStartStateCandidate(out GlobalMessageStartStateCandidate sscBestCandidate)
@@ -418,9 +422,9 @@ namespace Networking
             {
                 //get the max number of peers active in a state 
                 iMaxProposedScore = Mathf.Max(sscCandidate.m_gmsStateCandidate.ActiveChannelCount(), iMaxProposedScore);
-                
+
                 //get the highest voted state
-                if(sscBestCandidate == null || sscBestCandidate.m_iStartStateScore < sscCandidate.m_iStartStateScore)
+                if (sscBestCandidate == null || sscBestCandidate.m_iStartStateScore < sscCandidate.m_iStartStateScore)
                 {
                     sscBestCandidate = sscCandidate;
                 }
@@ -429,7 +433,7 @@ namespace Networking
             //get the difference between the most votes vs the most possible votes 
             int iVotingDifference = sscBestCandidate.m_iStartStateScore - iMaxProposedScore;
 
-            if(iVotingDifference < 0)
+            if (iVotingDifference < 0)
             {
                 return false;
             }
@@ -454,29 +458,47 @@ namespace Networking
             ChainLinks.Add(svaLinkSortValue, chlLink);
 
             //merge messages into the message buffer 
-            MergeChainLinkMessagesIntoBuffer(chlLink, gmbGlobalMessageBuffer);
+            MergeChainLinkMessagesIntoBuffer(chlLink, gmbGlobalMessageBuffer, out bool bIsMessageBufferDirty);
         }
 
         //set the first chain link and associated start state
-        public void SetChainStartState(long lLocalPeerID,GlobalMessagingState gmsStartState,ChainLink chlFirstLink)
+        public void SetChainStartState(long lLocalPeerID,int iMaxPlayerCount, GlobalMessagingState gmsStartState, ChainLink chlFirstLink)
         {
             m_gmsChainStartState = gmsStartState;
             m_chlChainBase = chlFirstLink;
             m_chlBestChainHead = chlFirstLink;
             chlFirstLink.m_bIsConnectedToBase = true;
+
+            chlFirstLink.m_iChainLength = 1;
+            chlFirstLink.m_chlParentChainLink = null;
+            chlFirstLink.m_lChainMessageCount = (ulong)m_chlChainBase.m_pmnMessages.Count;
+
+            SetupChannelAckArray(chlFirstLink, iMaxPlayerCount);
+
+            //get state at end of first link
+            chlFirstLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, gmsStartState);
+
+            foreach (ChainLink chlLink in ChainLinks.Values)
+            {
+                if (chlLink != chlFirstLink)
+                {
+                    chlLink.m_gmsState = null;
+                }
+            }
+
             ReprocessAllChainLinks(lLocalPeerID);
 
         }
-        
+
         //reprocess all the chain links
         public void ReprocessAllChainLinks(long lLocalPeerID)
         {
-            for(int i = 0; i <ChainLinks.Count; i++)
+            for (int i = 0; i < ChainLinks.Count; i++)
             {
-                ProceesChainLink(lLocalPeerID,ChainLinks.Values[i]);
+                ProceesChainLink(lLocalPeerID, ChainLinks.Values[i]);
             }
         }
-        
+
         //perform inital setup
         public ChainManager(int iMaxPlayerCount)
         {
@@ -498,14 +520,14 @@ namespace Networking
         {
             return (int)(iChainLinkCycleIndex % iChannelCount);
         }
-        
+
         // the time of the most recent message that can be included in 
         // a chain link of cycle x
         public DateTime GetEndTimeForChainLink(uint iChainLinkCycleIndex, TimeSpan tspTimePerChain, DateTime dtmSystemStartTime)
         {
             return dtmSystemStartTime + TimeSpan.FromTicks(tspTimePerChain.Ticks * iChainLinkCycleIndex);
         }
-        
+
         //build a chain
         public ChainLink BuildChain()
         {
@@ -559,8 +581,10 @@ namespace Networking
 
         //put the messages in the chain link into the main buffer and replce any messages
         // in the chain with their duplicates in the buffer if they have already been added
-        public void MergeChainLinkMessagesIntoBuffer(ChainLink chlChain, GlobalMessageBuffer gmbBuffer)
+        public void MergeChainLinkMessagesIntoBuffer(ChainLink chlChain, GlobalMessageBuffer gmbBuffer, out bool bDirtyMessageBufferState)
         {
+            bDirtyMessageBufferState = false;
+
             //loop through all the messages 
             for (int i = 0; i < chlChain.m_pmnMessages.Count; i++)
             {
@@ -574,6 +598,8 @@ namespace Networking
                 {
                     //add message to the buffer
                     gmbBuffer.UnConfirmedMessageBuffer.Add(chlChain.m_pmnMessages[i].m_svaMessageSortingValue, chlChain.m_pmnMessages[i]);
+
+                    bDirtyMessageBufferState = true;
                 }
             }
         }
@@ -582,16 +608,17 @@ namespace Networking
 
         //get best Chain Head
         //gets the best chain to extend with next link 
-        protected ChainLink FindBestHeadChainLink()
+        //returns true if best chainlink head changed
+        public bool UpdateBestHeadChainLink(GlobalMessageBuffer gmbMessageBuffer)
         {
-            int iBestChainLink = 0;
+            int iBestChainLink = int.MinValue;
             ChainLink chlBestLink = null;
 
-            for(int i = 0; i < ChainLinks.Values.Count; i++)
+            for (int i = 0; i < ChainLinks.Values.Count; i++)
             {
-                int iScore = ScoreChainLink(ChainLinks.Values[i]);
+                int iScore = ScoreChainLink(ChainLinks.Values[i], gmbMessageBuffer);
 
-                if(iBestChainLink <= iScore)
+                if (iBestChainLink <= iScore)
                 {
                     iBestChainLink = iScore;
 
@@ -599,39 +626,31 @@ namespace Networking
                 }
             }
 
-            return chlBestLink;
+            if(chlBestLink != m_chlBestChainHead)
+            {
+                m_chlBestChainHead = chlBestLink;
+
+                return true;
+            }
+
+            return false;
         }
 
         //function to evaluate the best chain link
-        protected int ScoreChainLink(ChainLink chlLink)
+        protected int ScoreChainLink(ChainLink chlLink, GlobalMessageBuffer gmbMessageBuffer)
         {
             int iValue = 0;
 
             iValue += ScoreChainLinkLenght(chlLink);
             iValue += ScoreChainAchnowledgement(chlLink);
-            iValue = Math.Max(0, iValue + ScoreChainLinkMessages(chlLink));
+            iValue = Math.Max(0, iValue + ScoreChainLinkMessages(chlLink, gmbMessageBuffer));
 
-            return iValue;            
+            return iValue;
         }
-        
+
         //function to score chain links on number of links and 
         //diversity of links
         protected int ScoreChainLinkLenght(ChainLink chlLink)
-        {
-            //check if connected to base
-            if(chlLink.m_bIsConnectedToBase == false)
-            {
-                return 0;
-            }
-
-            int iRelativeLength = (int)Math.Min(chlLink.m_iChainLength - m_chlChainBase.m_iChainLength,int.MaxValue);
-
-            return iRelativeLength;
-        }
-        
-        //does the chain link hold all the messages recieved in the target time frame
-        //does the chain include all messages sent by peer
-        protected int ScoreChainLinkMessages(ChainLink chlLink)
         {
             //check if connected to base
             if (chlLink.m_bIsConnectedToBase == false)
@@ -639,10 +658,32 @@ namespace Networking
                 return 0;
             }
 
-            //compare the number of messages in chain vs total number of messages over same time period 
-            int iMessageLenghDifference = (int) Math.Min(chlLink.m_lChainMessageCount - (m_chlChainBase.m_lChainMessageCount - (uint)m_chlChainBase.m_pmnMessages.Count),int.MaxValue);
+            int iRelativeLength = (int)Math.Min(chlLink.m_iChainLength - m_chlChainBase.m_iChainLength, int.MaxValue);
 
-            return iMessageLenghDifference;
+            return iRelativeLength;
+        }
+
+        //does the chain link hold all the messages recieved in the target time frame
+        //does the chain include all messages sent by peer
+        protected int ScoreChainLinkMessages(ChainLink chlLink, GlobalMessageBuffer gmbMessageBuffer)
+        {
+            //check if connected to base
+            if (chlLink.m_bIsConnectedToBase == false)
+            {
+                return 0;
+            }
+
+            //check if there was any messages in the same time period that were missed 
+            int iMissedMessages = 0;
+
+            gmbMessageBuffer.GetMessageStartAndEndIndexesBetweenStates(m_chlChainBase.m_gmsState, chlLink.m_gmsState, out int iStartIndex, out int iEndIndex);
+
+            //get messages in chain
+            int iMessagesInChain = Mathf.Max(0, (int)(m_chlBestChainHead.m_lChainMessageCount - m_chlChainBase.m_lChainMessageCount));
+
+            iMissedMessages =  Mathf.Max(0,(iEndIndex - iStartIndex) - iMessagesInChain);
+
+            return -iMissedMessages;
         }
 
         //which links have been acknowledged by peers
@@ -650,7 +691,7 @@ namespace Networking
         protected int ScoreChainAchnowledgement(ChainLink chlLink)
         {
             int iAcknowledgements = 0;
-            for(int i = 0; i < chlLink.m_bIsChannelBranch.Count; i++)
+            for (int i = 0; i < chlLink.m_bIsChannelBranch.Count; i++)
             {
                 if (chlLink.m_bIsChannelBranch[i] == true)
                 {
@@ -663,17 +704,17 @@ namespace Networking
 
         protected int ScoreDistanceBehindHead(ChainLink chlLink, uint iLatestCycleIndex)
         {
-            if(chlLink.m_iLinkIndex > iLatestCycleIndex)
+            if (chlLink.m_iLinkIndex > iLatestCycleIndex)
             {
                 return 0;
             }
 
             return -(int)Math.Min(iLatestCycleIndex - chlLink.m_iLinkIndex, int.MaxValue);
         }
-        
+
         //checks the link chain and removes links that are "aggread upon "
-        protected void UpdateBaseLink()
-        {   
+        protected void UpdateBaseLink(long lLocalPeerID, GlobalMessageBuffer gmbGlobalMessageBuffer)
+        {
             ChainLink chlNewBase = m_chlBestChainHead.m_chlParentChainLink;
 
             //check if parent is base
@@ -683,21 +724,21 @@ namespace Networking
             }
 
             //get the first new base in chain history
-            for ( int i = 0; i < ChainLinks.Count; i++)
+            for (int i = 0; i < ChainLinks.Count; i++)
             {
-                if(chlNewBase == null)
+                if (chlNewBase == null)
                 {
                     break;
                 }
 
                 //check if valid base 
-                if(IsValidBaseLink(chlNewBase, m_chlBestChainHead))
+                if (IsValidBaseLink(chlNewBase, m_chlBestChainHead))
                 {
                     break;
                 }
 
                 //check if forces base 
-                if(IsForcedBase(chlNewBase,m_chlBestChainHead))
+                if (IsForcedBase(chlNewBase, m_chlBestChainHead))
                 {
                     break;
                 }
@@ -708,41 +749,41 @@ namespace Networking
             }
 
             //check that this is a new base
-            if(chlNewBase == null || chlNewBase == m_chlChainBase)
+            if (chlNewBase == null || chlNewBase == m_chlChainBase)
             {
                 return;
             }
 
             //perform rebase 
-            DoRebase(chlNewBase);
+            DoRebase(lLocalPeerID, chlNewBase, gmbGlobalMessageBuffer);
         }
 
         protected bool IsValidBaseLink(ChainLink chlBaseCandidate, ChainLink chlCurrentHead)
         {
             //check if it has enough acks 
             //TODO:: Move this to the channel link to match active channle count
-            float fAcks = 0; 
-            for(int i = 0; i < chlBaseCandidate.m_bIsChannelBranch.Count; i++)
+            float fAcks = 0;
+            for (int i = 0; i < chlBaseCandidate.m_bIsChannelBranch.Count; i++)
             {
-                if(chlBaseCandidate.m_bIsChannelBranch[i])
+                if (chlBaseCandidate.m_bIsChannelBranch[i])
                 {
                     fAcks++;
                 }
             }
 
-            if( (float)fAcks / chlBaseCandidate.m_gmsState.ActiveChannelCount() <  PercentOfAcknowledgementsToRebase)
+            if (fAcks / chlBaseCandidate.m_gmsState.ActiveChannelCount() < PercentOfAcknowledgementsToRebase)
             {
                 return false;
             }
 
             //check if enough links have been attached
-            if(chlCurrentHead.m_iChainLength - chlBaseCandidate.m_iChainLength < MinChainLenght)
+            if (chlCurrentHead.m_iChainLength - chlBaseCandidate.m_iChainLength < MinChainLenght)
             {
                 return false;
             }
 
             //check if enough cycles have passed 
-            if(chlCurrentHead.m_iLinkIndex - chlBaseCandidate.m_iLinkIndex < MinCycleAge)
+            if (chlCurrentHead.m_iLinkIndex - chlBaseCandidate.m_iLinkIndex < MinCycleAge)
             {
                 return false;
             }
@@ -759,7 +800,7 @@ namespace Networking
                 return true;
             }
 
-            if(chlCurrentHead.m_iLinkIndex - chlBaseCandidate.m_chlParentChainLink.m_iLinkIndex > MaxCycleAge)
+            if (chlCurrentHead.m_iLinkIndex - chlBaseCandidate.m_chlParentChainLink.m_iLinkIndex > MaxCycleAge)
             {
                 return true;
             }
@@ -767,22 +808,58 @@ namespace Networking
             return false;
         }
 
-        protected void DoRebase(ChainLink chlNewBase)
+        protected void DoRebase(long lLocalPeerID, ChainLink chlNewBase,GlobalMessageBuffer gmbMessageBuffer)
         {
             //set base state
             m_gmsChainStartState.ResetToState(chlNewBase.m_chlParentChainLink.m_gmsState);
-            
+
             //set new base
             m_chlChainBase = chlNewBase;
 
             //remove outdated chain links
             //TODO: do this with a better algorithm that doesn't produce piles of garbage
-            while(ChainLinks.Count > 0 && ChainLinks.Values[0] != chlNewBase)
+            while (ChainLinks.Count > 0 && ChainLinks.Values[0] != chlNewBase)
             {
                 ChainLinks.RemoveAt(0);
             }
 
-            //TODO:: remove old messages ?
+            //remove refference to old links
+            m_chlChainBase.m_chlParentChainLink = null;
+
+            //remove old messages
+            gmbMessageBuffer.RemoveItemsUpTo(m_gmsChainStartState.m_svaLastMessageSortValue);
+
+            //recalculate if linked to base 
+            foreach(ChainLink chlLink in ChainLinks.Values)
+            {
+                if(chlLink == m_chlChainBase)
+                {
+                    continue;
+                }
+
+                if(chlLink.m_chlParentChainLink != null )
+                {
+                    //check if link is too old
+                    if(chlLink.m_chlParentChainLink.m_svaChainSortingValue.CompareTo(m_chlChainBase.m_svaChainSortingValue) < 0)
+                    {
+                        chlLink.m_chlParentChainLink = null;
+                        chlLink.m_bIsConnectedToBase = false;
+                        continue;
+                    }
+                    else
+                    {
+                        chlLink.m_bIsConnectedToBase = chlLink.m_chlParentChainLink.m_bIsConnectedToBase;
+                    }
+                }
+                else
+                {
+                    chlLink.m_bIsConnectedToBase = false;
+                }
+               
+            }
+
+            ReprocessAllChainLinks(lLocalPeerID);
+
         }
         #endregion
 

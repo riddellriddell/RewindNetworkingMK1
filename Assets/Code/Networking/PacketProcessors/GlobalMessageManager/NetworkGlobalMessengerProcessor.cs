@@ -59,6 +59,9 @@ namespace Networking
         //factory for creating the message payload classes 
         public ClassWithIDFactory m_cifGlobalMessageFactory;
 
+        //sim interface for selecting which peers to add or kick from game 
+        public IGlobalMessageKickJoinSimVerificationInterface m_sviSimKickJoinInterface;
+
         //the local time this peer started connecting  / syncronizing with the global message system 
         protected DateTime m_dtmTimeOfStateCollectionStart = DateTime.MinValue;
 
@@ -92,7 +95,7 @@ namespace Networking
             m_cifGlobalMessageFactory = new ClassWithIDFactory();
 
             //add all the different types of messages
-            VoteMessage.TypeID = m_cifGlobalMessageFactory.AddType<VoteMessage>();
+            VoteMessage.TypeID = m_cifGlobalMessageFactory.AddType<VoteMessage>(VoteMessage.TypeID);
         }
 
         public override void OnAddToNetwork(NetworkConnection ncnNetwork)
@@ -103,13 +106,13 @@ namespace Networking
 
 
             //add all the data packet classes this processor relies on to the main class factory 
-            GlobalMessagePacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalMessagePacket>();
+            GlobalMessagePacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalMessagePacket>(GlobalMessagePacket.TypeID);
 
-            GlobalLinkRequest.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalLinkRequest>();
+            GlobalLinkRequest.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalLinkRequest>(GlobalLinkRequest.TypeID);
 
-            GLobalChainLinkPacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GLobalChainLinkPacket>();
+            GLobalChainLinkPacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GLobalChainLinkPacket>(GLobalChainLinkPacket.TypeID);
 
-            GlobalChainStatePacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalChainStatePacket>();
+            GlobalChainStatePacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalChainStatePacket>(GlobalChainStatePacket.TypeID);
 
 
         }
@@ -130,7 +133,7 @@ namespace Networking
                     m_staState = State.Active;
                     break;
                 case State.ConnectAsAdditionalPeer:
-                    if(m_bStartStateCandidatesDirty)
+                    if (m_bStartStateCandidatesDirty)
                     {
                         m_chmChainManager.EvaluateStartCandidates(ParentNetworkConnection.m_lPeerID);
                         m_bStartStateCandidatesDirty = false;
@@ -144,10 +147,16 @@ namespace Networking
                     if (m_chmChainManager.m_gmsChainStartState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iIndex))
                     {
                         m_staState = State.Active;
+
+                        SetTimeOfNextPeerChainLink(m_tnpNetworkTime.NetworkTime);
                     }
                     break;
 
                 case State.Active:
+
+                    //vote to add new peers to the system
+                    UpdateAddingPeersToSystem();
+
                     MakeNewChainLinkIfTimeTo();
                     break;
             }
@@ -173,6 +182,10 @@ namespace Networking
         {
             if (pktInputPacket is GlobalMessagePacket)
             {
+                GlobalMessagePacket gmpPacket = pktInputPacket as GlobalMessagePacket;
+
+                ProcessMessagePacket(gmpPacket);
+
                 return null;
             }
             else if (pktInputPacket is GLobalChainLinkPacket)
@@ -186,7 +199,7 @@ namespace Networking
             else if (pktInputPacket is GlobalChainStatePacket)
             {
                 ProcessStatePacket(pktInputPacket as GlobalChainStatePacket);
-                               
+
                 return null;
             }
 
@@ -228,9 +241,14 @@ namespace Networking
 
                 clpChainLinkPacket.m_chlLink.CalculateLocalValuesForRecievedLink(m_cifGlobalMessageFactory);
 
-                m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, clpChainLinkPacket.m_chlLink, m_gkmKeyManager, m_gmbMessageBuffer);
-            }
+                m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, clpChainLinkPacket.m_chlLink, m_gkmKeyManager, m_gmbMessageBuffer, out bool bIsMessageBufferDirty);
 
+                if (bIsMessageBufferDirty)
+                {
+                    //update the final unconfirmed message state 
+                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, m_chmChainManager.m_chlBestChainHead.m_gmsState);
+                }
+            }
         }
 
         public void ProcessMessagePacket(GlobalMessagePacket gmpMessagePacket)
@@ -241,10 +259,8 @@ namespace Networking
             //decode message 
             pmnMessage.DecodePayloadArray(m_cifGlobalMessageFactory);
 
-            //add to message buffer
-            m_gmbMessageBuffer.AddMessageToBuffer(pmnMessage);
-
-            //check if message is built off a known state 
+            //add message to unconfirmed message buffer
+            ProcessMessage(pmnMessage);
         }
 
         public void MakeNewChainLinkIfTimeTo()
@@ -261,12 +277,17 @@ namespace Networking
                 SetTimeOfNextPeerChainLink(dtmNetworkTime);
 
                 //add link to local link tracker 
-                m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, chlNextLink, m_gkmKeyManager, m_gmbMessageBuffer);
+                m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, chlNextLink, m_gkmKeyManager, m_gmbMessageBuffer, out bool bIsMessageBufferDirty);
+
+                if (bIsMessageBufferDirty)
+                {
+                    //update the final unconfirmed message state 
+                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, m_chmChainManager.m_chlBestChainHead.m_gmsState);
+                }
 
                 //send link to peers
                 SendChainLinkToPeers(chlNextLink);
             }
-
         }
 
         public void SendChainLinkToPeers(ChainLink chlLink)
@@ -285,7 +306,7 @@ namespace Networking
         public void StartAsFirstPeerInSystem()
         {
             //setup the inital state of the chain
-            m_chmChainManager.SetStartState(ParentNetworkConnection.m_lPeerID);
+            m_chmChainManager.SetStartState(ParentNetworkConnection.m_lPeerID, MaxPlayerCount);
 
             DateTime dtmNetworkTime = m_tnpNetworkTime.NetworkTime;
 
@@ -313,6 +334,9 @@ namespace Networking
 
             //add link to chain manager
             m_chmChainManager.AddFirstChainLink(ParentNetworkConnection.m_lPeerID, chlLink);
+
+            //update buffer final state
+            m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, m_chmChainManager.m_chlBestChainHead.m_gmsState);
         }
 
         public void StartAsConnectorToSystem()
@@ -362,8 +386,10 @@ namespace Networking
             {
                 m_staState = State.Connected;
 
-                m_chmChainManager.SetChainStartState(ParentNetworkConnection.m_lPeerID, sscStartStateCandidate.m_gmsStateCandidate, sscStartStateCandidate.m_chlNextLink);
+                m_chmChainManager.SetChainStartState(ParentNetworkConnection.m_lPeerID, MaxPlayerCount, sscStartStateCandidate.m_gmsStateCandidate, sscStartStateCandidate.m_chlNextLink);
 
+                //update message buffer final state
+                m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, m_chmChainManager.m_chlBestChainHead.m_gmsState);
             }
         }
 
@@ -433,6 +459,140 @@ namespace Networking
             return chlNewLink;
         }
 
+        //adds peers to system if empty spot is available
+        public void UpdateAddingPeersToSystem()
+        {
+            //get number of players playing
+            int iPlayerCount = m_gmbMessageBuffer.LatestState.ActiveChannelCount();
+
+            //check if all possible candidates have already been joined 
+            //TODO: finter out kicked or otherwise excluded candidates? 
+            if (ChildConnectionProcessors.Count + 1 == iPlayerCount)
+            {
+                return;
+            }
+
+            //check if game is full
+            if (iPlayerCount == MaxPlayerCount)
+            {
+                return;
+            }
+
+            //gather all peers that are connected but not part of the system
+            SortedList<long, long> lJoinCandidates = new SortedList<long, long>();
+
+            foreach (KeyValuePair<long, ConnectionGlobalMessengerProcessor> kvpEntries in ChildConnectionProcessors)
+            {
+                //check if connected peer is already part of the system
+                if (m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(kvpEntries.Key, out int iIndex) == false)
+                {
+                    //get the time the candidate connected 
+                    long lCOnnectionTime = kvpEntries.Value.ParentConnection.m_dtmConnectionEstablishTime.Ticks;
+
+                    lJoinCandidates.Add(lCOnnectionTime, kvpEntries.Key);
+                }
+            }
+
+            //send peer list to sim for clearence 
+            //m_sviSimKickJoinInterface.PeerConnectionCandidates(lJoinCandidates);
+
+            //check if there is anyone left to join
+            if (lJoinCandidates.Count == 0)
+            {
+                return;
+            }
+
+            //number of peers to add
+            int iPeersToAdd = Math.Min((MaxPlayerCount - iPlayerCount), lJoinCandidates.Count);
+
+            //create add message payload
+            VoteMessage vmsVoteMessage = m_cifGlobalMessageFactory.CreateType<VoteMessage>(VoteMessage.TypeID);
+
+            vmsVoteMessage.m_tupActionPerPeer = new Tuple<byte, long>[iPeersToAdd];
+
+            for (int i = 0; i < iPeersToAdd; i++)
+            {
+                vmsVoteMessage.m_tupActionPerPeer[i] = new Tuple<byte, long>(1, lJoinCandidates.Values[i]);
+            }
+
+            //create message node and send to all peers
+            CreateMessageNode(vmsVoteMessage);
+        }
+
+        public void CreateMessageNode(GlobalMessageBase gmbMessageToSend)
+        {
+            long lPeerID = ParentNetworkConnection.m_lPeerID;
+
+            if (m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(lPeerID, out int iChannelIndex) == false)
+            {
+                //not part of the peer message system so cant send message 
+                return;
+            }
+
+            //create new message node 
+            PeerMessageNode pmnMessageNode = new PeerMessageNode();
+
+            pmnMessageNode.m_lPeerID = lPeerID;
+
+            pmnMessageNode.m_dtmMessageCreationTime = m_tnpNetworkTime.NetworkTime;
+
+            pmnMessageNode.m_lChainLinkHeadHash = m_chmChainManager.m_chlBestChainHead.m_lLinkPayloadHash;
+
+            pmnMessageNode.m_bMessageType = (byte)gmbMessageToSend.TypeNumber;
+
+            pmnMessageNode.m_gmbMessage = gmbMessageToSend;
+
+            pmnMessageNode.m_iPeerMessageIndex = m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iChannelIndex].m_iLastMessageIndexProcessed++;
+
+            pmnMessageNode.m_lPreviousMessageHash = m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iChannelIndex].m_lHashOfLastNodeProcessed;
+
+            pmnMessageNode.BuildPayloadArray();
+
+            pmnMessageNode.BuildPayloadHash();
+
+            pmnMessageNode.SignMessage();
+
+            pmnMessageNode.CalculateSortingValue();
+
+            //process new message and add it to the local unconfirmed message buffer 
+            ProcessMessage(pmnMessageNode);
+
+            //send message to all peers
+            GlobalMessagePacket gmpMessagePacket = ParentNetworkConnection.PacketFactory.CreateType<GlobalMessagePacket>(GlobalMessagePacket.TypeID);
+
+            gmpMessagePacket.m_pmnMessage = pmnMessageNode;
+
+            ParentNetworkConnection.TransmitPacketToAll(gmpMessagePacket);
+
+        }
+
+        public void ProcessMessage(PeerMessageNode pmnMessage)
+        {
+            //add to message buffer
+            m_gmbMessageBuffer.AddMessageToBuffer(pmnMessage);
+
+            //if connected or active
+            if (m_staState == State.Connected || m_staState == State.Active)
+            {
+                //check if message is being created behind head
+                if (m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue.CompareTo(pmnMessage.m_svaMessageSortingValue) > 0)
+                {
+                    //recalculate best head 
+                    bool bDidHeadCHange = m_chmChainManager.UpdateBestHeadChainLink(m_gmbMessageBuffer);
+
+                    if (bDidHeadCHange)
+                    {
+                        //rebuild message state 
+                        m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, m_chmChainManager.m_chlBestChainHead.m_gmsState);
+                    }
+                }
+                else
+                {
+                    //rebuild message state 
+                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, m_chmChainManager.m_chlBestChainHead.m_gmsState);
+                }
+            }
+        }
     }
 
     public class ConnectionGlobalMessengerProcessor : ManagedConnectionPacketProcessor<NetworkGlobalMessengerProcessor>

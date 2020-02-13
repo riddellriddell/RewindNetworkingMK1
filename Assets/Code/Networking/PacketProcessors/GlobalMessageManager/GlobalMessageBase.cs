@@ -4,28 +4,16 @@ namespace Networking
 {
     public abstract class GlobalMessageBase
     {
-        public abstract bool AddedToClassFactory{ get; }
+        public abstract bool AddedToClassFactory { get; }
 
         public abstract int TypeNumber { get; set; }
 
-    }
+        public abstract void Serialize(ReadByteStream rbsByteStream);
 
-    public partial class ByteStream
-    {
-        public static int DataSize(GlobalMessageBase Input)
-        {
-            throw new NotImplementedException();
-        }
+        public abstract void Serialize(WriteByteStream rbsByteStream);
 
-        public static void Serialize(WriteByteStream wbsStream, ref GlobalMessageBase Input)
-        {
-            throw new NotImplementedException();
-        }
+        public abstract int DataSize();
 
-        public static void Serialize(ReadByteStream rbsStream, ref GlobalMessageBase Input)
-        {
-            throw new NotImplementedException();
-        }
     }
 
     //this message indicates a peer is voting to kick another peer
@@ -57,6 +45,25 @@ namespace Networking
         //first value = action to perform (0 = kick, 1 = join)
         //second value = target peer
         public Tuple<byte, long>[] m_tupActionPerPeer;
+
+        public override void Serialize(ReadByteStream rbsByteStream)
+        {
+            VoteMessage vmsMessage = this;
+
+            ByteStream.Serialize(rbsByteStream, ref vmsMessage);
+        }
+
+        public override void Serialize(WriteByteStream wbsByteStream)
+        {
+            VoteMessage vmsMessage = this;
+
+            ByteStream.Serialize(wbsByteStream, ref vmsMessage);
+        }
+
+        public override int DataSize()
+        {
+            return ByteStream.DataSize(this);
+        }
     }
 
     //serialization for vote message 
@@ -68,7 +75,7 @@ namespace Networking
 
             iSize += ByteStream.DataSize(Input.m_tupActionPerPeer.Length);
 
-            for (int i = 0;i < Input.m_tupActionPerPeer.Length; i++)
+            for (int i = 0; i < Input.m_tupActionPerPeer.Length; i++)
             {
                 iSize += ByteStream.DataSize(Input.m_tupActionPerPeer[i]);
             }
@@ -91,7 +98,7 @@ namespace Networking
 
             ByteStream.Serialize(wbsStream, ref iCount);
 
-            for(int i = 0; i < iCount; i++)
+            for (int i = 0; i < iCount; i++)
             {
                 Tuple<byte, long> tupVote = Input.m_tupActionPerPeer[i];
 
@@ -105,7 +112,7 @@ namespace Networking
 
             ByteStream.Serialize(rbsStream, ref iCount);
 
-            if(Input.m_tupActionPerPeer == null || Input.m_tupActionPerPeer.Length != iCount )
+            if (Input.m_tupActionPerPeer == null || Input.m_tupActionPerPeer.Length != iCount)
             {
                 Input.m_tupActionPerPeer = new Tuple<byte, long>[iCount];
             }

@@ -37,6 +37,11 @@ namespace Networking
 
         public override void DecodePacket(ReadByteStream rbsByteStream)
         {
+            if(m_pmnMessage == null)
+            {
+                m_pmnMessage = new PeerMessageNode();
+            }
+
             m_pmnMessage.DecodePacket(rbsByteStream);
         }
 

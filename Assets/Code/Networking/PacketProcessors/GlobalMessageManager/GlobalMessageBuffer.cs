@@ -8,50 +8,14 @@ namespace Networking
 {
     public class GlobalMessageBuffer
     {
-        ////this class is used internally when getting subsets of the main buffer
-        //private class SortedMessageIndex : ISortedMessage
-        //{
-        //    public SortingValue SortingValue { get; set; }
-
-        //    public static SortedMessageIndex FromSortingValueInclusive(SortingValue SortingValue)
-        //    {
-        //        SortedMessageIndex pbrReturnValue = new SortedMessageIndex();
-        //        pbrReturnValue.SortingValue = SortingValue;
-
-        //        return pbrReturnValue;
-        //    }
-
-        //    public static SortedMessageIndex FromSortingValueExclusive(SortingValue SortingValue)
-        //    {
-        //        SortedMessageIndex pbrReturnValue = new SortedMessageIndex();
-        //        SortingValue.NextSortValue();
-        //        pbrReturnValue.SortingValue = SortingValue;
-        //        return pbrReturnValue;
-        //    }
-
-        //    public static SortedMessageIndex MinTimeInclusive(DateTime dtmMinTime)
-        //    {
-        //        SortedMessageIndex pbrReturnValue = new SortedMessageIndex();
-        //        pbrReturnValue.SortingValue = new SortingValue(dtmMinTime);
-
-        //        return pbrReturnValue;
-        //    }
-
-        //    public static SortedMessageIndex MaxTimeExclusive(DateTime dtmMinTime)
-        //    {
-        //        SortedMessageIndex pbrReturnValue = new SortedMessageIndex();
-        //        pbrReturnValue.SortingValue = new SortingValue(dtmMinTime);
-
-        //        return pbrReturnValue;
-        //    }
-        //}
-
-
         //a sorted array of all the unconfirmed messages from all the peers
         public SortedList<SortingValue, PeerMessageNode> UnConfirmedMessageBuffer { get; } = new SortedList<SortingValue, PeerMessageNode>();
 
         //tracks the most recent message recieved from a peer
         public Dictionary<long, PeerMessageNode> LastMessageRecievedFromPeer { get; } = new Dictionary<long, PeerMessageNode>();
+
+        //the messaging state once all the messages after the best chain head have been processed 
+        public GlobalMessagingState LatestState { get; } = new GlobalMessagingState();
 
         //the total number of messages that have ever been sent on this server up to the start of the 
         //unconfirmed message buffer
@@ -109,6 +73,36 @@ namespace Networking
             }
         }
 
+        //adds the effect of all the messages after the last message processed by gmsStartMessageState state 
+        //and stores the result in LatestState
+        public void UpdateFinalMessageState(long lLocalPeerID, GlobalMessagingState gmsStartMessageState)
+        {
+            LatestState.ResetToState(gmsStartMessageState);
+
+            //get the index of the last message processed
+            int iStartIndex = UnConfirmedMessageBuffer.IndexOfKey(LatestState.m_svaLastMessageSortValue);
+            
+            //move on to next message 
+            iStartIndex++;
+
+            for (int i = iStartIndex; i < UnConfirmedMessageBuffer.Count; i++)
+            {
+                LatestState.ProcessMessage(lLocalPeerID, UnConfirmedMessageBuffer.Values[i]);
+            }
+        }
+
+        public void GetMessageStartAndEndIndexesBetweenStates(GlobalMessagingState gmsStartState, GlobalMessagingState gmsEndState, out int iStartIndex, out int iEndIndex)
+        {
+            iStartIndex = UnConfirmedMessageBuffer.IndexOfKey(gmsStartState.m_svaLastMessageSortValue) + 1;
+            iEndIndex = UnConfirmedMessageBuffer.IndexOfKey(gmsEndState.m_svaLastMessageSortValue);
+
+            if(iEndIndex < iStartIndex)
+            {
+                //TODO: check if this is valid and catch error if it is not
+                iEndIndex = iStartIndex;
+            }
+        }
+
         //returns a subset of the message buffer that is older than the get message sort value but
         //still contains messages recieved from all active channels excluding channes that have 
         //timed out and are being treated as disconnected or disabled
@@ -124,27 +118,29 @@ namespace Networking
             //get the start index
             int iStartIndex = UnConfirmedMessageBuffer.IndexOfKey(msvGetMessagesFrom) + 1;
 
-            //if start message does not exist
-            if (iStartIndex == -1)
-            {
-                iStartIndex = 0;
-            }
 
             //get the last message in time band 
-            PeerMessageNode pmnLastMessage = UnConfirmedMessageBuffer.Values[UnConfirmedMessageBuffer.Values.Count - 1];
+            //PeerMessageNode pmnLastMessage = UnConfirmedMessageBuffer.Values[UnConfirmedMessageBuffer.Values.Count - 1];
 
             //if no messages for a channel have been recieved for more than tspTreatAsLatestIfOlderThan
             //treat that channel as disconnected / inactive and dont wait to recieve more messages
             //from it before including it in the node list 
-            SortingValue msvConnectionTimeOutTime = PeerMessageNode.SortingValueForTime(dtmLinkEndTime - tspConnectionTimeOutTime);
+            DateTime dtmConnectionTimeOutTime = dtmLinkEndTime;
 
-            SortingValue msvOldestActiveChannel = SortingValue.MinValue;
+            if(dtmLinkEndTime.Ticks > tspConnectionTimeOutTime.Ticks)
+            {
+                dtmConnectionTimeOutTime = dtmConnectionTimeOutTime - tspConnectionTimeOutTime;
+            }
+
+            SortingValue msvConnectionTimeOutTime = PeerMessageNode.SortingValueForTime(dtmConnectionTimeOutTime);
+
+            SortingValue msvOldestActiveChannel = LatestState.m_svaLastMessageSortValue;
 
             //get the last time messages were recieved for all channels 
             //excluding the channels being treated as disconnected;
-            for (int i = 0; i < pmnLastMessage.m_gmsState.m_gmcMessageChannels.Count; i++)
+            for (int i = 0; i < LatestState.m_gmcMessageChannels.Count; i++)
             {
-                GlobalMessageChannelState mcsState = pmnLastMessage.m_gmsState.m_gmcMessageChannels[i];
+                GlobalMessageChannelState mcsState = LatestState.m_gmcMessageChannels[i];
 
                 //check if channel is being treated as disconnected
                 if (mcsState.m_msvLastSortValue.CompareTo(msvConnectionTimeOutTime) > 0)
@@ -162,7 +158,7 @@ namespace Networking
             int iIndexOfLastValidMessage = UnConfirmedMessageBuffer.IndexOfKey(msvOldestActiveChannel);
 
             //check if there are any nodes inside that range 
-            if (iIndexOfLastValidMessage <= iStartIndex)
+            if (iIndexOfLastValidMessage < iStartIndex)
             {
                 return pmnOutput;
             }
@@ -281,12 +277,5 @@ namespace Networking
             return 0;
         }
 
-        //calculate node hash
-        //protected GlobalMessageNodeHash CalculateNodeHash(IPeerMessageNode pmnNode, GlobalMessageNodeHash gnhPastNodeHash)
-        //{
-        //    throw new NotImplementedException();
-        //
-        //    //return new GlobalMessageNodeHash();
-        //}
     }
 }

@@ -8,7 +8,7 @@ namespace Networking
 {
     public class PeerMessageNode
     {
-        public const int c_iSignatureSize = 64;
+        public const int c_iSignatureSize = 8;
 
         public static SortingValue SortingValueForTime(DateTime dtmTime)
         {
@@ -59,7 +59,7 @@ namespace Networking
         public SortingValue m_svaMessageSortingValue;
 
         //the state of the global messaging system after processing this message
-        public GlobalMessagingState m_gmsState;
+       // public GlobalMessagingState m_gmsState;
 
         #endregion
 
@@ -103,8 +103,39 @@ namespace Networking
             ByteStream.Serialize(wbsWriteBuffer, ref m_bMessageType);
 
             //serialize message
-            ByteStream.Serialize(wbsWriteBuffer, ref m_gmbMessage);
+            m_gmbMessage.Serialize(wbsWriteBuffer);
 
+        }
+
+        //TODO: make this actually criptographic
+        public void SignMessage()
+        {
+            m_bSignature = BitConverter.GetBytes(m_lMessagePayloadHash);
+        }
+
+        public void CalculateSortingValue()
+        {
+            Byte[] bSortingValue = new byte[SortingValue.c_TotalBytes];
+
+            int iStartIndex = 0;
+
+            //store the message creation time
+            Array.Copy(BitConverter.GetBytes(m_dtmMessageCreationTime.Ticks), 0, bSortingValue, iStartIndex, sizeof(Int64));
+
+            iStartIndex += sizeof(Int64);
+
+            //store the link index
+            Array.Copy(BitConverter.GetBytes(m_iPeerMessageIndex), bSortingValue, sizeof(UInt32));
+
+            iStartIndex += sizeof(UInt32);
+
+            //store part of the hash
+            Array.Copy(BitConverter.GetBytes(m_lMessagePayloadHash), 0, bSortingValue, iStartIndex, sizeof(Int32));
+
+            //should also store part of the peer id here 
+
+            //create sorting value
+            m_svaMessageSortingValue = new SortingValue(bSortingValue);
         }
 
         public void DecodePayloadArray(ClassWithIDFactory cifClassFactory)
@@ -131,7 +162,7 @@ namespace Networking
             m_gmbMessage = cifClassFactory.CreateType<GlobalMessageBase>(m_bMessageType);
 
             //serialize message
-            ByteStream.Serialize(rbsReadBuffer, ref m_gmbMessage);
+            m_gmbMessage.Serialize(rbsReadBuffer);
         }
         
         public int MessageSize()
@@ -189,6 +220,8 @@ namespace Networking
         {
             int iSize = 0;
 
+            iSize += ByteStream.DataSize(m_lChainLinkHeadHash);
+
             //add the size of the order number
             iSize += ByteStream.DataSize(m_iPeerMessageIndex);
 
@@ -202,7 +235,7 @@ namespace Networking
             iSize += ByteStream.DataSize(m_bMessageType);
 
             //add message size
-            iSize += ByteStream.DataSize(m_gmbMessage);
+            iSize += m_gmbMessage.DataSize();
 
             return iSize;
         }
@@ -222,30 +255,7 @@ namespace Networking
             }
         }
 
-        protected void CalculateSortingValue()
-        {
-            Byte[] bSortingValue = new byte[SortingValue.c_TotalBytes];
 
-            int iStartIndex = 0;
-
-            //store the message creation time
-            Array.Copy(BitConverter.GetBytes(m_dtmMessageCreationTime.Ticks), 0, bSortingValue, iStartIndex, sizeof(Int64));
-
-            iStartIndex += sizeof(Int64);
-
-            //store the link index
-            Array.Copy(BitConverter.GetBytes(m_iPeerMessageIndex), bSortingValue, sizeof(UInt32));
-
-            iStartIndex += sizeof(UInt32);
-
-            //store part of the hash
-            Array.Copy(BitConverter.GetBytes(m_lMessagePayloadHash), 0, bSortingValue, iStartIndex, sizeof(Int32));
-
-            //should also store part of the peer id here 
-
-            //create sorting value
-            m_svaMessageSortingValue = new SortingValue(bSortingValue);
-        }
     }
 
     public interface ISortedMessage

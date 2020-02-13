@@ -98,6 +98,11 @@ namespace Networking
 
         public void ResetToState(GlobalMessagingState gmsState)
         {
+            if(m_gmcMessageChannels == null || m_gmcMessageChannels.Count != gmsState.m_gmcMessageChannels.Count)
+            {
+                Init(gmsState.m_gmcMessageChannels.Count);
+            }
+
             for (int i = 0; i < m_gmcMessageChannels.Count; i++)
             {
                 m_gmcMessageChannels[i].ResetToState(gmsState.m_gmcMessageChannels[i]);
@@ -246,7 +251,7 @@ namespace Networking
             }
 
             //get hash of previouse data
-            long lMessageParentHash = pmnMessageNode.m_lMessagePayloadHash;
+            long lMessageParentHash = pmnMessageNode.m_lPreviousMessageHash;
             long lHashOfLastValidMessage = m_gmcMessageChannels[iMessageChannel].m_lHashOfLastNodeProcessed;
 
             //check if message parent hash matches last processed message
@@ -256,7 +261,7 @@ namespace Networking
             }
 
             //update the hash head for this channel
-            m_gmcMessageChannels[iMessageChannel].m_lHashOfLastNodeProcessed = lMessageParentHash;
+            m_gmcMessageChannels[iMessageChannel].m_lHashOfLastNodeProcessed = pmnMessageNode.m_lMessagePayloadHash;
             m_gmcMessageChannels[iMessageChannel].m_iLastMessageIndexProcessed = iMessageChannelIndex;
 
             //update the chain link this channel is using as head 
@@ -310,11 +315,17 @@ namespace Networking
                         //add kick vote to channel
                         m_gmcMessageChannels[iMessageChannel].AddKickVote(iKickTarget, dtmMessageCreationTime, lPeerID);
 
-                        //process kick messages 
-                        ProcessSplitVotes(lLocalPeerID, iMessageChannel, dtmMessageCreationTime);
                     }
                 }
             }
+
+
+            //process join votes
+            ProcessJoin(iMessageChannel, dtmMessageCreationTime);
+
+
+            //process kick messages 
+            ProcessSplitVotes(lLocalPeerID, iMessageChannel, dtmMessageCreationTime);
         }
 
         //process split vote
@@ -465,7 +476,7 @@ namespace Networking
             //loop through all channels and add up votes
             for (int i = 0; i < m_gmcMessageChannels.Count; i++)
             {
-                GlobalMessageChannelState gcsChannel = m_gmcMessageChannels[iMessagingChannel];
+                GlobalMessageChannelState gcsChannel = m_gmcMessageChannels[i];
 
                 //check if channel is active
                 if (gcsChannel.m_staState != GlobalMessageChannelState.State.Assigned)

@@ -88,9 +88,10 @@ namespace Networking
             m_staState = chsChannelState.m_staState;
 
             //copy across votes 
-            for (int i = 0; i < m_chvVotes.Count; i++)
+            m_chvVotes.Clear();
+            for (int i = 0; i < chsChannelState.m_chvVotes.Count; i++)
             {
-                m_chvVotes[i] = chsChannelState.m_chvVotes[i];
+                m_chvVotes.Add(chsChannelState.m_chvVotes[i]);
             }
 
             m_lHashOfLastNodeProcessed = chsChannelState.m_lHashOfLastNodeProcessed;
@@ -112,7 +113,7 @@ namespace Networking
 
             m_chvVotes = new List<ChannelVote>(iMaxPeerCount);
 
-            for (int i = 0; i < m_chvVotes.Count; i++)
+            for (int i = 0; i < iMaxPeerCount; i++)
             {
                 m_chvVotes.Add(new ChannelVote()
                 {

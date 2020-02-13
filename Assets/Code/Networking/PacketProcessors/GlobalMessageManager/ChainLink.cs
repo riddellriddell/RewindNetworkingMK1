@@ -202,10 +202,13 @@ namespace Networking
 
             for (int i = 0; i < iCount; i++)
             {
-                m_pmnMessages[i].DecodePacket(rbsByteStream);
-                m_pmnMessages[i].DecodePayloadArray(cifClassFactory);
-            }
+                PeerMessageNode pmnMessage = new PeerMessageNode();
 
+                pmnMessage.DecodePacket(rbsByteStream);
+                pmnMessage.DecodePayloadArray(cifClassFactory);
+
+                m_pmnMessages.Add(pmnMessage);
+            }
         }
                
         public void CaluclateGlobalMessagingStateAtEndOflink(long lLocalPeerID, GlobalMessagingState gmsStateAtLinkStart)
