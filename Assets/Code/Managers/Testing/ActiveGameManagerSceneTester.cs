@@ -44,6 +44,8 @@ namespace GameManagers
 
         public ActiveGameManager m_agmActiveGameManager;
 
+        public bool m_bAlive = true;
+
         [SerializeField]
         public long m_lPeerID;
 
@@ -53,7 +55,7 @@ namespace GameManagers
         // Start is called before the first frame update
         void Start()
         {
-            StartCoroutine(Test());
+            
         }
 
         // Update is called once per frame
@@ -62,8 +64,39 @@ namespace GameManagers
 
         }
 
+        private void OnEnable()
+        {
+            OnConnect();
+        }
+
+        private void OnDisable()
+        {
+            Disconnect();
+        }
+
+        public void NewPeerID()
+        {
+            m_strUniqueDeviceID = $"User:{Random.Range(int.MinValue, int.MaxValue)}";
+        }
+
+        public void OnConnect()
+        {
+            StartCoroutine(Test());
+        }
+
+        public void Disconnect()
+        {
+            m_bAlive = false;
+
+            m_wbiWebInterface = null;
+
+            m_agmActiveGameManager = null;
+        }
+
         protected IEnumerator Test()
         {
+            m_bAlive = true;
+
             yield return null;
 
             Debug.Log("Starting active game manager Test");
@@ -72,23 +105,28 @@ namespace GameManagers
 
             if(m_strUniqueDeviceID == string.Empty)
             {
-                m_strUniqueDeviceID = $"User:{Random.Range(int.MinValue, int.MaxValue)}";
+                NewPeerID();
             }
 
             m_wbiWebInterface.GetPlayerID(m_strUniqueDeviceID);
                         
 
-            while (m_wbiWebInterface.PlayerIDCommunicationStatus.m_cmsStatus != WebInterface.WebAPICommunicationTracker.CommunctionStatus.Succedded )
-            {
+            while (m_bAlive && m_wbiWebInterface.PlayerIDCommunicationStatus.m_cmsStatus != WebInterface.WebAPICommunicationTracker.CommunctionStatus.Succedded )
+            {              
                 m_wbiWebInterface.UpdateCommunication();
 
                 yield return null;
             }
 
+            if (m_bAlive == false)
+            {
+                yield break;
+            }
+
             m_agmActiveGameManager = new ActiveGameManager(m_wbiWebInterface);
 
-            while(true)
-            {
+            while(m_bAlive)
+            {              
                 m_wbiWebInterface.UpdateCommunication();
 
                 m_agmActiveGameManager.UpdateGame(Time.deltaTime);
@@ -96,6 +134,11 @@ namespace GameManagers
                 UpdateNetworkDebug();
 
                 yield return null;
+            }
+
+            if (m_bAlive == false)
+            {
+                yield break;
             }
 
         }

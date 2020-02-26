@@ -11,8 +11,7 @@ namespace Networking
         New,
         Negotiating,
         Connected,
-        Disconnected,
-        Error
+        Disconnected
     }
 
     //this represents a connection to another user 
@@ -37,6 +36,9 @@ namespace Networking
 
         //called when connection has been established
         Action OnConnectionEstablished { get; set; }
+
+        //called when connection disconnects
+        Action OnConnectionLost { get; set; }
 
         //called when data is received
         Action<byte[]> OnDataReceive { get; set; }

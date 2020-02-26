@@ -194,6 +194,12 @@ namespace Networking
 
         public override void Update()
         {
+            //dont try and send packets if not connected
+            if(ParentConnection.Status != Connection.ConnectionStatus.Connected)
+            {
+                return;
+            }
+
             TimeSpan tspTimeSinceLastUpdate = m_tParentPacketProcessor.BaseTime - m_dtmTimeOfLastUpdate;
 
             //check if it is time for another update 

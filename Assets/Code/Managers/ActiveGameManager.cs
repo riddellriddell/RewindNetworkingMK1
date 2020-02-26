@@ -49,10 +49,10 @@ namespace GameManagers
         public NetworkConnectionPropagatorProcessor m_ncpConnectionPropegator;
 
         //the amount of time to wait to get gateway before timing out and starting again
-        protected float m_fGettingGatewayTimeout = 30f;
+        protected float m_fGettingGatewayTimeout = 20f;
 
         //the amount of time to wait before timing out a connection through a gateway
-        protected float m_fGatewayConnectionTimeout = 30f;
+        protected float m_fGatewayConnectionTimeout = 20f;
         protected DateTime m_dtmConnectThroughGateStart;
 
         //the timeout time for getting sim state from cluster
@@ -449,7 +449,7 @@ namespace GameManagers
             m_ncpConnectionPropegator = new NetworkConnectionPropagatorProcessor();
             m_ncnNetworkConnection.AddPacketProcessor(m_ncpConnectionPropegator);
 
-            m_ncnNetworkConnection.AddPacketProcessor(new NetworkGlobalMessengerProcessor());
+            //m_ncnNetworkConnection.AddPacketProcessor(new NetworkGlobalMessengerProcessor());
 
         }
     }

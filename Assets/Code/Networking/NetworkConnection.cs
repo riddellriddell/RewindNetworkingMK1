@@ -91,7 +91,7 @@ namespace Networking
 
         public Connection CreateOrResetConnection(DateTime dtmNegotiationStart, long lPeerID)
         {
-            if(ConnectionList.TryGetValue(lPeerID,out Connection conConnection))
+            if (ConnectionList.TryGetValue(lPeerID, out Connection conConnection))
             {
                 ResetConnection(dtmNegotiationStart, lPeerID);
 
@@ -122,10 +122,10 @@ namespace Networking
         public void ResetConnection(DateTime dtmResetTime, long lPeerID)
         {
             //try and get the target connection
-            if(ConnectionList.TryGetValue(lPeerID, out Connection conConnection))
+            if (ConnectionList.TryGetValue(lPeerID, out Connection conConnection))
             {
                 conConnection.Reset(dtmResetTime);
-            }            
+            }
         }
 
         public void DestroyConnection(long lUserID)
@@ -157,6 +157,12 @@ namespace Networking
 
             //set connection values 
             conNewConnection.m_iMaxBytesToSend = 500;
+
+            conNewConnection.m_tspConnectionTimeOutTime = TimeSpan.FromSeconds(4);
+
+            conNewConnection.m_tspConnectionEstablishTimeOut = TimeSpan.FromSeconds(30);
+
+            conNewConnection.m_tspMaxTimeBetweenMessages = TimeSpan.FromSeconds(0.5f);
 
             //process new connection 
             ProcessNewConnection(conNewConnection);
@@ -208,10 +214,10 @@ namespace Networking
         {
             return Time.timeSinceLevelLoad;
         }
-        
+
         public void OnFirstPeerInSwarm()
         {
-            foreach(BaseNetworkPacketProcessor nppProcessor in NetworkPacketProcessors)
+            foreach (BaseNetworkPacketProcessor nppProcessor in NetworkPacketProcessors)
             {
                 m_bIsFirstPeer = true;
                 nppProcessor.OnFirstPeerInSwarm();
@@ -306,6 +312,5 @@ namespace Networking
                 nppProcessor.OnNewConnection(conConnection);
             }
         }
-
     }
 }

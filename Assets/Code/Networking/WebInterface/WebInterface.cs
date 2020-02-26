@@ -144,7 +144,7 @@ namespace Networking
         //all the messages fetched from the server
         public Queue<UserMessage> MessagesFromServer { get; } = new Queue<UserMessage>();
         public WebAPICommunicationTracker MessageFetchStatus { get; private set; } = WebAPICommunicationTracker.StartState(5);
-        public float TimeBetweenMessageUpdates { get; } = 2;
+        public float TimeBetweenMessageUpdates { get; } = 1;
 
         protected Queue<SendMessageCommand> MessagesToSend { get; } = new Queue<SendMessageCommand>();
         public int MessageSendQueueCount
@@ -159,7 +159,7 @@ namespace Networking
 
         public SetGatewayCommand LocalGatewaySimStatus { get; private set; }
         public WebAPICommunicationTracker SetGatewayStatus { get; private set; } = WebAPICommunicationTracker.StartState(5);
-        public float TimeBetweenGatewayUpdates { get; } = 5;
+        public float TimeBetweenGatewayUpdates { get; } = 2;
 
         public Gateway? ExternalGateway { get; private set; }
         public WebAPICommunicationTracker ExternalGatewayCommunicationStatus { get; private set; } = WebAPICommunicationTracker.StartState(5);
@@ -242,8 +242,8 @@ namespace Networking
                 InternalStartSetGateway();
             }
             else if (
-                (SetGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.NotStarted ||
-                SetGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled) &&
+                SetGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.NotStarted &&
+                SetGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled &&
                 SetGatewayStatus.TimeSinceLastCommunication() > TimeBetweenGatewayUpdates)
             {
                 SetGatewayStatus = SetGatewayStatus.Reset();
@@ -380,7 +380,10 @@ namespace Networking
         //stop running a gateway for people to connect through 
         public void CloseGateway()
         {
-            SetGatewayStatus = SetGatewayStatus.CommunicationFailed();
+            if(SetGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled)
+            {
+                SetGatewayStatus = SetGatewayStatus.Cancel();
+            }            
         }
 
         /// <summary>
@@ -455,7 +458,7 @@ namespace Networking
                 {
                     PlayerID = lPlayerIDFromServer;
 
-                    //mark coms attempt as failed
+                    //mark coms attempt as succeess
                     PlayerIDCommunicationStatus = PlayerIDCommunicationStatus.CommunicationSuccessfull();
 
                     return;

@@ -269,7 +269,7 @@ namespace Networking
         /// <returns></returns>
         public bool DoesNegotiationMessageInvalidateConnection(ConnectionNegotiationBasePacket cnpPacket)
         {
-            if (ParentConnection.m_conConnectionSetupStart < cnpPacket.m_dtmNegotiationStart)
+            if (ParentConnection.m_dtmConnectionSetupStart < cnpPacket.m_dtmNegotiationStart)
             {
                 Debug.Log("Conneciton Negotiation message invalidates connection ");
 
@@ -286,7 +286,7 @@ namespace Networking
         /// <returns></returns>
         public bool IsOutdatedMessage(ConnectionNegotiationBasePacket cnpPacket)
         {
-            if (ParentConnection.m_conConnectionSetupStart > cnpPacket.m_dtmNegotiationStart)
+            if (ParentConnection.m_dtmConnectionSetupStart > cnpPacket.m_dtmNegotiationStart)
             {
                 Debug.Log("Conneciton Negotiation message is outdated");
                 return true;
@@ -320,7 +320,7 @@ namespace Networking
 
                 ConnectionNegotiationMessagePacket cnmPacket = ParentConnection.m_cifPacketFactory.CreateType<ConnectionNegotiationMessagePacket>(ConnectionNegotiationMessagePacket.TypeID);
 
-                cnmPacket.m_dtmNegotiationStart = ParentConnection.m_conConnectionSetupStart;
+                cnmPacket.m_dtmNegotiationStart = ParentConnection.m_dtmConnectionSetupStart;
                 cnmPacket.m_iIndex = m_iNextMessageIndex;
                 cnmPacket.m_lFrom = m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID;
                 cnmPacket.m_lTo = ParentConnection.m_lUserUniqueID;

@@ -16,9 +16,9 @@ namespace Networking
         protected class FakeDatabase
         {
             //the number of seconds before a message by the user has timed out and can be discarded
-            public static float s_fUserMessageTimeOut = float.MaxValue; //10f;
+            public static float s_fUserMessageTimeOut = 10f;
 
-            public static float s_fGatewayTimeOut = float.MaxValue; //5f;
+            public static float s_fGatewayTimeOut = 6f;
 
             public List<UserIDCredentialsPair> m_uicUserIDCredentialsPairs = new List<UserIDCredentialsPair>();
             public Dictionary<long, UserMessages> m_umsUserMessages = new Dictionary<long, UserMessages>();

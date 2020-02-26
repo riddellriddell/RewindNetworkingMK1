@@ -18,7 +18,7 @@ namespace Networking
         {
             get
             {
-                return TimeSpan.FromSeconds(5);
+                return TimeSpan.FromSeconds(3);
             }
         }
 
@@ -29,7 +29,7 @@ namespace Networking
         {
             get
             {
-                return TimeSpan.FromSeconds(8);
+                return TimeSpan.FromSeconds(10);
             }
         }
 
@@ -58,7 +58,8 @@ namespace Networking
             if (ParentNetworkConnection.m_bIsConnectedToSwarm == true && NeedsOpenGateway == false)
             {
                 //check if there is any connections this client is missing
-                if (m_nlpNetworkLayoutProcessor.MissingConnections.Count > 0)
+                if (m_nlpNetworkLayoutProcessor.MissingConnections.Count > 0 ||
+                    m_nlpNetworkLayoutProcessor.HasRecievedNetworkLayoutDataFromAllConnectedPeers() == false)
                 {
                     return;
                 }
@@ -72,6 +73,12 @@ namespace Networking
                 //check if there is a client that has an open gateway
                 foreach (ConnectionGatewayManager cgmConnection in ChildConnectionProcessors.Values)
                 {
+                    //skip disconnected peers
+                    if(cgmConnection.ParentConnection.Status != Connection.ConnectionStatus.Connected)
+                    {
+                        continue;
+                    }
+
                     if (cgmConnection.HasActiveGateway)
                     {
                         bActiveGate = true;
@@ -91,9 +98,9 @@ namespace Networking
                     bool bShouldOpenGate = true;
 
                     //check if this user is highest user ID and should open gate 
-                    foreach (long userID in ChildConnectionProcessors.Keys)
+                    foreach (ConnectionGatewayManager userID in ChildConnectionProcessors.Values)
                     {
-                        if (userID > ParentNetworkConnection.m_lPeerID)
+                        if (userID.ParentConnection.Status == Connection.ConnectionStatus.Connected && userID.ParentConnection.m_lUserUniqueID > ParentNetworkConnection.m_lPeerID)
                         {
                             bShouldOpenGate = false;
 
@@ -253,7 +260,7 @@ namespace Networking
 
             if (HadTimeToRecieveGateNotification == false)
             {
-                if (ParentConnection.Status == Connection.ConnectionStatus.Connected && ParentConnection.m_dtmConnectionEstablishTime > m_tnpNetworkTime.BaseTime + NetworkGatewayManager.GatewayTimeout)
+                if (ParentConnection.Status == Connection.ConnectionStatus.Connected && ParentConnection.m_dtmConnectionEstablishTime + NetworkGatewayManager.GatewayTimeout < m_tnpNetworkTime.BaseTime)
                 {
                     HadTimeToRecieveGateNotification = true;
                 }
@@ -276,6 +283,14 @@ namespace Networking
             }
 
             return base.ProcessReceivedPacket(conConnection, pktInputPacket);
+        }
+
+        public override void OnConnectionStateChange(Connection.ConnectionStatus cstOldState, Connection.ConnectionStatus cstNewState)
+        {
+            if(cstNewState == Connection.ConnectionStatus.Disconnected || cstNewState == Connection.ConnectionStatus.Disconnecting)
+            {
+                TimeOfLastGatewayNotification = DateTime.MinValue;
+            }
         }
 
         public override void OnConnectionReset()
