@@ -46,12 +46,13 @@ namespace Networking
             m_conConnectionDetails.Add(new ConnectionState(lConnectionID, dtmTimeOfConnection));
         }
 
-        public List<long> ConnectionsNotInDictionary(Dictionary<long, Connection> conTargetConnections)
-        {            
+        //returns list of connection id's not in the passed in conTargetConnections list
+        public List<long> ConnectionsNotInDictionary(Dictionary<long, Connection> conExistingConnections)
+        {
             //check that connections list is setup
-            if(m_conConnectionDetails == null)
+            if (m_conConnectionDetails == null)
             {
-                return new List<long>(conTargetConnections.Keys);
+                return new List<long>(conExistingConnections.Keys);
             }
 
             List<long> conOutput = new List<long>();
@@ -60,11 +61,13 @@ namespace Networking
             {
                 long lConnectionID = m_conConnectionDetails[i].m_lConnectionID;
 
-                if (conTargetConnections.ContainsKey(lConnectionID) == false)
+                //check if not connected to peer or the connection has been disconnected 
+                if (conExistingConnections.TryGetValue(lConnectionID, out Connection conConnection) == false ||
+                    conConnection.Status == Connection.ConnectionStatus.New ||
+                    conConnection.Status == Connection.ConnectionStatus.Disconnected ||
+                    conConnection.Status == Connection.ConnectionStatus.Disconnecting)
                 {
-
                     conOutput.Add(m_conConnectionDetails[i].m_lConnectionID);
-
                 }
             }
 
@@ -97,13 +100,13 @@ namespace Networking
         {
             Int32 iSize = 0;
 
-            Serialize(rbsByteStream,ref iSize);
+            Serialize(rbsByteStream, ref iSize);
 
             Input.m_conConnectionDetails = new List<NetworkLayout.ConnectionState>(iSize);
 
             for (int i = 0; i < iSize; i++)
             {
-                NetworkLayout.ConnectionState cstState = new NetworkLayout.ConnectionState(); 
+                NetworkLayout.ConnectionState cstState = new NetworkLayout.ConnectionState();
                 Serialize(rbsByteStream, ref cstState);
 
                 Input.m_conConnectionDetails.Add(cstState);
@@ -139,14 +142,15 @@ namespace Networking
         {
             int iSize = DataSize(Input.m_conConnectionDetails.Count);
 
-            NetworkLayout.ConnectionState cnsState = new NetworkLayout.ConnectionState();
-
-            iSize += DataSize(ref cnsState);
+            for (int i = 0; i < Input.m_conConnectionDetails.Count; i++)
+            {
+                iSize += DataSize(Input.m_conConnectionDetails[i]);
+            }
 
             return iSize;
         }
 
-        public static int DataSize(ref NetworkLayout.ConnectionState Input)
+        public static int DataSize(NetworkLayout.ConnectionState Input)
         {
             int iSize = DataSize(Input.m_lConnectionID);
 
@@ -162,6 +166,8 @@ namespace Networking
         public delegate void ConnectionLayoutChange(ConnectionNetworkLayoutProcessor clpLayoutProcessor);
         public event ConnectionLayoutChange m_evtPeerConnectionLayoutChange;
 
+        public bool m_bHasRecievedGatewayDataFromPeers = false;
+
         public bool m_bShouldUpdatePeers = false;
 
         public HashSet<long> MissingConnections { get; } = new HashSet<long>();
@@ -176,7 +182,7 @@ namespace Networking
 
         public override void Update()
         {
-            if(m_bShouldUpdatePeers)
+            if (m_bShouldUpdatePeers)
             {
                 Debug.Log("sending layout to connected peers");
 
@@ -185,21 +191,47 @@ namespace Networking
             }
         }
 
+        //when a connected peer changes their network layout
         public void OnPeerNetworkLayoutChange(ConnectionNetworkLayoutProcessor clpConnectionNetworkLayoutProcessor)
         {
+            //indicate that network layout data has been recieved from peers 
+            m_bHasRecievedGatewayDataFromPeers = true;
+
             //check if peer has new connections that are missing in local 
             CheckForMissingConnections();
 
             m_evtPeerConnectionLayoutChange.Invoke(clpConnectionNetworkLayoutProcessor);
         }
 
+        //then the local peer gains or looses connection to a peer
+        public void OnPeerDisconnect()
+        {
+            //tell peers next update the change in network layout
+            m_bShouldUpdatePeers = true;
+
+            //update the missing connections list
+            CheckForMissingConnections();
+        }
+
+        //called when a peer losses connection
+        public void OnPeerConnection(long lPeerID)
+        {
+            //tell peers next update the change in network layout
+            m_bShouldUpdatePeers = true;
+
+            //update the list of missing connection
+            RemoveMissingConnectionID(lPeerID);
+        }
+
+        //find connected peers with link to target
         public List<long> PeersWithConnection(long lConnection)
         {
             List<long> lOutput = new List<long>();
 
-            foreach (KeyValuePair<long,ConnectionNetworkLayoutProcessor> kvpPair in ChildConnectionProcessors)
+            foreach (KeyValuePair<long, ConnectionNetworkLayoutProcessor> kvpPair in ChildConnectionProcessors)
             {
-                if (kvpPair.Value.m_nlaNetworkLayout.HasTarget(lConnection))
+                if (kvpPair.Value.ParentConnection.Status == Connection.ConnectionStatus.Connected &&
+                    kvpPair.Value.m_nlaNetworkLayout.HasTarget(lConnection))
                 {
                     lOutput.Add(kvpPair.Key);
                 }
@@ -208,11 +240,19 @@ namespace Networking
             return lOutput;
         }
 
-        public override void OnNewConnection(Connection conConnection)
+        //check that all peers have sent their connection layout data
+        public bool HasRecievedNetworkLayoutDataFromAllConnectedPeers()
         {
-            base.OnNewConnection(conConnection);
+            foreach (ConnectionNetworkLayoutProcessor clpLayout in ChildConnectionProcessors.Values)
+            {
+                if (clpLayout.ParentConnection.Status == Connection.ConnectionStatus.Connected &&
+                    clpLayout.m_bHasRecievedNetworkLayoutData == false)
+                {
+                    return false;
+                }
+            }
 
-            RemoveMissingConnectionID(conConnection.m_lUserUniqueID);
+            return true;
         }
 
         protected void SendNetworkLayoutToPeers()
@@ -225,22 +265,11 @@ namespace Networking
             ParentNetworkConnection.TransmitPacketToAll(nlpNetworkLayoutPacket);
         }
 
-        protected override void OnClientProcessorDisconnect(Connection conConnection, ConnectionNetworkLayoutProcessor tConnectionProcessor)
-        {
-            base.OnClientProcessorDisconnect(conConnection, tConnectionProcessor);
-
-            //tell peers next update the change in network layout
-            m_bShouldUpdatePeers = true;
-
-            //update the missing connections list
-            CheckForMissingConnections();
-        }
-
         protected NetworkLayout GenterateNetworkLayout()
         {
             NetworkLayout networkLayout = new NetworkLayout(ChildConnectionProcessors.Count);
 
-            foreach(ConnectionNetworkLayoutProcessor clpLayout in ChildConnectionProcessors.Values)
+            foreach (ConnectionNetworkLayoutProcessor clpLayout in ChildConnectionProcessors.Values)
             {
                 //check if fully connected
                 if (clpLayout.ParentConnection.Status == Connection.ConnectionStatus.Connected)
@@ -259,26 +288,32 @@ namespace Networking
         {
             MissingConnections.Clear();
 
-            foreach (Connection conConnection in ParentNetworkConnection.ConnectionList.Values)
+            foreach (ConnectionNetworkLayoutProcessor clpConnectionLayout in ChildConnectionProcessors.Values)
             {
-                //check if peer has missing connections 
-                CheckPeerForMissingConnection(conConnection);
+                if (clpConnectionLayout.ParentConnection.Status == Connection.ConnectionStatus.Connected)
+                {
+                    //check if peer has missing connections 
+                    CheckPeerForMissingConnection(clpConnectionLayout);
+                }
             }
-
         }
 
-        protected void CheckPeerForMissingConnection(Connection conConnection)
+        protected void CheckPeerForMissingConnection(ConnectionNetworkLayoutProcessor clpConnectionLayout)
         {
-            ConnectionNetworkLayoutProcessor clpConnectionLayout = conConnection.GetPacketProcessor<ConnectionNetworkLayoutProcessor>();
-
             List<long> lMissingConnections = clpConnectionLayout.m_nlaNetworkLayout.ConnectionsNotInDictionary(ParentNetworkConnection.ConnectionList);
 
             for (int i = 0; i < lMissingConnections.Count; i++)
             {
+                //check if missing connection is to local peer 
+                if (lMissingConnections[i] == ParentNetworkConnection.m_lPeerID)
+                {
+                    continue;
+                }
+
                 TryAddMissingConnectionID(lMissingConnections[i]);
             }
         }
-        
+
         protected void TryAddMissingConnectionID(long lConnectionID)
         {
             if (MissingConnections.Contains(lConnectionID))
@@ -286,10 +321,9 @@ namespace Networking
                 return;
             }
 
-
             MissingConnections.Add(lConnectionID);
         }
-               
+
         protected void RemoveMissingConnectionID(long lConnectionID)
         {
             MissingConnections.Remove(lConnectionID);
@@ -325,6 +359,9 @@ namespace Networking
         //the connection layout at the other end of this connection
         public NetworkLayout m_nlaNetworkLayout;
 
+        //has this peer sent its network layout data 
+        public bool m_bHasRecievedNetworkLayoutData = false;
+
         protected TimeNetworkProcessor m_tnpNetworkTime;
 
         public ConnectionNetworkLayoutProcessor()
@@ -352,6 +389,8 @@ namespace Networking
 
                 m_nlaNetworkLayout = (pktInputPacket as NetworkLayoutPacket).m_nlaNetworkLayout;
 
+                m_bHasRecievedNetworkLayoutData = true;
+
                 m_tParentPacketProcessor.OnPeerNetworkLayoutChange(this);
 
                 return null;
@@ -365,6 +404,8 @@ namespace Networking
             //reset time of connection 
             m_dtmBaseTimeOfConnection = m_tnpNetworkTime.BaseTime;
 
+            m_bHasRecievedNetworkLayoutData = false;
+
             m_nlaNetworkLayout = new NetworkLayout(0);
 
             base.OnConnectionReset();
@@ -372,8 +413,15 @@ namespace Networking
 
         public override void OnConnectionStateChange(Connection.ConnectionStatus cstOldState, Connection.ConnectionStatus cstNewState)
         {
-            m_tParentPacketProcessor.m_bShouldUpdatePeers = true;
+            if (cstNewState == Connection.ConnectionStatus.Connected)
+            {
+                m_tParentPacketProcessor.OnPeerConnection(ParentConnection.m_lUserUniqueID);
+            }
+
+            if (cstNewState == Connection.ConnectionStatus.Disconnected || cstNewState == Connection.ConnectionStatus.Disconnecting)
+            {
+                m_tParentPacketProcessor.OnPeerDisconnect();
+            }
         }
-        
     }
 }

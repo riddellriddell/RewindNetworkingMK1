@@ -32,17 +32,17 @@ namespace Networking
 
         public static Dictionary<int, FakeWebRTCTransmitter> TransmitterRegistery { get; } = new Dictionary<int, FakeWebRTCTransmitter>();
 
-        public static float s_fOfferCreateTime = 0.25f;
+        public static float s_fOfferCreateTime = 0.05f;
 
-        public static float s_fIceCreateTime = 0.2f;
+        public static float s_fIceCreateTime = 0.05f;
 
         public static int s_iNumberOfIceCandidates = 5;
 
         public static int s_iConnectOnReturnIceCandidate = 3;
 
-        public static int s_iDataPaddingMax = 1000;
+        public static int s_iDataPaddingMax = 10;
 
-        public static int s_iDataPaddingMin = 400;
+        public static int s_iDataPaddingMin = 4;
 
         protected int m_iTransmitterID = int.MinValue;
 
@@ -59,7 +59,7 @@ namespace Networking
             //m_iTransmitterID = 0 - TransmitterRegistery.Count;
             m_iTransmitterID = Random.Range(int.MinValue, int.MaxValue);
 
-            while(TransmitterRegistery.ContainsKey(m_iTargetID))
+            while (TransmitterRegistery.ContainsKey(m_iTargetID))
             {
                 Debug.Log("Collision for transmitter id detected calculating new id");
                 m_iTransmitterID = Random.Range(int.MinValue, int.MaxValue);
@@ -81,6 +81,12 @@ namespace Networking
 
         protected void MakeConnection()
         {
+            //check if already disconnected 
+            if(State != PeerTransmitterState.Negotiating)
+            {
+                return;
+            }
+
             State = PeerTransmitterState.Connected;
 
             OnConnectionEstablished?.Invoke();
@@ -89,7 +95,7 @@ namespace Networking
         protected IEnumerator MakeOffer()
         {
             //check state 
-            if(State != PeerTransmitterState.New )
+            if (State != PeerTransmitterState.New)
             {
                 yield break;
             }
@@ -159,7 +165,7 @@ namespace Networking
         protected IEnumerator MakeIce()
         {
             //wait for session description to finish
-            if(m_bSessionDescriptionFinished)
+            if (m_bSessionDescriptionFinished)
             {
                 yield return null;
             }
@@ -193,10 +199,18 @@ namespace Networking
 
         public Action<string> OnNegotiationMessageCreated { get; set; }
         public Action<byte[]> OnDataReceive { get; set; }
+
         public Action OnConnectionEstablished { get; set; }
+        public Action OnConnectionLost { get; set; }
 
         public bool ProcessNegotiationMessage(string strMessage)
         {
+            //check in negotiation state 
+            if(State != PeerTransmitterState.Negotiating && State != PeerTransmitterState.New)
+            {
+                return false;
+            }
+
             NegotiationMessage nmsNegotiationMessage = JsonUtility.FromJson<NegotiationMessage>(strMessage);
 
             Debug.Log($"Processing message {strMessage} Sender: {nmsNegotiationMessage.m_iSender}, Type: {nmsNegotiationMessage.m_iType}");
@@ -208,12 +222,12 @@ namespace Networking
                 m_iTargetID = nmsNegotiationMessage.m_iSender;
 
                 //if message was offer start making reply
-                if(nmsNegotiationMessage.m_iType == (int)NegotiationMessage.Type.Offer)
+                if (nmsNegotiationMessage.m_iType == (int)NegotiationMessage.Type.Offer)
                 {
                     InternetConnectionSimulator.Instance.StartCoroutine(MakeReply());
                 }
             }
-            else if(m_bMakingOffer && State != PeerTransmitterState.Connected)
+            else if (m_bMakingOffer)
             {
                 //update the number of ice candidates recieved
                 m_iIceCandidatesRecieved++;
@@ -221,17 +235,25 @@ namespace Networking
                 Debug.Log($"{s_iConnectOnReturnIceCandidate - m_iIceCandidatesRecieved} Left to create connection from {m_iTransmitterID}  to {m_iTargetID} !!!");
 
                 //if enough ice candidates have been recieved make connection
-                if(m_iIceCandidatesRecieved >= s_iConnectOnReturnIceCandidate)
+                if (m_iIceCandidatesRecieved >= s_iConnectOnReturnIceCandidate)
                 {
-                    if(m_iTargetID != int.MinValue)
+                    if (m_iTargetID != int.MinValue)
                     {
-                        if(TransmitterRegistery.TryGetValue(m_iTargetID,out FakeWebRTCTransmitter fwtTarget))
+                        if (TransmitterRegistery.TryGetValue(m_iTargetID, out FakeWebRTCTransmitter fwtTarget))
                         {
-                            Debug.Log("Transmitter connection established!!!!");
+                            if(fwtTarget.State == PeerTransmitterState.Negotiating)
+                            {
+                                Debug.Log("Transmitter connection established!!!!");
 
-                            State = PeerTransmitterState.Connected;
-                            fwtTarget.MakeConnection();
-                            OnConnectionEstablished?.Invoke();
+                                State = PeerTransmitterState.Connected;
+                                fwtTarget.MakeConnection();
+                                OnConnectionEstablished?.Invoke();
+                            }
+                            else
+                            {
+                                Debug.Log("Target Failed Connection Process");
+                            }
+                           
                         }
                         else
                         {
@@ -255,11 +277,14 @@ namespace Networking
 
         public void Disconnect()
         {
-            State = PeerTransmitterState.Disconnected;
+
             if (TransmitterRegistery.ContainsKey(m_iTransmitterID))
             {
                 TransmitterRegistery.Remove(m_iTransmitterID);
             }
+
+            State = PeerTransmitterState.Disconnected;
+            OnDisconnect();
         }
 
         public bool SentData(byte[] data)
@@ -271,7 +296,7 @@ namespace Networking
             }
 
             //try get target
-            if (TransmitterRegistery.TryGetValue(m_iTargetID,out FakeWebRTCTransmitter fwtTransmitter))
+            if (TransmitterRegistery.TryGetValue(m_iTargetID, out FakeWebRTCTransmitter fwtTransmitter))
             {
                 //send the data through a fake unreliable connection
                 InternetConnectionSimulator.Instance.SendPacket(data, fwtTransmitter.OnDataRecieved);
@@ -286,16 +311,20 @@ namespace Networking
             m_iIceCandidatesRecieved = 0;
             InternetConnectionSimulator.Instance.StartCoroutine(MakeOffer());
         }
-        
+
         protected string GenerateRandomDataPadding()
         {
             int iCharacterNumber = Random.Range(s_iDataPaddingMin, s_iDataPaddingMax);
 
             const string chars = "abcdefghijklmnopABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 |:_,.";
             return new string(Enumerable.Repeat(chars, iCharacterNumber)
-              .Select(s => s[Random.Range(0,s.Length)]).ToArray());
+              .Select(s => s[Random.Range(0, s.Length)]).ToArray());
         }
 
+        protected void OnDisconnect()
+        {
+            OnConnectionLost?.Invoke();
+        }
         #endregion
     }
 }

@@ -19,7 +19,7 @@ namespace Networking
             return new T();
         }
 
-        protected virtual void OnClientProcessorDisconnect(Connection conConnection,T tConnectionProcessor)
+        protected virtual void OnConnectionLayoutChange(Connection conConnection,T tConnectionProcessor)
         {
 
         }

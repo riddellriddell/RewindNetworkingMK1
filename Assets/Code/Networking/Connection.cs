@@ -48,10 +48,26 @@ namespace Networking
         public int m_iMaxBytesToSend;
 
         // the time this connection was initalised
-        public DateTime m_conConnectionSetupStart;
+        public DateTime m_dtmConnectionSetupStart;
 
         //the time this connection was established
         public DateTime m_dtmConnectionEstablishTime;
+
+        //the last time a message was recieved
+        public DateTime m_dtmTimeOfLastActivity;
+
+        //the last time a message was sent 
+        public DateTime m_dtmTimeOfLastMessageSent;
+
+        // the max time a connected connection can go without recieving 
+        //a message before it is considered disconnected
+        public TimeSpan m_tspConnectionTimeOutTime;
+
+        //the amount of time to wait for a connection to be established 
+        public TimeSpan m_tspConnectionEstablishTimeOut;
+
+        //the maximum amount of time to wait between sending messages 
+        public TimeSpan m_tspMaxTimeBetweenMessages;
 
         // the max payload to send (max bytes - packet wrapper header)
         public int MaxPacketBytesToSend
@@ -72,7 +88,7 @@ namespace Networking
         public ClassWithIDFactory m_cifPacketFactory;
 
         //the current state of the connection
-        public ConnectionStatus Status { get; private set; } = ConnectionStatus.Initializing;
+        public ConnectionStatus Status { get; private set; } = ConnectionStatus.New;
 
         //when the connection is created or a reconnection is triggered this is used to
         //create a new peer transmitter
@@ -96,19 +112,22 @@ namespace Networking
         // the most recent packet received 
         protected int m_iTotalPacketsReceived;
 
-        //the tick of the last packet recieved
-        protected int m_iLastTickReceived;
+        //does this peer need to send an acknowledgement of packets
+        //recieved back to sender 
+        protected bool m_bNeedToSendAckPacket;
 
         //the peer network this connection is being managed by
         protected NetworkConnection m_ncnParentNetworkConneciton;
 
         public Connection(DateTime dtmNegotiationStart, NetworkConnection ncnParetnNetwork, long lUserUniqueID, ClassWithIDFactory cifPacketFactory, IPeerTransmitterFactory ptfPeerFactory )
         {
-            m_conConnectionSetupStart = dtmNegotiationStart;
+            m_dtmConnectionSetupStart = dtmNegotiationStart;
+
+            m_dtmTimeOfLastActivity = DateTime.UtcNow; 
 
             m_dtmConnectionEstablishTime = DateTime.MinValue;
-                      
-            SetStatus(ConnectionStatus.Initializing);
+
+            m_dtmTimeOfLastMessageSent = DateTime.UtcNow;
 
             m_ncnParentNetworkConneciton = ncnParetnNetwork;
 
@@ -129,24 +148,34 @@ namespace Networking
             //listen for establishment of a connection to another peer
             m_ptrTransmitter.OnConnectionEstablished += OnConnectionEstablished;
 
+            //listen for connection being disconnected 
+            m_ptrTransmitter.OnConnectionLost += OnConnectionLost;
+
             m_iPacketsQueuedToSendCount = 0;
             m_iLastAckPacketNumberSent = 0;
             m_iTotalPacketsReceived = 0;
+            m_bNeedToSendAckPacket = false;
+
+            SetStatus(ConnectionStatus.Initializing);
         }
 
         public void Reset(DateTime dtmResetTime)
         {
             //reset conneciton start time
-            m_conConnectionSetupStart = dtmResetTime;
+            m_dtmConnectionSetupStart = dtmResetTime;
 
+            //reset the last time of activity
+            m_dtmTimeOfLastActivity = DateTime.UtcNow;
+                       
             //reset connection establish time
             m_dtmConnectionEstablishTime = DateTime.MinValue;
+
+            //reset the last time a message was sent
+            m_dtmTimeOfLastMessageSent = DateTime.UtcNow;
 
             //remove any stored date from previouse connection
             //stored in packet processors 
             OnConnectionReset();
-
-            SetStatus(ConnectionStatus.Initializing);
 
             //reset the peer transmitter
             m_ptrTransmitter = m_ptfTransmitterFactory.CreatePeerTransmitter();
@@ -160,16 +189,22 @@ namespace Networking
             //listen for establishment of a connection to another peer
             m_ptrTransmitter.OnConnectionEstablished += OnConnectionEstablished;
 
+            //listen for connection being disconnected 
+            m_ptrTransmitter.OnConnectionLost += OnConnectionLost;
+
             //reset sent packet tracking values
             m_iPacketsQueuedToSendCount = 0;
             m_iLastAckPacketNumberSent = 0;
             m_iTotalPacketsReceived = 0;
+            m_bNeedToSendAckPacket = false;
 
             //reset transmission negotiation messages
             TransmittionNegotiationMessages.Clear();
 
             //clear any packets in flight
             PacketsInFlight.Clear();
+
+            SetStatus(ConnectionStatus.Initializing);
         }
 
         #region TransmittionHandling
@@ -185,12 +220,26 @@ namespace Networking
         //process network negotiation data
         public void ProcessNetworkNegotiationMessage(string strConnectionData)
         {
+            m_dtmTimeOfLastActivity = DateTime.UtcNow;
             m_ptrTransmitter.ProcessNegotiationMessage(strConnectionData);
+        }
+
+        public void UpdateConnectionState()
+        {
+
         }
 
         public void DisconnectFromPeer()
         {
-            m_ptrTransmitter.Disconnect();
+            //make sure not already disconnecting
+            if(Status == ConnectionStatus.Disconnecting || Status == ConnectionStatus.Disconnected)
+            {
+                return;
+            }
+
+            SetStatus(ConnectionStatus.Disconnecting);
+
+            m_ptrTransmitter.Disconnect();           
         }
 
         protected void OnNegoriationMessageFromTransmitter(string strMessageJson)
@@ -199,21 +248,30 @@ namespace Networking
             TransmittionNegotiationMessages.Enqueue(strMessageJson);
         }
 
+        #endregion
+
         protected void OnConnectionEstablished()
-        {
+        {      
             //check that we are transittioning from correct state
             if (Status == ConnectionStatus.Initializing)
             {
                 SetStatus(ConnectionStatus.Connected);
             }
 
+            m_dtmTimeOfLastActivity = DateTime.UtcNow;
+
             //store the time connection was established 
             m_dtmConnectionEstablishTime = m_ncnParentNetworkConneciton.GetPacketProcessor<TimeNetworkProcessor>().BaseTime;
 
             //inform parent that now part of the swarm 
             m_ncnParentNetworkConneciton.OnConnectToSwarm();
+
         }
-        #endregion
+        
+        protected void OnConnectionLost()
+        {
+            SetStatus(ConnectionStatus.Disconnected);
+        }
 
         public void OnConnectionReset()
         {
@@ -234,15 +292,47 @@ namespace Networking
         //check if a ping packet is needed to keep the connection alive
         public void UpdateConnection()
         {
+            //check if this connection is still valid 
+            CheckForDisconnect();
+
             //update all packet processors 
             UpdatePacketProcessors();
 
             //send packets to target
             SendPackets();
         }
+
+        public void CheckForDisconnect()
+        {
+            if (Status == ConnectionStatus.New || Status == ConnectionStatus.Disconnecting || Status == ConnectionStatus.Disconnected)
+            {
+                return;
+            }
+
+            TimeSpan tspTimeSinceLastMessage = DateTime.UtcNow - m_dtmTimeOfLastActivity;
+
+            //allow extra time for connection messages to get through
+            if (Status == ConnectionStatus.Initializing)
+            {
+                if (tspTimeSinceLastMessage > m_tspConnectionEstablishTimeOut)
+                {
+                    DisconnectFromPeer();
+                }
+            }
+            else
+            {
+                if (tspTimeSinceLastMessage > m_tspConnectionTimeOutTime)
+                {
+                    DisconnectFromPeer();
+                }
+            }
+        }
         
         public void ReceivePacket(byte[] bData)
         {
+            //update the time since last message 
+            m_dtmTimeOfLastActivity = DateTime.UtcNow;
+
             //convert raw data to packet wrapper 
             PacketWrapper packetWrapper = new PacketWrapper(bData);
 
@@ -268,6 +358,9 @@ namespace Networking
 
                     //add packet to list of packets to be processed 
                     ProcessRecievedPacket(pktDecodedPacket);
+
+                    //indicate that an acknowledgement needs to be sent to packet sender
+                    m_bNeedToSendAckPacket = true;
                 }                
             }
         }
@@ -292,6 +385,7 @@ namespace Networking
             return false;
         }
 
+        #region PacketProcessors 
         public void AddPacketProcessor(BaseConnectionPacketProcessor cppProcessor)
         {
             if(OrderedPacketProcessorList.Add(cppProcessor) == false)
@@ -377,6 +471,8 @@ namespace Networking
             return pktPacket;
         }
 
+        #endregion
+
         private void SendPackets()
         {
             //check if connected and able to send packets
@@ -385,8 +481,16 @@ namespace Networking
                 return;
             }
 
-            //check if there is anything to send
-            if (PacketsInFlight.Count == 0)
+            bool bForceSendMessage = false;
+
+            //check if max time between packet sends has been reached
+            if(m_tspMaxTimeBetweenMessages < DateTime.UtcNow - m_dtmTimeOfLastMessageSent)
+            {
+                bForceSendMessage = true;
+            }
+
+            //check if there is anything to send or an acknowledgement needs to be sent
+            if (PacketsInFlight.Count == 0 && m_bNeedToSendAckPacket == false && bForceSendMessage == false)
             {
                 return;
             }
@@ -398,16 +502,18 @@ namespace Networking
             {
                 PacketsInFlight.Clear();
 
-                return;
             }
-
-            //dequeue all the old packets that have already been acknowledged
-            for (int i = 0; i < iPacketsToDrop; i++)
+            else
             {
-                PacketsInFlight.Dequeue();
+                //dequeue all the old packets that have already been acknowledged
+                for (int i = 0; i < iPacketsToDrop; i++)
+                {
+                    PacketsInFlight.Dequeue();
+                }
             }
 
-            if (PacketsInFlight.Count == 0)
+            //check if there is still a need to send a packet
+            if (PacketsInFlight.Count == 0 && m_bNeedToSendAckPacket == false && bForceSendMessage == false)
             {
                 return;
             }
@@ -447,6 +553,12 @@ namespace Networking
 
             //send packet through transmitter
             m_ptrTransmitter.SentData(pkwPacketWrappepr.WriteStream.GetData());
+
+            //update the time of last packet sent
+            m_dtmTimeOfLastMessageSent = DateTime.UtcNow;
+
+            //stop sending acks for packets
+            m_bNeedToSendAckPacket = false;
         }
 
         //takes the binary data in the packet wrapper and converts it to a data packet
