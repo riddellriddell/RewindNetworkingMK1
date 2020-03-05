@@ -10,7 +10,8 @@ namespace Networking
         public enum State : byte
         {
             Empty, // not in use
-            Voting, // peers are voting on if channel should be assigned to peer
+            VoteJoin, // peers are voting on if channel should be assigned to peer
+            VoteKick, // peers are voting of if peed should be kicked / split off
             Assigned //channel assigned to peer
         }
 
@@ -184,12 +185,18 @@ namespace Networking
         }
 
         //start vote on channel to assign peer to it
-        public void StartVoteForPeer(long lPeerID, DateTime dtmVoteStartTime)
+        public void StartVoteJoinForPeer(long lPeerID, DateTime dtmVoteStartTime)
         {
             ClearVotes();
             m_lChannelPeer = lPeerID;
             m_dtmVoteStartTime = dtmVoteStartTime;
-            m_staState = State.Voting;
+            m_staState = State.VoteJoin;
+        }
+
+        public void StartVoteKickForPeer(DateTime dtmVoteStartTime)
+        {
+            m_dtmVoteStartTime = dtmVoteStartTime;
+            m_staState = State.VoteKick;
         }
 
         //make the peer with id lPeerID in control of this channel
@@ -288,6 +295,7 @@ namespace Networking
         //serialize guns
         public static void Serialize(ReadByteStream rbsByteStream, ref GlobalMessageChannelState Output)
         {
+            //player count
             int iPlayerCount = 0;
 
             Serialize(rbsByteStream, ref iPlayerCount);
@@ -297,6 +305,7 @@ namespace Networking
                 Output = new GlobalMessageChannelState(iPlayerCount);
             }
 
+            //votes 
             Output.m_chvVotes = new List<GlobalMessageChannelState.ChannelVote>(iPlayerCount);
 
             for(int i = 0; i < iPlayerCount; i++)
@@ -308,26 +317,38 @@ namespace Networking
                 Output.m_chvVotes.Add(cvhtVote);
             }
 
-            Serialize(rbsByteStream, ref Output.m_lChainLinkHeadHash);
-            Serialize(rbsByteStream, ref Output.m_dtmVoteStartTime);
-            Serialize(rbsByteStream, ref Output.m_iLastMessageIndexProcessed);
+            //assigned peer
             Serialize(rbsByteStream, ref Output.m_lChannelPeer);
-            Serialize(rbsByteStream, ref Output.m_lHashOfLastNodeProcessed);
-            Serialize(rbsByteStream, ref Output.m_msvLastSortValue);
+            
+            //time of last vote start
+            Serialize(rbsByteStream, ref Output.m_dtmVoteStartTime);
 
+            //state
             byte bState = 0;
-
             Serialize(rbsByteStream, ref bState);
-
             Output.m_staState = (GlobalMessageChannelState.State)bState;
+
+            //hash of last node processed
+            Serialize(rbsByteStream, ref Output.m_lHashOfLastNodeProcessed);
+
+            //last message index processed 
+            Serialize(rbsByteStream, ref Output.m_iLastMessageIndexProcessed);
+
+            //best chain link hash 
+            Serialize(rbsByteStream, ref Output.m_lChainLinkHeadHash);
+            
+            //the sorting value of the last valid message processed 
+            Serialize(rbsByteStream, ref Output.m_msvLastSortValue);
         }
 
         public static void Serialize(WriteByteStream wbsByteStream, ref GlobalMessageChannelState Input)
         {
+            //player count
             int iPlayerCount = Input.m_chvVotes.Count;
 
             Serialize(wbsByteStream, ref iPlayerCount);
 
+            //votes
             for (int i = 0; i < iPlayerCount; i++)
             {
                 GlobalMessageChannelState.ChannelVote chvVote = Input.m_chvVotes[i];
@@ -335,16 +356,27 @@ namespace Networking
                 Serialize(wbsByteStream, ref chvVote);
             }
 
-            Serialize(wbsByteStream, ref Input.m_lChainLinkHeadHash);
-            Serialize(wbsByteStream, ref Input.m_dtmVoteStartTime);
-            Serialize(wbsByteStream, ref Input.m_iLastMessageIndexProcessed);
+            //assigned peer
             Serialize(wbsByteStream, ref Input.m_lChannelPeer);
-            Serialize(wbsByteStream, ref Input.m_lHashOfLastNodeProcessed);
-            Serialize(wbsByteStream, ref Input.m_msvLastSortValue);
 
+            //time of last vote
+            Serialize(wbsByteStream, ref Input.m_dtmVoteStartTime);
+
+            //state
             byte bState = (byte)Input.m_staState;
-
             Serialize(wbsByteStream, ref bState);
+
+            //hash of last node processed 
+            Serialize(wbsByteStream, ref Input.m_lHashOfLastNodeProcessed);
+
+            //last message index processed 
+            Serialize(wbsByteStream, ref Input.m_iLastMessageIndexProcessed);
+
+            //best chain link hash
+            Serialize(wbsByteStream, ref Input.m_lChainLinkHeadHash);
+
+            //the sorting value of the last valid message processed 
+            Serialize(wbsByteStream, ref Input.m_msvLastSortValue);
         }
 
         public static int DataSize(GlobalMessageChannelState Input)

@@ -449,7 +449,7 @@ namespace GameManagers
             m_ncpConnectionPropegator = new NetworkConnectionPropagatorProcessor();
             m_ncnNetworkConnection.AddPacketProcessor(m_ncpConnectionPropegator);
 
-            //m_ncnNetworkConnection.AddPacketProcessor(new NetworkGlobalMessengerProcessor());
+            m_ncnNetworkConnection.AddPacketProcessor(new NetworkGlobalMessengerProcessor());
 
         }
     }

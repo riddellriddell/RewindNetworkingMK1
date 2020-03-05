@@ -93,7 +93,7 @@ namespace Networking
 
         public void GetMessageStartAndEndIndexesBetweenStates(GlobalMessagingState gmsStartState, GlobalMessagingState gmsEndState, out int iStartIndex, out int iEndIndex)
         {
-            iStartIndex = UnConfirmedMessageBuffer.IndexOfKey(gmsStartState.m_svaLastMessageSortValue) + 1;
+            iStartIndex = UnConfirmedMessageBuffer.IndexOfKey(gmsStartState.m_svaLastMessageSortValue);
             iEndIndex = UnConfirmedMessageBuffer.IndexOfKey(gmsEndState.m_svaLastMessageSortValue);
 
             if(iEndIndex < iStartIndex)

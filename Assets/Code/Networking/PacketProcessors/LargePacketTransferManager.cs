@@ -141,6 +141,9 @@ namespace Networking
 
                 iReadStartIndex += iMTU;
 
+                //add the name of the source packet for debugging
+                lpkLargePacket.m_strNameOfParentPacket = pktOutputPacket.ToString();
+
                 //check that packet size is within spec
                 Debug.Assert(lpkLargePacket.PacketTotalSize <= iMaxPacketSize, $"Split packet size: {lpkLargePacket.PacketTotalSize} larger than allowd size{iMaxPacketSize}");
 

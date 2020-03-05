@@ -54,8 +54,8 @@ namespace Networking
 
         public SortingValue(Byte[] bValue)
         {
-            m_lSortValueA = BitConverter.ToUInt64(bValue, 0);
-            m_lSortValueB = BitConverter.ToUInt64(bValue, sizeof(UInt64));
+            m_lSortValueA = BitConverter.ToUInt64(bValue, sizeof(UInt64));
+            m_lSortValueB = BitConverter.ToUInt64(bValue, 0);            
         }
 
         public SortingValue(SortingValue msvSortValue)

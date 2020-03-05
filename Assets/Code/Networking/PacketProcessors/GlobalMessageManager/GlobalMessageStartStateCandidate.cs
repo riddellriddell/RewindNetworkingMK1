@@ -62,10 +62,8 @@ namespace Networking
 
         //the score of this start state
         //(currently just the number of peers on chains starting from this state)
-        public int m_iStartStateScore;
-        
-        //used to sort potential start states 
-        public SortingValue m_svaSortingValue;
+        public int m_iStartStateScore = 1;
+
         #endregion
 
         public void Init(GlobalMessagingState gmsState,long lNextChainLinkHash)

@@ -12,11 +12,11 @@ namespace Networking
             get
             {
                 //for testing and debug
-                long lTicks = ((DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay) * TimeSpan.TicksPerDay) + (long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad);
+                //long lTicks = ((DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay) * TimeSpan.TicksPerDay) + (long)(TimeSpan.TicksPerSecond * Time.timeSinceLevelLoad);
+                //
+                //return new DateTime(lTicks, DateTimeKind.Utc);
 
-                return new DateTime(lTicks, DateTimeKind.Utc);
-
-                //return DateTime.UtcNow;
+                return DateTime.UtcNow;
             }
         }
 
@@ -25,7 +25,18 @@ namespace Networking
         {
             get
             {
-                return BaseTime - m_tspCurrentTimeOffset;
+                //calcualte network time
+                DateTime dtmNetworkTime = BaseTime - m_tspCurrentTimeOffset;
+
+                //make sure never to run time backwards 
+                if(dtmNetworkTime < m_dtmOldestTime)
+                {
+                    return m_dtmOldestTime;
+                }
+
+                m_dtmOldestTime = dtmNetworkTime;
+
+                return dtmNetworkTime;
             }
 
         }
@@ -47,6 +58,8 @@ namespace Networking
             }
         }
 
+        //the oldest network time calculated 
+        private DateTime m_dtmOldestTime = DateTime.MinValue;
         private TimeSpan m_tspTargetTimeOffset;
         private TimeSpan m_tspCurrentTimeOffset;
         private TimeSpan m_tspOffsetChangeRate;

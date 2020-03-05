@@ -16,6 +16,7 @@ namespace GameManagers
         [SerializeField]
         public Connection.ConnectionStatus m_cnsConnectionState;
 
+
         [SerializeField]
         public PeerTransmitterState m_ptsTransmitterState;
 
@@ -27,6 +28,19 @@ namespace GameManagers
 
         [SerializeField]
         public List<long> m_lConnectedPeers;
+    }
+
+    [Serializable]
+    public struct ActiveGameManagerSceneTesterGlobalMessageChannel
+    {
+        [SerializeField]
+        public long m_lActivePeerID;
+
+        [SerializeField]
+        public GlobalMessageChannelState.State m_staState;
+        
+        [SerializeField]
+        public int m_iVotes;
     }
 
     [Serializable]
@@ -48,6 +62,23 @@ namespace GameManagers
 
         [SerializeField]
         public long m_lPeerID;
+
+
+        [SerializeField]
+        public NetworkGlobalMessengerProcessor.State m_staGlobalMessagingState;
+
+        [SerializeField]
+        public int m_iTotalChainLinks;
+
+
+        [SerializeField]
+        public int m_iActiveChainLinks;
+
+        [SerializeField]
+        public int m_iGlobalMessagingChannelIndex;      
+
+        [SerializeField]
+        public List<ActiveGameManagerSceneTesterGlobalMessageChannel> m_gmsGlobalMessagingState;
 
         [SerializeField]
         public List<ActiveGameManagerSceneTesterConnection> m_stcNetworkDebugData;
@@ -146,6 +177,64 @@ namespace GameManagers
         protected void UpdateNetworkDebug()
         {
             m_lPeerID = m_agmActiveGameManager.m_winWebInterface.PlayerID;
+
+            NetworkGlobalMessengerProcessor gmpGlobalMessagingProcessor = m_agmActiveGameManager.m_ncnNetworkConnection.GetPacketProcessor<NetworkGlobalMessengerProcessor>();
+            TimeNetworkProcessor tnpTimeProcessor = m_agmActiveGameManager.m_ncnNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
+
+            m_staGlobalMessagingState = gmpGlobalMessagingProcessor.m_staState;
+
+            if (m_staGlobalMessagingState == NetworkGlobalMessengerProcessor.State.Connected ||
+                m_staGlobalMessagingState == NetworkGlobalMessengerProcessor.State.Active)
+            {
+                //the number of links in chain manager
+                m_iTotalChainLinks = gmpGlobalMessagingProcessor.m_chmChainManager.ChainLinks.Count;
+
+                //the number of links in the active chain
+                m_iActiveChainLinks = (int)(gmpGlobalMessagingProcessor.m_chmChainManager.m_chlBestChainHead.m_iChainLength - gmpGlobalMessagingProcessor.m_chmChainManager.m_chlChainBase.m_iChainLength);
+
+                if (gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(m_agmActiveGameManager.m_ncnNetworkConnection.m_lPeerID, out int iIndex))
+                {
+                    m_iGlobalMessagingChannelIndex = iIndex;
+                }
+                else
+                {
+                    m_iGlobalMessagingChannelIndex = -1;
+                }
+                               
+                m_gmsGlobalMessagingState = new List<ActiveGameManagerSceneTesterGlobalMessageChannel>();
+
+                for (int i = 0; i < gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels.Count; i++)
+                {
+                    GlobalMessageChannelState gcsChannelState = gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[i];
+
+                    int iVotes = 0;
+
+                    for(int j = 0; j < gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels.Count; j++)
+                    {
+                        GlobalMessageChannelState gcsVotingChannel = gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[j];
+
+                        if (gcsVotingChannel.m_staState == GlobalMessageChannelState.State.Assigned ||
+                            gcsVotingChannel.m_staState == GlobalMessageChannelState.State.VoteKick)
+                        {
+                            //if(gcsVotingChannel.m_chvVotes[i].m_lPeerID == gcsChannelState.m_lChannelPeer)
+                            //{
+                                if(gcsVotingChannel.m_chvVotes[i].IsActive(tnpTimeProcessor.NetworkTime, GlobalMessagingState.s_tspVoteTimeout) == true)
+                                {
+                                    iVotes++;
+                                }
+                            //}
+                        }
+
+                    }
+
+                    m_gmsGlobalMessagingState.Add(new ActiveGameManagerSceneTesterGlobalMessageChannel()
+                    {
+                        m_lActivePeerID = gcsChannelState.m_lChannelPeer,
+                        m_staState = gcsChannelState.m_staState,
+                        m_iVotes = iVotes
+                    });
+                }
+            }
 
             m_stcNetworkDebugData = new List<ActiveGameManagerSceneTesterConnection>();
 

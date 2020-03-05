@@ -44,6 +44,8 @@ namespace Networking
             }
         }
 
+        public string m_strNameOfParentPacket;
+
         public byte m_bIsLastPacketInSequence;
 
         public List<byte> m_bPacketSegment = new List<byte>();
@@ -56,6 +58,11 @@ namespace Networking
         public override void EncodePacket(WriteByteStream wbsByteStream)
         {
             ByteStream.Serialize(wbsByteStream, this);
+        }
+
+        public override string ToString()
+        {
+            return base.ToString() + $": {m_strNameOfParentPacket} ";
         }
     }
 

@@ -10,16 +10,6 @@ namespace Networking
         public const int c_iSignatureSize = 64;
         #endregion
 
-        public SortingValue GetSortingValueForIndex(uint iIndex)
-        {
-            Byte[] bSortingValue = new byte[SortingValue.c_TotalBytes];
-
-            //store the link index
-            Array.Copy(BitConverter.GetBytes(m_iLinkIndex), bSortingValue, sizeof(UInt32));
-
-            return new SortingValue(bSortingValue);
-        }
-
         #region SentData
 
         public long m_lPeerID;
@@ -207,6 +197,13 @@ namespace Networking
                 pmnMessage.DecodePacket(rbsByteStream);
                 pmnMessage.DecodePayloadArray(cifClassFactory);
 
+                //calculate the hash for the payload
+                pmnMessage.BuildPayloadHash();
+
+                //crate the sorting value for the message 
+                pmnMessage.CalculateSortingValue();
+
+                //add to messagees in link
                 m_pmnMessages.Add(pmnMessage);
             }
         }
@@ -225,6 +222,9 @@ namespace Networking
             {
                 m_gmsState.ProcessMessage(lLocalPeerID, m_pmnMessages[i]);
             }
+
+            //check that end state matches expected state
+            ChainLinkEndStateVerrifier.RegisterLink(this, lLocalPeerID);
         }
 
         protected void BuildPayloadHash()
@@ -278,26 +278,42 @@ namespace Networking
             return iSize;
         }
 
-        protected void CalculateSortingValue()
+        public void CalculateSortingValue()
         {
-            Byte[] bSortingValue = new byte[SortingValue.c_TotalBytes];
+            //Byte[] bSortingValue = new byte[SortingValue.c_TotalBytes];
 
-            int iStartIndex = 0;
+            //int iStartIndex = 0;
+                                 
+            ////store part of the hash
+            //Array.Copy(BitConverter.GetBytes(m_lLinkPayloadHash), 0, bSortingValue, iStartIndex, sizeof(Int32));
 
-            //store the link index
-            Array.Copy(BitConverter.GetBytes(m_iLinkIndex), bSortingValue, sizeof(UInt32));
+            //iStartIndex += sizeof(UInt32);
 
-            iStartIndex += sizeof(UInt32);
+            ////store the peer id
+            //Array.Copy(BitConverter.GetBytes(m_lPeerID), 0, bSortingValue, iStartIndex, sizeof(Int64));
 
-            //store the peer id
-            Array.Copy(BitConverter.GetBytes(m_lPeerID),0, bSortingValue, iStartIndex, sizeof(Int64));
+            //iStartIndex += sizeof(Int64);
 
-            iStartIndex += sizeof(Int64);
+            ////store the link index
+            //Array.Copy(BitConverter.GetBytes(m_iLinkIndex), bSortingValue, sizeof(UInt32));
 
-            //store part of the hash
-            Array.Copy(BitConverter.GetBytes(m_lLinkPayloadHash), 0, bSortingValue, iStartIndex, sizeof(Int32));
 
-            m_svaChainSortingValue = new SortingValue(bSortingValue);
+            ulong lPartA = 0;
+            ulong lPartB = 0;
+
+            lPartA = m_iLinkIndex;
+
+            lPartA = lPartA << sizeof(UInt32);
+
+            ulong iPartAPeerID =  (ulong)m_lPeerID >> sizeof(UInt32);
+
+            lPartA += iPartAPeerID;
+
+            lPartB = (ulong)m_lPeerID << sizeof(UInt32);
+
+            ulong lPartBHash = (ulong)m_lLinkPayloadHash >> sizeof(UInt32);
+            
+            m_svaChainSortingValue = new SortingValue(lPartA, lPartB);
 
         }
 

@@ -40,9 +40,9 @@ namespace Networking
 
         public static int s_iConnectOnReturnIceCandidate = 3;
 
-        public static int s_iDataPaddingMax = 10;
+        public static int s_iDataPaddingMax = 1000;
 
-        public static int s_iDataPaddingMin = 4;
+        public static int s_iDataPaddingMin = 400;
 
         protected int m_iTransmitterID = int.MinValue;
 

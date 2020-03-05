@@ -164,8 +164,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_strUniqueDeviceID: 
+  m_strUniqueDeviceID: user5
+  m_bAlive: 1
   m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
   m_stcNetworkDebugData: []
 --- !u!1 &134139634
 GameObject:
@@ -275,7 +281,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &413836340
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -288,8 +294,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_strUniqueDeviceID: 
+  m_strUniqueDeviceID: user2
+  m_bAlive: 1
   m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
   m_stcNetworkDebugData: []
 --- !u!4 &413836341
 Transform:
@@ -304,6 +316,58 @@ Transform:
   m_Children: []
   m_Father: {fileID: 804547389}
   m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &420017823
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 420017825}
+  - component: {fileID: 420017824}
+  m_Layer: 0
+  m_Name: TestPeer2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &420017824
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 420017823}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_strUniqueDeviceID: user1
+  m_bAlive: 1
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+--- !u!4 &420017825
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 420017823}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.5319157, y: 27.5414, z: -6.330299}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &491351826
 GameObject:
@@ -321,7 +385,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &491351827
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -334,8 +398,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_strUniqueDeviceID: 
+  m_strUniqueDeviceID: user3
+  m_bAlive: 1
   m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
   m_stcNetworkDebugData: []
 --- !u!4 &491351828
 Transform:
@@ -367,7 +437,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &522265005
 Transform:
   m_ObjectHideFlags: 0
@@ -394,8 +464,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_strUniqueDeviceID: 
+  m_strUniqueDeviceID: user4
+  m_bAlive: 1
   m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
   m_stcNetworkDebugData: []
 --- !u!1 &804547388
 GameObject:
@@ -406,13 +482,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 804547389}
+  - component: {fileID: 804547390}
   m_Layer: 0
   m_Name: ConnectingPeers
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &804547389
 Transform:
   m_ObjectHideFlags: 0
@@ -430,8 +507,33 @@ Transform:
   - {fileID: 23311873}
   - {fileID: 1589625336}
   m_Father: {fileID: 0}
-  m_RootOrder: 5
+  m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &804547390
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 804547388}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80ee9de96deb5d04fa9edf44502b7d0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_amgTesters:
+  - {fileID: 413836340}
+  - {fileID: 491351827}
+  - {fileID: 522265006}
+  - {fileID: 23311874}
+  - {fileID: 1589625337}
+  m_fInitalTesterDelayTime: 5
+  m_fMinAliveTime: 2
+  m_fMinDeadTime: 2
+  m_iMinActivePlayers: 1
+  m_fMinSwarmAliveTime: 10
+  m_fChanceOfConenct: 0.2
+  m_fChanceOfDisconnect: 0.1
 --- !u!1 &1160234410
 GameObject:
   m_ObjectHideFlags: 0
@@ -461,7 +563,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd042984fdc5efe4f816380a203dea68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_fLatncy: 0.05
+  m_fLatncy: 0.15
   m_fTimeOutChance: 0
   m_fTimeOutTime: 5
   m_fActionErrorChance: 0
@@ -522,8 +624,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_strUniqueDeviceID: 
+  m_strUniqueDeviceID: user6
+  m_bAlive: 1
   m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
   m_stcNetworkDebugData: []
 --- !u!1 &1737021094
 GameObject:
@@ -555,14 +663,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_bEnableLag: 1
-  m_fMinLag: 0.05
-  m_fMaxLag: 0.1
+  m_fMinLag: 0.15
+  m_fMaxLag: 0.2
   m_bEnableOutages: 0
   m_fMinOutage: 0.25
   m_fMaxOutage: 8
   m_fMinTimeBetweenOutages: 3
   m_fMaxTimeBetweenOutages: 9
-  m_bEnablePacketLoss: 0
+  m_bEnablePacketLoss: 1
   m_fPacketLoss: 0.3
 --- !u!4 &1737021096
 Transform:
@@ -607,8 +715,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_strUniqueDeviceID: user1
+  m_strUniqueDeviceID: user0
+  m_bAlive: 1
   m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
   m_stcNetworkDebugData: []
 --- !u!4 &1933776696
 Transform:

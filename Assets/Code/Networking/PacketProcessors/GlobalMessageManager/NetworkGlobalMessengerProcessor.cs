@@ -37,7 +37,7 @@ namespace Networking
         #region StartStateSelection
 
         //the max time to wait before selecting a start state 
-        public static TimeSpan StateCollectionTimeOutTime { get; } = TimeSpan.FromSeconds(3);
+        public static TimeSpan StateCollectionTimeOutTime { get; } = TimeSpan.FromSeconds(20);
 
         //the min amount of time to wait before selecting start state 
         public static TimeSpan StateCollactionMinTime { get; } = TimeSpan.FromSeconds(2);
@@ -47,14 +47,22 @@ namespace Networking
 
         #endregion
 
+        //when a peer initaly conencted wait this time before deciding to kick a peer for
+        // disconnect, this is to protect against unneccesary kicking while peer conenction is
+        // propegating through the swarm 
+        public static TimeSpan JoinVoteGracePeriod { get; } = TimeSpan.FromSeconds(3);
+
         //fixed max player count but in future will be dynamic? 
-        public static int MaxPlayerCount { get; } = 32;
+        public static int MaxPlayerCount { get; } = 6;
 
         //the state of the global message system
         public State m_staState = State.WaitingForConnection;
 
         //Chain manager 
         public ChainManager m_chmChainManager;
+
+        //buffer of all the valid messages recieved from all peers through the global message system
+        public GlobalMessageBuffer m_gmbMessageBuffer;
 
         //factory for creating the message payload classes 
         public ClassWithIDFactory m_cifGlobalMessageFactory;
@@ -73,9 +81,6 @@ namespace Networking
 
         //the index of next chain link build
         protected uint m_iNextLinkIndex = uint.MinValue;
-
-        //buffer of all the valid messages recieved from all peers through the global message system
-        protected GlobalMessageBuffer m_gmbMessageBuffer;
 
         protected TimeNetworkProcessor m_tnpNetworkTime;
 
@@ -144,7 +149,7 @@ namespace Networking
 
                 case State.Connected:
                     //check if peer has been assigned to a channel
-                    if (m_chmChainManager.m_gmsChainStartState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iIndex))
+                    if (m_chmChainManager.m_chlBestChainHead.m_gmsState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iIndex))
                     {
                         m_staState = State.Active;
 
@@ -157,6 +162,10 @@ namespace Networking
                     //vote to add new peers to the system
                     UpdateAddingPeersToSystem();
 
+                    //vote to kick disconnected peers 
+                    UpdateKickingPeersFromSystem();
+
+                    //add new links to chain 
                     MakeNewChainLinkIfTimeTo();
                     break;
             }
@@ -259,6 +268,12 @@ namespace Networking
             //decode message 
             pmnMessage.DecodePayloadArray(m_cifGlobalMessageFactory);
 
+            //calculate the hash for the payload
+            pmnMessage.BuildPayloadHash();
+
+            //crate the sorting value for the message 
+            pmnMessage.CalculateSortingValue();
+
             //add message to unconfirmed message buffer
             ProcessMessage(pmnMessage);
         }
@@ -287,6 +302,14 @@ namespace Networking
 
                 //send link to peers
                 SendChainLinkToPeers(chlNextLink);
+            }
+            else
+            {
+                //check if should set new link creation time
+                if (m_dtmNextLinkBuildTime.Ticks == DateTime.MinValue.Ticks)
+                {
+                    SetTimeOfNextPeerChainLink(dtmNetworkTime);
+                }
             }
         }
 
@@ -329,14 +352,14 @@ namespace Networking
             //create base chain link
             ChainLink chlLink = CreateFirstChainLink(iLastChainLinkForPeer);
 
-            //update the time of the next chian link
-            SetTimeOfNextPeerChainLink(dtmNetworkTime);
-
             //add link to chain manager
             m_chmChainManager.AddFirstChainLink(ParentNetworkConnection.m_lPeerID, chlLink);
 
             //update buffer final state
             m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, m_chmChainManager.m_chlBestChainHead.m_gmsState);
+
+            //update the time of the next chian link
+            SetTimeOfNextPeerChainLink(dtmNetworkTime);
         }
 
         public void StartAsConnectorToSystem()
@@ -358,10 +381,19 @@ namespace Networking
             }
 
             //check if enough states have been recieved 
-            float fPercentOfStatesRecieved = m_chmChainManager.StartStateCandidates.Count / iConnectedPeers;
+            float fPercentOfStatesRecieved = m_chmChainManager.m_iStartStatesRecieved / (float)iConnectedPeers;
+
+            //should a connection be forced
+            //this occurs in anomilus conditions 
+            bool bForceConnection = false;
+
+            if (m_tnpNetworkTime.BaseTime - m_dtmTimeOfStateCollectionStart > StateCollectionTimeOutTime)
+            {
+                bForceConnection = true;
+            }
 
             //check if enough ststes have been recieved
-            if (fPercentOfStatesRecieved < MinPercentOfStartStatesFromPeers)
+            if (fPercentOfStatesRecieved < MinPercentOfStartStatesFromPeers && bForceConnection == false)
             {
                 return;
             }
@@ -376,7 +408,7 @@ namespace Networking
             }
 
             //check if too much time has passed and a start state should be forced
-            if (m_tnpNetworkTime.BaseTime - m_dtmTimeOfStateCollectionStart > StateCollectionTimeOutTime)
+            if (bForceConnection)
             {
                 IsAcknowledgedStartState = true;
             }
@@ -404,10 +436,14 @@ namespace Networking
         {
             //get the channel that corresponds to peer id
             //may change this to use state at end of message buffer
-            if (m_chmChainManager.m_gmsChainStartState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iPeerChannel))
+            if (m_chmChainManager.m_chlBestChainHead.m_gmsState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iPeerChannel))
             {
                 //get current chain link
                 uint iCurrentChainLink = m_chmChainManager.GetChainlinkCycleIndexForTime(dtmCurrentNetworkTime, ChainManager.TimeBetweenLinks, ChainManager.GetChainBaseTime(dtmCurrentNetworkTime));
+
+                uint iNextLinkIndex = 0;
+
+                DateTime dtmNextLinkTime = DateTime.MinValue;
 
                 //get the next time the channel will be addding a chain link
                 m_chmChainManager.GetNextChainLinkForChannel(
@@ -416,9 +452,17 @@ namespace Networking
                     iCurrentChainLink,
                     ChainManager.TimeBetweenLinks,
                     ChainManager.GetChainBaseTime(dtmCurrentNetworkTime),
-                    out m_dtmNextLinkBuildTime,
-                    out m_iNextLinkIndex
+                    out dtmNextLinkTime,
+                    out iNextLinkIndex
                     );
+
+                m_dtmNextLinkBuildTime = dtmNextLinkTime;
+                m_iNextLinkIndex = iNextLinkIndex;
+            }
+            else
+            {
+                m_dtmNextLinkBuildTime = DateTime.MinValue;
+                m_iNextLinkIndex = uint.MinValue;
             }
         }
 
@@ -431,8 +475,15 @@ namespace Networking
                 return false;
             }
 
+            //check if still part of the system
+            if (m_chmChainManager.m_chlBestChainHead.m_gmsState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iIndex) == false)
+            {
+                return false;
+            }
+
+
             //check if it is this peers turn to add a link onto the chain
-            if (dtmNetworkTime > m_dtmNextLinkBuildTime)
+            if (dtmNetworkTime > m_dtmNextLinkBuildTime && m_dtmNextLinkBuildTime.Ticks != DateTime.MinValue.Ticks)
             {
                 return true;
             }
@@ -481,15 +532,42 @@ namespace Networking
             //gather all peers that are connected but not part of the system
             SortedList<long, long> lJoinCandidates = new SortedList<long, long>();
 
+            //get the channel index of the current local peer;
+            if (m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iLocalPeerChannel) == false)
+            {
+                return;
+            }
+
             foreach (KeyValuePair<long, ConnectionGlobalMessengerProcessor> kvpEntries in ChildConnectionProcessors)
             {
+                //check that peer is connected or connecting 
+                if (kvpEntries.Value.ParentConnection.Status == Connection.ConnectionStatus.Initializing ||
+                    kvpEntries.Value.ParentConnection.Status == Connection.ConnectionStatus.Disconnecting ||
+                    kvpEntries.Value.ParentConnection.Status == Connection.ConnectionStatus.Disconnected ||
+                    kvpEntries.Value.ParentConnection.Status == Connection.ConnectionStatus.New)
+                {
+                    //skip this peer
+                    continue;
+                }
+
                 //check if connected peer is already part of the system
-                if (m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(kvpEntries.Key, out int iIndex) == false)
+                // or the local peer has not voted to add them to the system
+                //TODO:: clean up this monstrosity of a statement
+                if (m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(kvpEntries.Key, out int iIndex) == false ||
+                    (m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iIndex].m_staState == GlobalMessageChannelState.State.VoteJoin &&
+                    (m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iLocalPeerChannel].m_chvVotes[iIndex].m_vtpVoteType != GlobalMessageChannelState.ChannelVote.VoteType.Add ||
+                    m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iLocalPeerChannel].m_chvVotes[iIndex].IsActive(m_tnpNetworkTime.NetworkTime, GlobalMessagingState.s_tspVoteTimeout) == false)))
                 {
                     //get the time the candidate connected 
-                    long lCOnnectionTime = kvpEntries.Value.ParentConnection.m_dtmConnectionEstablishTime.Ticks;
+                    long lConnectionTime = kvpEntries.Value.ParentConnection.m_dtmConnectionEstablishTime.Ticks;
 
-                    lJoinCandidates.Add(lCOnnectionTime, kvpEntries.Key);
+                    //protect against matching connection times
+                    while (lJoinCandidates.ContainsKey(lConnectionTime))
+                    {
+                        lConnectionTime++;
+                    }
+
+                    lJoinCandidates.Add(lConnectionTime, kvpEntries.Key);
                 }
             }
 
@@ -519,6 +597,81 @@ namespace Networking
             CreateMessageNode(vmsVoteMessage);
         }
 
+        //checks for peers the local peer has lost conenctio to and votes to kick them 
+        public void UpdateKickingPeersFromSystem()
+        {
+            //get all the active peers
+            List<Tuple<int, long>> lActivePeers = m_gmbMessageBuffer.LatestState.GetActivePeerIndexAndID();
+
+            //list of all the peers to kick
+            List<long> lPeersToKick = new List<long>();
+
+            if (m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iLocalPeerIndex) == false)
+            {
+                //local peer is not part of the global messaging system so cant send messages 
+                return;
+            }
+
+            //get local peer channel state
+            GlobalMessageChannelState gcsLocalPeerChannelState = m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iLocalPeerIndex];
+
+
+            //check if any peers in the global messaging system are not conencted to
+            //the local peer
+            for (int i = 0; i < lActivePeers.Count; i++)
+            {
+                //check if target peer is local peer
+                if (lActivePeers[i].Item2 == ParentNetworkConnection.m_lPeerID)
+                {
+                    continue;
+                }
+
+                //check if peer has just connected and local peer has not had time to make conenction
+                if (m_tnpNetworkTime.NetworkTime - m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[lActivePeers[i].Item1].m_dtmVoteStartTime < JoinVoteGracePeriod)
+                {
+                    continue;
+                }
+
+                //if the target peer has no connection to the local pper or the target peer is in the process of disconnectin 
+                if (ChildConnectionProcessors.TryGetValue(lActivePeers[i].Item2, out ConnectionGlobalMessengerProcessor cgmProcessor) == false
+                    || cgmProcessor.ParentConnection.Status == Connection.ConnectionStatus.Disconnecting
+                    || cgmProcessor.ParentConnection.Status == Connection.ConnectionStatus.Disconnected)
+                {
+                    //get vote for channel
+                    GlobalMessageChannelState.ChannelVote chvVote = gcsLocalPeerChannelState.m_chvVotes[lActivePeers[i].Item1];
+
+                    //check if already kicking peer 
+                    if (chvVote.m_vtpVoteType == GlobalMessageChannelState.ChannelVote.VoteType.Kick &&
+                        chvVote.IsActive(m_tnpNetworkTime.NetworkTime, GlobalMessagingState.s_tspVoteTimeout))
+                    {
+                        //skip peer because already kicking
+                        continue;
+                    }
+
+                    lPeersToKick.Add(lActivePeers[i].Item2);
+                }
+            }
+
+            if (lPeersToKick.Count == 0)
+            {
+                return;
+            }
+
+
+            //create add message payload
+            VoteMessage vmsVoteMessage = m_cifGlobalMessageFactory.CreateType<VoteMessage>(VoteMessage.TypeID);
+
+            vmsVoteMessage.m_tupActionPerPeer = new Tuple<byte, long>[lPeersToKick.Count];
+
+            for (int i = 0; i < lPeersToKick.Count; i++)
+            {
+                vmsVoteMessage.m_tupActionPerPeer[i] = new Tuple<byte, long>(0, lPeersToKick[i]);
+            }
+
+            //create message node and send to all peers
+            CreateMessageNode(vmsVoteMessage);
+        }
+
         public void CreateMessageNode(GlobalMessageBase gmbMessageToSend)
         {
             long lPeerID = ParentNetworkConnection.m_lPeerID;
@@ -542,7 +695,7 @@ namespace Networking
 
             pmnMessageNode.m_gmbMessage = gmbMessageToSend;
 
-            pmnMessageNode.m_iPeerMessageIndex = m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iChannelIndex].m_iLastMessageIndexProcessed++;
+            pmnMessageNode.m_iPeerMessageIndex = m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iChannelIndex].m_iLastMessageIndexProcessed + 1;
 
             pmnMessageNode.m_lPreviousMessageHash = m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iChannelIndex].m_lHashOfLastNodeProcessed;
 
@@ -597,6 +750,9 @@ namespace Networking
 
     public class ConnectionGlobalMessengerProcessor : ManagedConnectionPacketProcessor<NetworkGlobalMessengerProcessor>
     {
+        //has this peer sent a start state 
+        public bool m_bHasRecievedStartState = false;
+
         public override int Priority
         {
             get
@@ -604,9 +760,6 @@ namespace Networking
                 return 5;
             }
         }
-
-        //the current chain link this peer is working off
-        public long m_lCurrentChainHead;
 
         public override void OnConnectionStateChange(Connection.ConnectionStatus cstOldState, Connection.ConnectionStatus cstNewState)
         {
@@ -646,6 +799,19 @@ namespace Networking
 
                 return null;
             }
+            else if (pktInputPacket is GlobalChainStatePacket)
+            {
+                //stop peer from sending multiple start states
+                if (m_bHasRecievedStartState == false)
+                {
+                    m_bHasRecievedStartState = true;
+
+                    return pktInputPacket;
+                }
+
+                return null;
+            }
+
 
             return pktInputPacket;
         }

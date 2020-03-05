@@ -115,27 +115,37 @@ namespace Networking
 
         public void CalculateSortingValue()
         {
-            Byte[] bSortingValue = new byte[SortingValue.c_TotalBytes];
+            //Byte[] bSortingValue = new byte[SortingValue.c_TotalBytes];
 
-            int iStartIndex = 0;
+            //int iStartIndex = 0;
 
-            //store the message creation time
-            Array.Copy(BitConverter.GetBytes(m_dtmMessageCreationTime.Ticks), 0, bSortingValue, iStartIndex, sizeof(Int64));
+            ////store the message creation time
+            //Array.Copy(BitConverter.GetBytes(m_dtmMessageCreationTime.Ticks), 0, bSortingValue, iStartIndex, sizeof(Int64));
 
-            iStartIndex += sizeof(Int64);
+            //iStartIndex += sizeof(Int64);
 
-            //store the link index
-            Array.Copy(BitConverter.GetBytes(m_iPeerMessageIndex), bSortingValue, sizeof(UInt32));
+            ////store the link index
+            //Array.Copy(BitConverter.GetBytes(m_iPeerMessageIndex), bSortingValue, sizeof(UInt32));
 
-            iStartIndex += sizeof(UInt32);
+            //iStartIndex += sizeof(UInt32);
 
-            //store part of the hash
-            Array.Copy(BitConverter.GetBytes(m_lMessagePayloadHash), 0, bSortingValue, iStartIndex, sizeof(Int32));
+            ////store part of the hash
+            //Array.Copy(BitConverter.GetBytes(m_lMessagePayloadHash), 0, bSortingValue, iStartIndex, sizeof(Int32));
 
-            //should also store part of the peer id here 
+            ////should also store part of the peer id here 
+
+            ulong lPartA = 0;
+
+            ulong lPartB = 0;
+
+            lPartA = (ulong)m_dtmMessageCreationTime.Ticks;
+
+            lPartB = m_iPeerMessageIndex << sizeof(UInt32);
+
+            lPartB += (ulong)(m_lMessagePayloadHash >> sizeof(Int32));
 
             //create sorting value
-            m_svaMessageSortingValue = new SortingValue(bSortingValue);
+            m_svaMessageSortingValue = new SortingValue(lPartA, lPartB);
         }
 
         public void DecodePayloadArray(ClassWithIDFactory cifClassFactory)

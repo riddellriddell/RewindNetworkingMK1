@@ -12,18 +12,18 @@ namespace Networking
         #region LinkRebasing
         //the percent of active peers that need to acknowledge a link to make it 
         //a valid base link candidate
-        public static float PercentOfAcknowledgementsToRebase { get; } = 0.50f;
+        public static float PercentOfAcknowledgementsToRebase { get; } = 0.5f;
 
         public static uint MinCycleAge { get; } = 10;
 
         public static uint MaxCycleAge { get; } = 100;
 
-        public static int MinChainLenght { get; } = 5;
+        public static int MinChainLenght { get; } = 10;
 
         #endregion
 
         #region LinkTiming
-        public static TimeSpan TimeBetweenLinks { get; } = TimeSpan.FromSeconds(0.1f);
+        public static TimeSpan TimeBetweenLinks { get; } = TimeSpan.FromSeconds(1f);
 
         //each chain is based off the start of the year
         public static DateTime GetChainBaseTime(DateTime dtmCurrentNetworkTime)
@@ -36,6 +36,8 @@ namespace Networking
         //list of all the potential starting states for the global message system
         //this is used when the peer is connecting to the system for the first time 
         public Dictionary<long, GlobalMessageStartStateCandidate> StartStateCandidates { get; } = new Dictionary<long, GlobalMessageStartStateCandidate>();
+
+        public int m_iStartStatesRecieved = 0;
 
         //buffer of all recieved chain links
         public SortedList<SortingValue, ChainLink> ChainLinks { get; } = new SortedList<SortingValue, ChainLink>();
@@ -157,8 +159,6 @@ namespace Networking
 
         public void SetChannelAcknowledgements(int iChannelIndex, ChainLink chlAcknowledgedLink)
         {
-
-
             //check if alreadty acked 
             if (chlAcknowledgedLink.m_bIsChannelBranch[iChannelIndex])
             {
@@ -251,7 +251,7 @@ namespace Networking
             //TODO: do this in a more efficient way that is not redone for every link when a new link is 
             //accepted 
             //set peer as acknowledging chain 
-            if (m_gmsChainStartState.TryGetIndexForPeer(chlLink.m_lPeerID, out int iChannelIndex))
+            if (m_chlBestChainHead.m_gmsState.TryGetIndexForPeer(chlLink.m_lPeerID, out int iChannelIndex))
             {
                 //set acknowledgement for peer 
                 SetChannelAcknowledgements(iChannelIndex, chlLink);
@@ -261,7 +261,7 @@ namespace Networking
             chlLink.m_lChainMessageCount = chlLink.m_chlParentChainLink.m_lChainMessageCount + (ulong)chlLink.m_pmnMessages.Count;
             chlLink.m_iChainLength = chlLink.m_chlParentChainLink.m_iChainLength + 1;
 
-            Debug.Log($"Processed new chain link with length {chlLink.m_iChainLength}");
+            //Debug.Log($"Processed new chain link with length {chlLink.m_iChainLength}");
         }
 
         public void SetupChannelAckArray(ChainLink chlLink, int iMaxPlayerCount)
@@ -304,9 +304,14 @@ namespace Networking
         //add a new potential chain start state 
         public void AddNewStartCandidate(GlobalMessageStartStateCandidate sscStateCandidate)
         {
+            //increment the number of start states recieved 
+            m_iStartStatesRecieved++;
+
             //check if already added to candidate buffer
-            if (StartStateCandidates.ContainsKey(sscStateCandidate.m_lHashOfStateCandidate) == true)
+            if (StartStateCandidates.TryGetValue(sscStateCandidate.m_lHashOfStateCandidate,out GlobalMessageStartStateCandidate sscStartState) == true)
             {
+                sscStartState.m_iStartStateScore += 1;
+
                 return;
             }
             else
@@ -340,9 +345,6 @@ namespace Networking
                     }
                 }
 
-                //reset start state valuce
-                sscCandidate.m_iStartStateScore = 1;
-
                 //get the start index
                 int iStartIndex = ChainLinks.IndexOfKey(sscCandidate.m_chlNextLink.m_svaChainSortingValue);
 
@@ -359,8 +361,6 @@ namespace Networking
                 {
                     //reset state 
                     ChainLinks.Values[i].m_gmsState = null;
-
-
 
                     if (i != iStartIndex)
                     {
@@ -396,9 +396,12 @@ namespace Networking
 
                         if (StartStateCandidates.TryGetValue(lHashForLinkState, out GlobalMessageStartStateCandidate sscChildStartStateCandidate))
                         {
-                            sscChildStartStateCandidate.m_bIsOldestStateOnChain = false;
+                            if (sscChildStartStateCandidate.m_bIsOldestStateOnChain == true)
+                            {
+                                sscChildStartStateCandidate.m_bIsOldestStateOnChain = false;
 
-                            sscCandidate.m_iStartStateScore++;
+                                sscCandidate.m_iStartStateScore += sscChildStartStateCandidate.m_iStartStateScore;
+                            }                            
                         }
                     }
 
@@ -428,6 +431,11 @@ namespace Networking
                 {
                     sscBestCandidate = sscCandidate;
                 }
+            }
+
+            if(sscBestCandidate == null)
+            {
+                return false;
             }
 
             //get the difference between the most votes vs the most possible votes 
@@ -642,8 +650,8 @@ namespace Networking
             int iValue = 0;
 
             iValue += ScoreChainLinkLenght(chlLink);
-            iValue += ScoreChainAchnowledgement(chlLink);
-            iValue = Math.Max(0, iValue + ScoreChainLinkMessages(chlLink, gmbMessageBuffer));
+            //iValue += ScoreChainAchnowledgement(chlLink);
+            //iValue = Math.Max(0, iValue + ScoreChainLinkMessages(chlLink, gmbMessageBuffer));
 
             return iValue;
         }
@@ -678,8 +686,8 @@ namespace Networking
 
             gmbMessageBuffer.GetMessageStartAndEndIndexesBetweenStates(m_chlChainBase.m_gmsState, chlLink.m_gmsState, out int iStartIndex, out int iEndIndex);
 
-            //get messages in chain
-            int iMessagesInChain = Mathf.Max(0, (int)(m_chlBestChainHead.m_lChainMessageCount - m_chlChainBase.m_lChainMessageCount));
+            //get messages in chain up to target link
+            int iMessagesInChain = Mathf.Max(0, (int)(chlLink.m_lChainMessageCount - m_chlChainBase.m_lChainMessageCount));
 
             iMissedMessages =  Mathf.Max(0,(iEndIndex - iStartIndex) - iMessagesInChain);
 
@@ -690,6 +698,19 @@ namespace Networking
         //how diverse is the chain acknowledgement
         protected int ScoreChainAchnowledgement(ChainLink chlLink)
         {
+            //check that link is setup and connected
+            if(chlLink.m_gmsState == null || chlLink.m_bIsConnectedToBase == false)
+            {
+                return -10;
+            }
+
+            int iActivePeersOnBranch = chlLink.m_gmsState.ActiveChannelCount();
+
+            if(iActivePeersOnBranch == 0)
+            {
+                return - 10;
+            }
+
             int iAcknowledgements = 0;
             for (int i = 0; i < chlLink.m_bIsChannelBranch.Count; i++)
             {
@@ -699,7 +720,9 @@ namespace Networking
                 }
             }
 
-            return iAcknowledgements;
+            int ackPercent = (iAcknowledgements * 10) / (iActivePeersOnBranch * 10);
+
+            return ackPercent;
         }
 
         protected int ScoreDistanceBehindHead(ChainLink chlLink, uint iLatestCycleIndex)
@@ -738,10 +761,10 @@ namespace Networking
                 }
 
                 //check if forces base 
-                if (IsForcedBase(chlNewBase, m_chlBestChainHead))
-                {
-                    break;
-                }
+                //if (IsForcedBase(chlNewBase, m_chlBestChainHead))
+                //{
+                //    break;
+                //}
 
                 //move to previous chain link
                 chlNewBase = chlNewBase.m_chlParentChainLink;
@@ -771,7 +794,7 @@ namespace Networking
                 }
             }
 
-            if (fAcks / chlBaseCandidate.m_gmsState.ActiveChannelCount() < PercentOfAcknowledgementsToRebase)
+            if (fAcks / (float)chlBaseCandidate.m_gmsState.ActiveChannelCount() < PercentOfAcknowledgementsToRebase)
             {
                 return false;
             }
