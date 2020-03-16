@@ -40,10 +40,7 @@ namespace Networking
     //todo find a better way to do this
     public enum MessageType
     {
-        GatewayMessage,
-        WebRTCOffer,
-        WebRTCIceCandidate,
-        WebRTCReply,
+        GatewayMessage
     }
 
 
@@ -114,8 +111,6 @@ namespace Networking
     [Serializable]
     public struct SendMessageCommand
     {
-      
-
         public long m_lFromID;
         public long m_lToID;
         public int m_iType;
