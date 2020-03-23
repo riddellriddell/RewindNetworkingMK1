@@ -2,6 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using System.Security.Cryptography;
+using System.Text;
+using UnityEngine.Networking;
+using System.Collections;
 
 /// <summary>
 /// This class pull and pushes data exposed by the external web api or the local FakeWebAPI
@@ -10,6 +14,13 @@ namespace Networking
 {
     public class WebInterface
     {
+        //the web addresses for the web rest api
+        public static string s_strGetIDWithUDUDAddress = "https://us-central1-rollbacknetworkingprototype.cloudfunctions.net/GetPeerIDForUDID";
+        public static string s_strSendMessageAddress = "https://us-central1-rollbacknetworkingprototype.cloudfunctions.net/SendMessageToPeer";
+        public static string s_strGetMessageAddress = "https://us-central1-rollbacknetworkingprototype.cloudfunctions.net/GetMessagesForPeer";
+        public static string s_strSetGatewayAddress = "https://us-central1-rollbacknetworkingprototype.cloudfunctions.net/SetGateway";
+        public static string s_strGetGatewayAddress = "https://us-central1-rollbacknetworkingprototype.cloudfunctions.net/GetGateway";
+               
         public struct WebAPICommunicationTracker
         {
             public enum CommunctionStatus
@@ -136,9 +147,18 @@ namespace Networking
             }
         }
 
+        //should use the actual internet server or simulate locally 
+        public bool TestLocally { get; set; } = false;
+               
         //the id of the player
-        public long PlayerID { get; private set; }
-        public bool PlayerIDAlreadyExistsOnServer { get; private set; } = true;
+        public long UserID { get; private set; }
+
+        //the secret access key used to verify user with the server
+        public long UserKey { get; private set; }
+
+        //when running coroutunes this is the object the routines will be run off
+        public MonoBehaviour CoroutineExecutionObject { get; private set; } 
+
         public WebAPICommunicationTracker PlayerIDCommunicationStatus { get; private set; } = WebAPICommunicationTracker.StartState(5);
 
         //all the messages fetched from the server
@@ -161,28 +181,26 @@ namespace Networking
         public WebAPICommunicationTracker SetGatewayStatus { get; private set; } = WebAPICommunicationTracker.StartState(5);
         public float TimeBetweenGatewayUpdates { get; } = 2;
 
-        public Gateway? ExternalGateway { get; private set; }
+        public SearchForGatewayReturn? ExternalGateway { get; private set; }
         public WebAPICommunicationTracker ExternalGatewayCommunicationStatus { get; private set; } = WebAPICommunicationTracker.StartState(5);
         public bool NoGatewayExistsOnServer { get; private set; } = false;
 
         protected string m_strUniqueDeviceIdentifier = string.Empty;
+
+        public WebInterface(MonoBehaviour mbhCoroutineRunner)
+        {
+            CoroutineExecutionObject = mbhCoroutineRunner;
+        }
 
         public void UpdateCommunication()
         {
             //check if get player ID needs restarting
             if (PlayerIDCommunicationStatus.ShouldRestart())
             {
-                //check what sort of action should be taken
-                if (PlayerIDAlreadyExistsOnServer)
-                {
-                    //restart get player id
-                    InternalStartGetPlayerID();
-                }
-                else
-                {
-                    //restart getting player id
-                    InternalStartCreatePlayerID();
-                }
+
+                //restart get player id
+                InternalStartGetPlayerID();
+
             }
 
             //check if message fetch needs updating 
@@ -284,7 +302,7 @@ namespace Networking
         //check if the web interface is currently getting messages from the server
         public bool IsGettingMessagesFromServer()
         {
-            if(
+            if (
                 MessageFetchStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.Cancled ||
                 MessageFetchStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.NotStarted)
             {
@@ -321,7 +339,7 @@ namespace Networking
             SendMessageCommand smcMessageCommand = new SendMessageCommand()
             {
                 m_iType = iMessageType,
-                m_lFromID = PlayerID,
+                m_lFromID = UserID,
                 m_lToID = lTarget,
                 m_strMessage = strMessage
             };
@@ -336,7 +354,7 @@ namespace Networking
             {
                 //dont have a local player id and cant send messages 
                 return false;
-            }        
+            }
 
             //add to message queue
             MessagesToSend.Enqueue(smcMessageCommand);
@@ -361,8 +379,9 @@ namespace Networking
 
             LocalGatewaySimStatus = new SetGatewayCommand()
             {
-                m_sstStatus = stsSimStatus,
-                m_lOwningPlayerId = PlayerID
+                m_staGameState = stsSimStatus,
+                m_lUserID = UserID,
+                m_lUserKey = UserKey
             };
 
             //check if communication needs starting
@@ -380,10 +399,10 @@ namespace Networking
         //stop running a gateway for people to connect through 
         public void CloseGateway()
         {
-            if(SetGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled)
+            if (SetGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled)
             {
                 SetGatewayStatus = SetGatewayStatus.Cancel();
-            }            
+            }
         }
 
         /// <summary>
@@ -418,12 +437,47 @@ namespace Networking
 
         }
 
+        protected IEnumerator WebRequest(string strAddress, string strBody, Action<bool,string> actCallback)
+        {
+            using (UnityWebRequest www = UnityWebRequest.Put(strAddress, strBody))
+            {
+                www.downloadHandler = new DownloadHandlerBuffer();
+                www.SetRequestHeader("Content-Type", "application/json");
+                www.SetRequestHeader("cache-control", "no-cache");
+
+                yield return www.SendWebRequest();
+
+                if (www.isNetworkError || www.isHttpError)
+                {
+                    Debug.Log(www.error);
+                    actCallback.Invoke(false, www.responseCode.ToString());
+                }
+                else
+                {
+                    Debug.Log("Form upload complete!");
+
+                    actCallback.Invoke(true, www.downloadHandler.text);
+                }
+            }
+        }
+
         protected void InternalStartGetPlayerID()
         {
             PlayerIDCommunicationStatus = PlayerIDCommunicationStatus.StartNewAttempt();
-            FakeWebAPI.Instance.GetUserWithLoginCredentials(m_strUniqueDeviceIdentifier, InternalOnFinishGetPlayerID);
-        }
 
+            if (TestLocally)
+            {
+                FakeWebAPI.Instance.GetUserWithLoginCredentials(m_strUniqueDeviceIdentifier, InternalOnFinishGetPlayerID);
+            }
+            else
+            {
+                //build requrest
+                string strRequest = $"{{ \"m_strUdid\":\"{m_strUniqueDeviceIdentifier}\"}}";
+
+                CoroutineExecutionObject.StartCoroutine(WebRequest(s_strGetIDWithUDUDAddress, strRequest, InternalOnFinishGetPlayerID));
+            }
+        }
+               
         protected void InternalOnFinishGetPlayerID(bool bWasSuccess, string strResult)
         {
             //check if communication was canceled 
@@ -436,14 +490,6 @@ namespace Networking
             //check if it was a success 
             if (bWasSuccess == false)
             {
-                //check what kind of error it was
-
-                //check if user does not exist
-                if (strResult.Contains("404"))
-                {
-                    PlayerIDAlreadyExistsOnServer = false;
-                }
-
                 //mark coms attempt as failed
                 PlayerIDCommunicationStatus = PlayerIDCommunicationStatus.CommunicationFailed();
 
@@ -453,18 +499,9 @@ namespace Networking
             //try and decode response
             try
             {
+                UserIDDetails uidUserDetails = JsonUtility.FromJson<UserIDDetails>(strResult);
 
-                if (long.TryParse(strResult, out long lPlayerIDFromServer))
-                {
-                    PlayerID = lPlayerIDFromServer;
-
-                    //mark coms attempt as succeess
-                    PlayerIDCommunicationStatus = PlayerIDCommunicationStatus.CommunicationSuccessfull();
-
-                    return;
-
-                }
-                else
+                if(uidUserDetails.m_lUserID == 0 || uidUserDetails.m_lUserKey == 0)
                 {
                     //check error type
 
@@ -475,6 +512,16 @@ namespace Networking
 
                     return;
                 }
+
+                UserID = uidUserDetails.m_lUserID;
+
+                UserKey = uidUserDetails.m_lUserKey;
+                
+                //mark coms attempt as succeess
+                PlayerIDCommunicationStatus = PlayerIDCommunicationStatus.CommunicationSuccessfull();
+                
+                return;
+
             }
             catch
             {
@@ -485,76 +532,6 @@ namespace Networking
 
                 return;
             }
-        }
-
-        protected void InternalStartCreatePlayerID()
-        {
-            PlayerIDCommunicationStatus = PlayerIDCommunicationStatus.StartNewAttempt();
-
-            FakeWebAPI.Instance.CreateUserWithLoginCredentials(m_strUniqueDeviceIdentifier, InternalOnFinishCreatePlayerID);
-        }
-
-        protected void InternalOnFinishCreatePlayerID(bool bWasSuccess, string strResult)
-        {
-            //check if communication was canceled 
-            if (PlayerIDCommunicationStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.Cancled)
-            {
-                //dont apply changes to local state
-                return;
-            }
-
-            //check if it was a success 
-            if (bWasSuccess == false)
-            {
-
-                //check if user already exist
-                if (strResult.Contains("403"))
-                {
-                    PlayerIDAlreadyExistsOnServer = true;
-                }
-
-                //mark coms attempt as failed
-                PlayerIDCommunicationStatus = PlayerIDCommunicationStatus.CommunicationFailed();
-
-                return;
-            }
-
-            //try and decode response
-            try
-            {
-
-                if (long.TryParse(strResult, out long lPlayerIDFromServer))
-                {
-                    PlayerID = lPlayerIDFromServer;
-
-                    //mark coms attempt as failed
-                    PlayerIDCommunicationStatus = PlayerIDCommunicationStatus.CommunicationSuccessfull();
-
-                    return;
-
-                }
-                else
-                {
-                    //check error type
-
-                    Debug.LogError($"Failed to decode json string : {strResult} int player id from server");
-
-                    //mark coms attempt as failed
-                    PlayerIDCommunicationStatus = PlayerIDCommunicationStatus.CommunicationFailed();
-
-                    return;
-                }
-            }
-            catch
-            {
-                Debug.LogError($"Failed to decode json string : {strResult} int player id from server");
-
-                //mark coms attempt as failed
-                PlayerIDCommunicationStatus = PlayerIDCommunicationStatus.CommunicationFailed();
-
-                return;
-            }
-
         }
 
         protected void InternalStartGettingMessagesFromServer()
@@ -562,8 +539,22 @@ namespace Networking
             //start next attempt
             MessageFetchStatus = MessageFetchStatus.StartNewAttempt();
 
-            FakeWebAPI.Instance.GetDeleteUserMessages(PlayerID.ToString(), InternalOnFinishGettingMessagesFromServer);
+            GetMessageRequest gmrGetMessageRequest = new GetMessageRequest
+            {
+                m_lUserID = UserID,
+                m_lUserKey = UserKey
+            };
 
+            string strRequest = JsonUtility.ToJson(gmrGetMessageRequest);
+
+            if (TestLocally)
+            {
+                FakeWebAPI.Instance.GetDeleteUserMessages(strRequest, InternalOnFinishGettingMessagesFromServer);
+            }
+            else
+            {
+                CoroutineExecutionObject.StartCoroutine(WebRequest(s_strGetMessageAddress, strRequest, InternalOnFinishGettingMessagesFromServer));
+            }
         }
 
         protected void InternalOnFinishGettingMessagesFromServer(bool bWasSuccess, string strResult)
@@ -589,7 +580,7 @@ namespace Networking
 
                 List<UserMessage> mesMessages = new List<UserMessage>(gmrMessageReturn.m_usmUserMessages);
 
-                mesMessages = mesMessages.OrderBy(x => x.m_lTimeOfMessage).ToList();
+                mesMessages = mesMessages.OrderBy(x => x.m_dtmTimeOfMessage).ToList();
 
                 //add new messages to message list
                 foreach (UserMessage mesMessage in mesMessages)
@@ -610,8 +601,19 @@ namespace Networking
         {
             MessageSendStatus = MessageSendStatus.StartNewAttempt();
 
-            string strMessageDetails = JsonUtility.ToJson(smcMessage);
-            FakeWebAPI.Instance.AddNewMessage(strMessageDetails, InternalOnFinishSendingMessage);
+            string strRequest = JsonUtility.ToJson(smcMessage);
+
+            Debug.Log($"Sending message: {strRequest}");
+
+            if (TestLocally)
+            {
+                FakeWebAPI.Instance.AddNewMessage(strRequest, InternalOnFinishSendingMessage);
+
+              }
+            else
+            {
+                CoroutineExecutionObject.StartCoroutine(WebRequest(s_strSendMessageAddress, strRequest, InternalOnFinishSendingMessage));
+            }
         }
 
         protected void InternalOnFinishSendingMessage(bool bWasSuccess, string strResult)
@@ -640,12 +642,19 @@ namespace Networking
 
             SetGatewayStatus = SetGatewayStatus.StartNewAttempt();
 
-            string strGatewayCommand = JsonUtility.ToJson(LocalGatewaySimStatus);
+            string strRequest = JsonUtility.ToJson(LocalGatewaySimStatus);
 
-            FakeWebAPI.Instance.SetGateway(strGatewayCommand, InternalOnFinishCreateGateway);
+            if (TestLocally)
+            {
+                FakeWebAPI.Instance.SetGateway(strRequest, InternalOnFinishSetGateway);
+            }
+            else
+            {
+                CoroutineExecutionObject.StartCoroutine(WebRequest(s_strSetGatewayAddress, strRequest, InternalOnFinishSetGateway));
+            }
         }
 
-        protected void InternalOnFinishCreateGateway(bool bWasSuccess, string strResult)
+        protected void InternalOnFinishSetGateway(bool bWasSuccess, string strResult)
         {
             if (SetGatewayStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.Cancled)
             {
@@ -665,8 +674,20 @@ namespace Networking
         protected void InternalStartSearchForGateway()
         {
             ExternalGatewayCommunicationStatus = ExternalGatewayCommunicationStatus.StartNewAttempt();
+
             NoGatewayExistsOnServer = false;
-            FakeWebAPI.Instance.SearchForGateway(PlayerID.ToString(), InternalOnFinishSearchForGateway);
+
+            if (TestLocally)
+            {
+                FakeWebAPI.Instance.SearchForGateway(UserID.ToString(), InternalOnFinishSearchForGateway);
+            }
+            else
+            {
+                //build requrest
+                string strRequest = $"{{ \"m_iUserID\":{UserID}}}";
+
+                CoroutineExecutionObject.StartCoroutine(WebRequest(s_strGetGatewayAddress, strRequest, InternalOnFinishSearchForGateway));
+            }
         }
 
         protected void InternalOnFinishSearchForGateway(bool bWasSuccess, string strResult)
@@ -679,7 +700,7 @@ namespace Networking
             if (bWasSuccess == false)
             {
                 //check if the reason the conenction failed was because the server has no matching games
-                if(strResult.Contains("404"))
+                if (strResult.Contains("404"))
                 {
                     NoGatewayExistsOnServer = true;
                 }
@@ -691,8 +712,10 @@ namespace Networking
 
             try
             {
+                Debug.Log($"External Gateway: {strResult} found");
+
                 //decode external gate
-                ExternalGateway = JsonUtility.FromJson<Gateway>(strResult);
+                ExternalGateway = JsonUtility.FromJson<SearchForGatewayReturn>(strResult);
 
                 ExternalGatewayCommunicationStatus = ExternalGatewayCommunicationStatus.CommunicationSuccessfull();
 

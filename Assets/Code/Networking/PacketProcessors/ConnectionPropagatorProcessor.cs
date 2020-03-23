@@ -154,6 +154,8 @@ namespace Networking
                     //if no client exists check if user has active gateway or this is the first connection to the swarm
                     else if (m_ngmGatewayManager.NeedsOpenGateway == true || ParentNetworkConnection.m_bIsConnectedToSwarm == false)
                     {
+                        //check if peer has full peer id for target peer
+
                         m_ngmGatewayManager.ProcessMessageToGateway(cnpPacket.m_lTo, cnpPacket);
                     }
                     else //if there is no way to send message close connection negotiation
@@ -203,7 +205,6 @@ namespace Networking
                     //get new connection propegator 
                     ChildConnectionProcessors.TryGetValue(cnpPacket.m_lFrom, out cppFromConnection);
                 }
-
             }
             else
             {

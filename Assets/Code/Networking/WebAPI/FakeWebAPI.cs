@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -12,6 +13,13 @@ namespace Networking
     /// </summary>
     public class FakeWebAPI : MonoBehaviour
     {
+        public static string GenerateRandomString(int iCharacters)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            return new string(Enumerable.Repeat(chars, iCharacters)
+              .Select(s => s[Random.Range(0,s.Length)]).ToArray());
+        }
+
         //simulated API Database
         protected class FakeDatabase
         {
@@ -20,70 +28,32 @@ namespace Networking
 
             public static float s_fGatewayTimeOut = 6f;
 
-            public List<UserIDCredentialsPair> m_uicUserIDCredentialsPairs = new List<UserIDCredentialsPair>();
+            public Dictionary<string, UserIDDetails> m_uicUserIDCredentialsPairs = new Dictionary<string, UserIDDetails>();
+            public Dictionary<long, UserIDDetails> m_uicUserIDs = new Dictionary<long, UserIDDetails>();
             public Dictionary<long, UserMessages> m_umsUserMessages = new Dictionary<long, UserMessages>();
             public Dictionary<long, Gateway> m_gtwGateways = new Dictionary<long, Gateway>();
-
-
+            
             //gets the id for the passed in identifier or returns long min value if not found
-            public long? GetUserIDWithCredentials(string strLoginCredentials)
+            public UserIDDetails GetUserIDWithCredentials(string strLoginCredentials)
             {
-                foreach (UserIDCredentialsPair uicPair in m_uicUserIDCredentialsPairs)
+                if(m_uicUserIDCredentialsPairs.TryGetValue(strLoginCredentials, out UserIDDetails uidUserDetails))
                 {
-                    if (uicPair.m_dliDeviceLoginIdentifier.m_strLoginCredentials == strLoginCredentials)
+                    return uidUserDetails;
+                }
+                else
+                {
+                    UserIDDetails uidNewUser = new UserIDDetails()
                     {
-                        return uicPair.m_lAccountID;
-                    }
+                        m_lUserID = Random.Range(int.MinValue,int.MaxValue),
+                        m_lUserKey = Random.Range(int.MinValue, int.MaxValue)
+                    };
+
+                    m_uicUserIDCredentialsPairs.Add(strLoginCredentials, uidNewUser);
+                    m_uicUserIDs.Add(uidNewUser.m_lUserID, uidNewUser);
+                    m_umsUserMessages.Add(uidNewUser.m_lUserID, new UserMessages() { m_lAccountID = uidNewUser.m_lUserID, m_umUserMessages = new UserMessage[0] });
+
+                    return uidNewUser;
                 }
-
-                return null;
-            }
-
-            //create a new user account and return the ID
-            public long? CreateUserWithCredentialsAndReturnID(string strLoginCredentials)
-            {
-                //check if user already exists with id
-                if (DoesIdentifierExist(strLoginCredentials))
-                {
-                    //cant have 2 id's with the same login credentials
-                    return null;
-                }
-
-                long lNewID = -1;
-                bool isUnique = false;
-
-                //repeate untill unique id found
-                while (isUnique == false)
-                {
-                    //create unique id
-                    lNewID++;
-
-                    isUnique = true;
-
-                    //loop through all existing accounts
-                    foreach (UserIDCredentialsPair uicPair in m_uicUserIDCredentialsPairs)
-                    {
-                        //check if id is unique
-                        if (uicPair.m_lAccountID == lNewID)
-                        {
-                            //move on to next id                            
-                            isUnique = false;
-                            break;
-                        }
-                    }
-                }
-
-                //add new account to db
-                m_uicUserIDCredentialsPairs.Add(new UserIDCredentialsPair()
-                {
-                    m_lAccountID = lNewID,
-                    m_dliDeviceLoginIdentifier = new DeviceLoginIdentifier() { m_strLoginCredentials = strLoginCredentials }
-                });
-
-                //add new message post box for player
-                m_umsUserMessages.Add(lNewID, new UserMessages() { m_lAccountID = lNewID, m_umUserMessages = new UserMessage[0] });
-
-                return lNewID;
             }
 
             //get and delete messages
@@ -99,7 +69,7 @@ namespace Networking
                 foreach (UserMessage mesMessage in umsUserMessages.m_umUserMessages)
                 {
                     //get time dif
-                    TimeSpan tspTimeSpan = DateTime.UtcNow - new DateTime(mesMessage.m_lTimeOfMessage);
+                    TimeSpan tspTimeSpan = DateTime.UtcNow - new DateTime(mesMessage.m_dtmTimeOfMessage);
 
                     //add message to list of messages to return
                     if (tspTimeSpan.TotalSeconds < s_fUserMessageTimeOut)
@@ -129,7 +99,7 @@ namespace Networking
                 {
                     m_iMessageType = iMessageType,
                     m_lFromUser = lFromUserID,
-                    m_lTimeOfMessage = DateTime.UtcNow.Ticks,
+                    m_dtmTimeOfMessage = DateTime.UtcNow.Ticks,
                     m_strMessage = strMessage
 
                 };
@@ -149,13 +119,14 @@ namespace Networking
             }
 
             //update gateway 
-            public bool SetGateway(long lUserID, int iStatus, int iRemainingSlots)
+            public bool SetGateway(long lUserID, long lAccessKey, int iStatus, int iRemainingSlots)
             {
                 Gateway gtwNewGate = new Gateway()
                 {
-                    m_lOwningPlayerId = lUserID,
-                    m_lTimeOfLastUpdate = DateTime.UtcNow.Ticks,
-                    m_sstSimStatus = new SimStatus()
+                    m_lUserID = lUserID,
+                    m_lUserKey = lAccessKey,
+                    m_dtmLastActiveTime = DateTime.UtcNow.Ticks,
+                    m_staGameState = new SimStatus()
                     {
                         m_iRemainingSlots = iRemainingSlots,
                         m_iSimStatus = iStatus
@@ -167,6 +138,17 @@ namespace Networking
                 return true;
             }
 
+            //get a gateway made by user 
+            public Gateway? GetGateway(long lUserID)
+            {
+                if(m_gtwGateways.TryGetValue(lUserID,out Gateway gtwGate))
+                {
+                    return gtwGate;
+                }
+
+                return null;
+            }
+
             //search for gateway
             public Gateway? SearchForGateway(long lUserID)
             {
@@ -174,20 +156,14 @@ namespace Networking
 
                 foreach (Gateway gtwGate in m_gtwGateways.Values)
                 {
-                    //check if not currently owned
-                    if (gtwGate.m_lOwningPlayerId == lUserID)
-                    {
-                        continue;
-                    }
-
-                    //check if in lobby state 
-                    if (gtwGate.m_sstSimStatus.m_iSimStatus != (int)SimStatus.State.Lobby)
+                    //check if not currently running own gate
+                    if (gtwGate.m_lUserID == lUserID)
                     {
                         continue;
                     }
 
                     //check if there are empty player slots
-                    if (gtwGate.m_sstSimStatus.m_iRemainingSlots <= 0)
+                    if (gtwGate.m_staGameState.m_iRemainingSlots <= 0)
                     {
                         continue;
                     }
@@ -202,15 +178,7 @@ namespace Networking
             //check if string identifier already exists in user id list
             protected bool DoesIdentifierExist(string strLoginCredentials)
             {
-                foreach (UserIDCredentialsPair uicPair in m_uicUserIDCredentialsPairs)
-                {
-                    if (uicPair.m_dliDeviceLoginIdentifier.m_strLoginCredentials == strLoginCredentials)
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
+                return m_uicUserIDCredentialsPairs.ContainsKey(strLoginCredentials);
             }
 
             //remove old gates that are nolonger in use 
@@ -220,19 +188,19 @@ namespace Networking
 
                 foreach (Gateway gtwGate in m_gtwGateways.Values)
                 {
-                    TimeSpan tspTimeSinceLastUpdate = DateTime.UtcNow - new DateTime(gtwGate.m_lTimeOfLastUpdate);
+                    TimeSpan tspTimeSinceLastUpdate = DateTime.UtcNow - new DateTime(gtwGate.m_dtmLastActiveTime);
 
                     if (tspTimeSinceLastUpdate.Seconds > s_fGatewayTimeOut
-                        || gtwGate.m_sstSimStatus.m_iSimStatus == (int)SimStatus.State.Broken
-                        || gtwGate.m_sstSimStatus.m_iSimStatus == (int)SimStatus.State.Closed)
+                        || gtwGate.m_staGameState.m_iSimStatus == (int)SimStatus.State.Broken
+                        || gtwGate.m_staGameState.m_iSimStatus == (int)SimStatus.State.Closed)
                     {
-                        lGatesToRemove.Add(gtwGate.m_lOwningPlayerId);
+                        lGatesToRemove.Add(gtwGate.m_lUserID);
                     }
                 }
 
-                foreach (long lTargetToRemove in lGatesToRemove)
+                foreach (long strTargetToRemove in lGatesToRemove)
                 {
-                    m_gtwGateways.Remove(lTargetToRemove);
+                    m_gtwGateways.Remove(strTargetToRemove);
                 }
             }
         }
@@ -264,8 +232,7 @@ namespace Networking
         protected string m_strItemDoesNoteExistResponse = "404 Item Does Not Exist";
 
         protected string m_strDoNotHavePermissionResponse = "403 Action Denied Error";
-
-
+        
         protected FakeDatabase m_fdbFakeDatabase = new FakeDatabase();
 
         public void Start()
@@ -288,24 +255,14 @@ namespace Networking
             }
         }
 
-        /// <summary>
-        /// create a user on the server
-        /// </summary>
-        /// <param name="strLoginCredentials"></param>
-        /// <param name="cucCreateUserCallback"></param>
-        public void CreateUserWithLoginCredentials(string strLoginCredentials, Action<bool, string> actCreateUserCallback)
-        {
-            StartCoroutine(InternalCreateUser(strLoginCredentials, actCreateUserCallback));
-        }
-
         public void GetUserWithLoginCredentials(string strLoginCredentials, Action<bool, string> actGetUserCallback)
         {
             StartCoroutine(InternalGetUserWithLoginCredentials(strLoginCredentials, actGetUserCallback));
         }
 
-        public void GetDeleteUserMessages(string strIDOfUser, Action<bool, string> actGetMessagesCallback)
+        public void GetDeleteUserMessages(string strUserIDandKey, Action<bool, string> actGetMessagesCallback)
         {
-            StartCoroutine(InternalGetDeleteUserMessages(strIDOfUser, actGetMessagesCallback));
+            StartCoroutine(InternalGetDeleteUserMessages(strUserIDandKey, actGetMessagesCallback));
         }
 
         public void AddNewMessage(string strNewMessageDetails, Action<bool, string> actAddMessageCallback)
@@ -323,49 +280,9 @@ namespace Networking
             StartCoroutine(InternalSearchForGateway(strUserID, actSearchForGateCallback));
         }
 
-        protected IEnumerator InternalCreateUser(string strLoginCredentials, Action<bool, string> actCreateUserCallback)
-        {
-            //check for timeout 
-            if (Random.Range(0, 1) < m_fTimeOutChance)
-            {
-                yield return new WaitForSeconds(m_fTimeOutTime);
-
-                actCreateUserCallback?.Invoke(false, m_strTimeOutResponse);
-
-                yield break;
-            }
-
-            yield return new WaitForSeconds(m_fLatncy);
-
-            //check if user could not be created due to conflicts / bad connection or other conflicts
-            if (Random.Range(0, 1) < m_fActionErrorChance)
-            {
-                //return error result
-                actCreateUserCallback?.Invoke(false, m_strServerErrorResponse);
-                yield break;
-            }
-
-            //create user
-            long? lUserID = m_fdbFakeDatabase.CreateUserWithCredentialsAndReturnID(strLoginCredentials);
-
-            if (lUserID.HasValue == false)
-            {
-                actCreateUserCallback?.Invoke(false, m_strDoNotHavePermissionResponse);
-
-                yield break;
-            }
-
-            //serialize response from db
-            string strResponse = lUserID.Value.ToString();
-
-            Debug.Log($"Created user account with credentials: {strLoginCredentials} returned : {strResponse} ");
-
-            //return success
-            actCreateUserCallback?.Invoke(true, strResponse);
-        }
-
         protected IEnumerator InternalGetUserWithLoginCredentials(string strLoginCredentials, Action<bool, string> actGetUserCallback)
         {
+
             //check for timeout 
             if (Random.Range(0, 1) < m_fTimeOutChance)
             {
@@ -388,22 +305,12 @@ namespace Networking
             }
 
             //try get user
-            long? lUserID = m_fdbFakeDatabase.GetUserIDWithCredentials(strLoginCredentials);
+            UserIDDetails strUserDetails = m_fdbFakeDatabase.GetUserIDWithCredentials(strLoginCredentials);
 
-            if (lUserID.HasValue == false)
-            {
-                actGetUserCallback?.Invoke(false, m_strItemDoesNoteExistResponse);
-
-                yield break;
-            }
-
-            //serialize response from db
-            string strResponse = lUserID.Value.ToString();
-
-            Debug.Log($"get user account with credentials: {strLoginCredentials} returned : {strResponse} ");
+            Debug.Log($"get user account with credentials: {strLoginCredentials} returned : {strUserDetails} ");
 
             //return success
-            actGetUserCallback?.Invoke(true, strResponse);
+            actGetUserCallback?.Invoke(true, JsonUtility.ToJson(strUserDetails));
         }
 
         protected IEnumerator InternalGetDeleteUserMessages(string strUserDetails, Action<bool, string> actGetMessagesCallback)
@@ -429,12 +336,12 @@ namespace Networking
                 yield break;
             }
 
-            long lUserID = long.MinValue;
+            GetMessageRequest gmdGetMessageRequest = JsonUtility.FromJson<GetMessageRequest>(strUserDetails);
 
-            //try and convert user details to long
-            if (long.TryParse(strUserDetails, out lUserID) == false)
+            //check if message request was properly formed
+            if (gmdGetMessageRequest.m_lUserKey == 0 || gmdGetMessageRequest.m_lUserID == 0)
             {
-                Debug.LogError($"Failed to parse user id : {strUserDetails}");
+                Debug.LogError($"Failed to parse user details : {strUserDetails}");
 
                 //return error result
                 actGetMessagesCallback?.Invoke(false, m_strServerErrorResponse);
@@ -442,7 +349,20 @@ namespace Networking
                 yield break;
             }
 
-            List<UserMessage> mesMessages = m_fdbFakeDatabase.GetDeleteUserMessages(lUserID);
+            //check that the user key matches
+            UserIDDetails uidUserDetails = m_fdbFakeDatabase.m_uicUserIDs[gmdGetMessageRequest.m_lUserID];
+
+            if(uidUserDetails.m_lUserKey != gmdGetMessageRequest.m_lUserKey)
+            {
+                Debug.LogError($"User access key incorrect  Request:{strUserDetails} User Key: {gmdGetMessageRequest.m_lUserKey}");
+
+                //return error result
+                actGetMessagesCallback?.Invoke(false, m_strServerErrorResponse);
+
+                yield break;
+            }
+
+            List<UserMessage> mesMessages = m_fdbFakeDatabase.GetDeleteUserMessages(gmdGetMessageRequest.m_lUserID);
 
             GetMessageReturn gmrReturn = new GetMessageReturn()
             {
@@ -479,8 +399,7 @@ namespace Networking
 
                 yield break;
             }
-
-
+            
             //try and convert user details to long
             SendMessageCommand smcSendMessageCommand = JsonUtility.FromJson<SendMessageCommand>(strNewMessageDetails);
 
@@ -527,8 +446,17 @@ namespace Networking
             //deserialize gateway changes
             SetGatewayCommand ugcUpdateGateCommand = JsonUtility.FromJson<SetGatewayCommand>(strSetGatewayCommand);
 
+            Gateway? gtwGate = m_fdbFakeDatabase.GetGateway(ugcUpdateGateCommand.m_lUserID);
+
+            //check access key
+            if (gtwGate.HasValue == true && gtwGate.Value.m_lUserKey != ugcUpdateGateCommand.m_lUserKey)
+            {
+                //return error result
+                actSetGateway?.Invoke(false, m_strServerErrorResponse);
+            }
+
             //try and find the target gateway
-            if (m_fdbFakeDatabase.SetGateway(ugcUpdateGateCommand.m_lOwningPlayerId, ugcUpdateGateCommand.m_sstStatus.m_iSimStatus, ugcUpdateGateCommand.m_sstStatus.m_iRemainingSlots) == false)
+            if (m_fdbFakeDatabase.SetGateway(ugcUpdateGateCommand.m_lUserID, ugcUpdateGateCommand.m_lUserKey, ugcUpdateGateCommand.m_staGameState.m_iSimStatus, ugcUpdateGateCommand.m_staGameState.m_iRemainingSlots) == false)
             {
                 //return error result
                 actSetGateway?.Invoke(false, m_strServerErrorResponse);
@@ -562,18 +490,10 @@ namespace Networking
                 yield break;
             }
 
-            long lUserID = long.MinValue;
+            //get user id
+            UserIDDetails uadUserDetails = m_fdbFakeDatabase.m_uicUserIDs[long.Parse(strGatewayDetails)];
 
-            //try and convert user details to long
-            if (long.TryParse(strGatewayDetails, out lUserID) == false)
-            {
-                //return error result
-                actSearchCallback?.Invoke(false, m_strServerErrorResponse);
-
-                yield break;
-            }
-
-            Gateway? gtwGate = m_fdbFakeDatabase.SearchForGateway(lUserID);
+            Gateway? gtwGate = m_fdbFakeDatabase.SearchForGateway(uadUserDetails.m_lUserID);
 
             if (gtwGate.HasValue == false)
             {

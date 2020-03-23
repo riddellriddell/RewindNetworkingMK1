@@ -7,24 +7,17 @@ using UnityEngine;
 
 namespace Networking
 {
-    /// <summary>
-    /// the details used to identify this machiene and create a player 
-    /// </summary>
-    public struct DeviceLoginIdentifier
-    {
-        //the unique identifier for this device 
-        public string m_strLoginCredentials;
-    }
 
     /// <summary>
     /// the data used to connect a player to a player ID
     /// </summary>
-    public struct UserIDCredentialsPair
+    [Serializable]
+    public struct UserIDDetails
     {
         //the identifier for the account
-        public long m_lAccountID;
+        public long m_lUserID;
 
-        public DeviceLoginIdentifier m_dliDeviceLoginIdentifier;
+        public long m_lUserKey;
     }
 
     /// <summary>
@@ -48,10 +41,11 @@ namespace Networking
     public struct UserMessage
     {       
         public long m_lFromUser;
-        public long m_lTimeOfMessage;
+        public long m_dtmTimeOfMessage;
         public int m_iMessageType;
         public string m_strMessage;
     }
+
 
     /// <summary>
     /// structure for holding all the messages associated with a user
@@ -91,15 +85,25 @@ namespace Networking
     [Serializable]
     public struct Gateway
     {
-        public long m_lOwningPlayerId;
+        public long m_lUserID;
 
-        public long m_lTimeOfLastUpdate;
+        public long m_lUserKey;
 
-        public SimStatus m_sstSimStatus;
+        public long m_dtmLastActiveTime;
+
+        public SimStatus m_staGameState;
 
     }
 
     //---------------------- Communication Types --------------------------------
+
+
+    [Serializable]
+    public struct GetMessageRequest
+    {
+        public long m_lUserID;
+        public long m_lUserKey;
+    }
 
     [Serializable]
     public struct GetMessageReturn
@@ -121,8 +125,14 @@ namespace Networking
     [Serializable]
     public struct SetGatewayCommand
     {
-        public long m_lOwningPlayerId;
+        public long m_lUserID;
+        public long m_lUserKey;
+        public SimStatus m_staGameState;
+    }
 
-        public SimStatus m_sstStatus;
+    [Serializable]
+    public struct SearchForGatewayReturn
+    {
+        public long m_lGateOwnerUserID;
     }
 }

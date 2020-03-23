@@ -8,6 +8,8 @@ namespace Networking
     {
 #if UNITY_EDITOR
 
+        public bool m_bUseFakeWebApi = true;
+
         protected WebInterface m_winWebInterface1;
         protected WebInterface m_winWebInterface2;
 
@@ -15,8 +17,11 @@ namespace Networking
         void Start()
         {
             //create web interface 
-            m_winWebInterface1 = new WebInterface();
-            m_winWebInterface2 = new WebInterface();
+            m_winWebInterface1 = new WebInterface(this);
+            m_winWebInterface2 = new WebInterface(this);
+
+            m_winWebInterface1.TestLocally = m_bUseFakeWebApi;
+            m_winWebInterface1.TestLocally = m_bUseFakeWebApi;
 
             StartCoroutine(TestCoroutine());
         }
@@ -73,8 +78,8 @@ namespace Networking
             int iInterface1ConnectionAttempts = m_winWebInterface1.PlayerIDCommunicationStatus.m_iCommunicationAttemptNumber;
             int iInterface2ConnectionAttempts = m_winWebInterface2.PlayerIDCommunicationStatus.m_iCommunicationAttemptNumber;
 
-            Debug.Log($"Interface 1 connected after {iInterface1ConnectionAttempts} connection attempts with id {m_winWebInterface1.PlayerID}");
-            Debug.Log($"Interface 2 connected after {iInterface2ConnectionAttempts} connection attempts with id {m_winWebInterface2.PlayerID}");
+            Debug.Log($"Interface 1 connected after {iInterface1ConnectionAttempts} connection attempts with id {m_winWebInterface1.UserID}");
+            Debug.Log($"Interface 2 connected after {iInterface2ConnectionAttempts} connection attempts with id {m_winWebInterface2.UserID}");
         }
 
         public IEnumerator SetupGateway()
@@ -108,7 +113,7 @@ namespace Networking
 
             Debug.Assert(m_winWebInterface2.ExternalGatewayCommunicationStatus.m_cmsStatus != WebInterface.WebAPICommunicationTracker.CommunctionStatus.Failed);
 
-            Debug.Log($"Found Gateway {m_winWebInterface2.ExternalGateway.Value.ToString()} ");
+            Debug.Log($"Found Gateway {m_winWebInterface2.ExternalGateway.Value.m_lGateOwnerUserID.ToString()} ");
         }
 
         public IEnumerator SendMessage()
@@ -117,7 +122,7 @@ namespace Networking
 
             Debug.Log("Starting sending message");
 
-            m_winWebInterface2.SendMessage(m_winWebInterface2.ExternalGateway.Value.m_lOwningPlayerId, 0, "Test Message");
+            m_winWebInterface2.SendMessage(m_winWebInterface2.ExternalGateway.Value.m_lGateOwnerUserID, 0, "Test Message");
 
             yield return new WaitForSeconds(5);
 

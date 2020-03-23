@@ -1,37 +1,40 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+//import * as cryptogrpahy from 'crypto'
 
 admin.initializeApp();
 
- function MakeID(length:number):string 
- {
-    let result           = '';
-    let characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let charactersLength = characters.length;
-    for ( let i = 0; i < length; i++ ) {
-       result += characters.charAt(Math.floor(Math.random() * charactersLength));
-    }
-    return result;
- }
+function UniformBitRandLong():number
+{
+    let randomID:number = 0;
 
-function SetupNewPeer(UserKey : admin.database.Reference, AccessKey : string): Promise<void>
+    //make sure the random id is never 0
+    while(randomID === 0)
+    {
+        randomID = Math.floor(((Math.random() - 0.5)  * Number.MAX_SAFE_INTEGER * 2));
+    }
+
+    return randomID;
+}
+
+function SetupNewPeer(adrUserKey : admin.database.Reference, lUserKey : number): Promise<void>
 {
     const PromiseArray = [];
 
     //the time of the last activity
-    PromiseArray.push(UserKey.child('LastActivity').set(admin.database.ServerValue.TIMESTAMP));
-    PromiseArray.push(UserKey.child('AccessKey').set(AccessKey));
+    PromiseArray.push(adrUserKey.child('m_dtmLastActivity').set(admin.database.ServerValue.TIMESTAMP));
+    PromiseArray.push(adrUserKey.child('m_lUserKey').set(lUserKey));
 
     return Promise.all(PromiseArray).then();
 }
 
-function SetupNewUdidMapping(UdidKey : admin.database.Reference, UserKey :string, AccessKey : string): Promise<void>
+function SetupNewUdidMapping(UdidKey : admin.database.Reference, lUserID :number, lUserKey : number): Promise<void>
 {
     const PromiseArray = [];
 
     //the time of the last activity
-    PromiseArray.push(UdidKey.child('UserKey').set(UserKey));
-    PromiseArray.push(UdidKey.child('AccessKey').set(AccessKey));
+    PromiseArray.push(UdidKey.child('m_lUserID').set(lUserID));
+    PromiseArray.push(UdidKey.child('m_lUserKey').set(lUserKey));
 
     return Promise.all(PromiseArray).then();
 }
@@ -41,7 +44,7 @@ function SetupNewUdidMapping(UdidKey : admin.database.Reference, UserKey :string
     console.log(request.body);
 
      //get the device udid
-    const strUniqueDeviceID = request.body.udid;
+    const strUniqueDeviceID = String(request.body.m_strUdid);
 
     console.log(strUniqueDeviceID);
     
@@ -70,40 +73,38 @@ function SetupNewUdidMapping(UdidKey : admin.database.Reference, UserKey :string
         }
         else
         {
+            const lNewUserID :number = UniformBitRandLong();
+            const lNewUserAccessKey :number = UniformBitRandLong();
+            
             //create new user 
-            const NewUserAddress = admin.database().ref('Users').push();
+            const adrNewUserAddress = admin.database().ref('Users').child(lNewUserID.toString());
             
-            const NewUserID = String(NewUserAddress.key)
-            const NewUserAccessKey = MakeID(10);
-            
-            const PromiseArray = [];
+            const prmPromiseArray = [];
 
             //push new user to the server 
-            PromiseArray.push( SetupNewPeer(NewUserAddress,NewUserAccessKey));
-            PromiseArray.push( SetupNewUdidMapping(UdidMappingAddress,NewUserID,NewUserAccessKey));
+            prmPromiseArray.push( SetupNewPeer(adrNewUserAddress,lNewUserAccessKey));
+            prmPromiseArray.push( SetupNewUdidMapping(UdidMappingAddress,lNewUserID,lNewUserAccessKey));
             
 
-            return Promise.all(PromiseArray).then(() =>
+            return Promise.all(prmPromiseArray).then(() =>
             {
-                const UserIDValues = {
-                    UserKey: NewUserID,
-                    AccessKey: NewUserAccessKey
+                const uivUserIDValues = {
+                    m_lUserID: lNewUserID,
+                    m_lUserKey: lNewUserAccessKey
                 };
 
-               return UserIDValues
+               return uivUserIDValues
             })
         }
     })
     .then((result) =>
     {
-        response.status(200).json(
-            {
-                UserID: result
-            }                    
-        );
+        response.status(200).json(result);
     })
     .catch((error) =>
     {
+        console.log('Error:' + error);
+
         response.status(500).send(error);
     });
 
@@ -114,24 +115,24 @@ function SetupNewUdidMapping(UdidKey : admin.database.Reference, UserKey :string
 export const SendMessageToPeer = functions.https.onRequest((request, response) =>
 {
     //check that request was fully formed 
-    const lFromID = request.body.m_lFromID;
-    const lToID = request.body.m_lToID;
-    const iType = request.body.m_iType;
-    const strMessage = request.body.m_strMessage;
+    const lFromID:number = Number(request.body.m_lFromID) || 0;
+    const lToID:number = Number(request.body.m_lToID) || 0;
+    const iType:number = Number(request.body.m_iType);
+    const strMessage:string = request.body.m_strMessage;
     
-    let bIsValidRequest = true;
+    let bIsValidRequest:boolean = true;
 
     // validate request types
-    if((typeof lFromID).localeCompare('string')!== 0 || !lFromID)
+    if(lFromID == 0)
     {
         bIsValidRequest = false;
     }
-    if((typeof lToID).localeCompare('string')!== 0 || !lToID)
+    if(lToID == 0)
     {
         bIsValidRequest = false;
     }
     
-    if((typeof iType).localeCompare('number')!== 0)
+    if(iType == NaN)
     {
         bIsValidRequest = false;
     }
@@ -153,15 +154,15 @@ export const SendMessageToPeer = functions.https.onRequest((request, response) =
     }
 
     //get target directory 
-    const UserMessageAddress = admin.database().ref('Users').child(lToID).child('Messages').push();
+    const UserMessageAddress = admin.database().ref('Users').child(lToID.toString()).child('Messages').push();
 
     //create message
     const MessageCreatePromises = []
 
-    MessageCreatePromises.push(UserMessageAddress.child('Date').set(admin.database.ServerValue.TIMESTAMP));
-    MessageCreatePromises.push(UserMessageAddress.child('From').set(lFromID));
-    MessageCreatePromises.push(UserMessageAddress.child('Type').set(iType));
-    MessageCreatePromises.push(UserMessageAddress.child('Message').set(strMessage));
+    MessageCreatePromises.push(UserMessageAddress.child('dtmDate').set(admin.database.ServerValue.TIMESTAMP));
+    MessageCreatePromises.push(UserMessageAddress.child('lFrom').set(lFromID));
+    MessageCreatePromises.push(UserMessageAddress.child('iType').set(iType));
+    MessageCreatePromises.push(UserMessageAddress.child('strMessage').set(strMessage));
 
     Promise.all(MessageCreatePromises).then((res)=>
     {
@@ -169,6 +170,8 @@ export const SendMessageToPeer = functions.https.onRequest((request, response) =
         
     }).catch((error) =>
     {
+        console.log('Error:' + error);
+
         response.status(500).json(
             {                  
                 message: 'Error in sending message' + error
@@ -181,14 +184,14 @@ export const SendMessageToPeer = functions.https.onRequest((request, response) =
 export const GetMessagesForPeer = functions.https.onRequest((request, response) =>
 {
     //get user id
-    const strUserID = request.body.m_strUserID;
-    const strAccesKey = request.body.m_strAccessKey;
+    const lUserID:number = Number(request.body.m_lUserID) || 0;
+    const lAccesKey: number = Number(request.body.m_lUserKey) || 0;
 
-    if(!strUserID || !strAccesKey)
+    if(lUserID == 0 || lAccesKey == 0)
     {
         response.status(400).json(
             {                  
-                message: 'Bad Request data in request UserID:' + strUserID + ' AccessKey:' + strAccesKey
+                message: 'Bad Request data in request UserID:' + lUserID + ' AccessKey:' + lAccesKey
             }
         );
 
@@ -196,28 +199,29 @@ export const GetMessagesForPeer = functions.https.onRequest((request, response) 
     }
 
     //try get user messages
-    const UserAccessKeyAddress = admin.database().ref('Users').child(strUserID).child('AccessKey');
-    const UserMessageAddress = admin.database().ref('Users').child(strUserID).child('Messages');
+    const adrUserAccessKeyAddress = admin.database().ref('Users').child(lUserID.toString()).child('m_lUserKey');
+    const adrUserMessageAddress = admin.database().ref('Users').child(lUserID.toString()).child('Messages');
 
     const MessageCreatePromises = []
 
      //message object
      interface MessageDetials
      {
-        Key: string,
-        Value: any
+        strKey: string,
+        anyValue: any
      }
+
     const Messages = new Array<MessageDetials>();
     let bIsValidReqest = true;
 
-    MessageCreatePromises.push(UserAccessKeyAddress.once('value').then((ReturnValues) =>
+    MessageCreatePromises.push(adrUserAccessKeyAddress.once('value').then((ReturnValues) =>
     {
         if(ReturnValues === null )
         {
             //check if peer existed at all
             response.status(404).json(
                 {                  
-                    message: 'User Does Not Exist UserID:' + strUserID
+                    message: 'User Does Not Exist UserID:' + lUserID
                 }
             );
 
@@ -225,12 +229,12 @@ export const GetMessagesForPeer = functions.https.onRequest((request, response) 
 
             return;
         }
-        else if (ReturnValues.val() !== strAccesKey)
+        else if (ReturnValues.val() !== lAccesKey)
         {
              //check if peer existed at all
              response.status(500).json(
                 {                  
-                    message: 'Incorrect User Key  Access Key:' + ReturnValues.val() + ' Passed Key:' + strAccesKey + ' UserKey:' + strUserID 
+                    message: 'Incorrect User Key  Access Key:' + ReturnValues.val() + ' Passed Key:' + lAccesKey + ' UserKey:' + lUserID 
                 }               
             );
 
@@ -239,17 +243,19 @@ export const GetMessagesForPeer = functions.https.onRequest((request, response) 
             return;
         }
 
-        bIsValidReqest = true
+        bIsValidReqest = true;
 
         return;
     }));
 
     //get messages 
-    MessageCreatePromises.push(UserMessageAddress.once('value').then((ReturnValue) =>
+    MessageCreatePromises.push(adrUserMessageAddress.once('value').then((ReturnValue) =>
     {      
         //check if there was any messages 
         if(ReturnValue === null)
         {
+            console.log('No messages found at address ' + adrUserMessageAddress);
+
            return;
         }
         else
@@ -258,8 +264,8 @@ export const GetMessagesForPeer = functions.https.onRequest((request, response) 
             {
                 const MessageDetails = 
                 {
-                    Key: String(messageSnapshot.key),
-                    Value: messageSnapshot.val()
+                    strKey: String(messageSnapshot.key),
+                    anyValue: messageSnapshot.val()
                 };
 
                 Messages.push(MessageDetails)
@@ -279,43 +285,43 @@ export const GetMessagesForPeer = functions.https.onRequest((request, response) 
         
         interface ReplyMessage
         {
-            m_lFromUser: string,
-            m_lTimeOfMessage: number,
+            m_lFromUser: number,
+            m_dtmTimeOfMessage: number,
             m_iMessageType: number,
             m_strMessage: string
         }
 
         //build reply message
-        const ReplyMessage = new Array<ReplyMessage>();
+        const msgReplyMessage = new Array<ReplyMessage>();
             
         //the min time for a message to be valid
-        const MinValidMessageAge = Date.now() - (1000 * 20);
+        const dtmMinValidMessageAge = Date.now() - (1000 * 20);
 
-        const DeletePromisies = []
+        const prmDeletePromisies = []
 
         for (let i = 0; i < Messages.length; i++) 
         {
-            const MessageCreationTime = Number(Messages[i].Value.Date);
-            if(MessageCreationTime > MinValidMessageAge)
+            const dtmMessageCreationTime = Number(Messages[i].anyValue.dtmDate);
+            if(dtmMessageCreationTime > dtmMinValidMessageAge)
             {
-                let UserMessage = {
-                    m_lFromUser: Messages[i].Value.From,
-                    m_lTimeOfMessage: Messages[i].Value.Date,
-                    m_iMessageType: Messages[i].Value.Type,
-                    m_strMessage: Messages[i].Value.Message
+                let msgUserMessage:ReplyMessage = {
+                    m_lFromUser: Messages[i].anyValue.lFrom,
+                    m_dtmTimeOfMessage: Messages[i].anyValue.dtmDate,
+                    m_iMessageType: Messages[i].anyValue.iType,
+                    m_strMessage: Messages[i].anyValue.strMessage
                 };
 
-                ReplyMessage.push(UserMessage);
+                msgReplyMessage.push(msgUserMessage);
             }
 
-            DeletePromisies.push(UserMessageAddress.child(Messages[i].Key).remove())
+            prmDeletePromisies.push(adrUserMessageAddress.child(Messages[i].strKey.toString()).remove())
         };
 
         //wait for messages to finish deleting 
-        return Promise.all(DeletePromisies).then(()=>
+        return Promise.all(prmDeletePromisies).then(()=>
         {
             //return the compiled reply message
-            return ReplyMessage;
+            return msgReplyMessage;
         } );
 
     }).then((result) =>
@@ -325,12 +331,14 @@ export const GetMessagesForPeer = functions.https.onRequest((request, response) 
             //send reply message 
             response.status(200).json(
             {                  
-                UserMessage: result
+                m_usmUserMessages: result
             });
         }
 
     }).catch((error)=>
     {
+        console.log('Error:' + error);
+
         //send reply message 
         response.status(500).json(
         {                  
@@ -348,9 +356,9 @@ interface GatewayState
 
 interface GatewayDetails
 {
-    m_iLastActiveTime:number
-    m_strUserID: string
-    m_strAccessKey: string
+    m_dtmLastActiveTime:number
+    m_lUserID: number
+    m_lUserKey: number
     m_staGameState: GatewayState 
 }
 
@@ -358,43 +366,49 @@ interface GatewayDetails
 //sets a gateway 
 export const SetGateway = functions.https.onRequest((request, response) =>
 {
+    console.log('Set Gateway Start');
+
     //get owning player and owning player key
-    const OldestValidGateTime =Number(Date.now());
-    const strUserID:string = String(request.body.m_strUserID);
-    const strAccessKey:string = String(request.body.m_strAccessKey);
+    const dtmOldestValidGateTime:number = Number(Date.now());
+    const lUserID:number = Number(request.body.m_lUserID) || 0;
+    const lUserKey:number = Number(request.body.m_lUserKey) || 0;
     const staGameState: GatewayState = request.body.m_staGameState;
 
-    const GateDetaild: GatewayDetails =
+    const gdtGateDetails: GatewayDetails =
     {
-        m_iLastActiveTime: OldestValidGateTime,
-        m_strUserID: strUserID,
-        m_strAccessKey: strAccessKey,
+        m_dtmLastActiveTime: dtmOldestValidGateTime,
+        m_lUserID: lUserID,
+        m_lUserKey: lUserKey,
         m_staGameState: staGameState
     }
 
     //validate inputs 
-    if(!strUserID || !strAccessKey || staGameState === null || staGameState === undefined || staGameState.m_iRemainingSlots === undefined)
+    if(lUserID == 0 || lUserKey == 0 || staGameState === null || staGameState === undefined || staGameState.m_iRemainingSlots === undefined)
     {
+        console.log('Bad Request data in request UserID:' + lUserID + ' AccessKey:' + lUserKey + ' Game State' + staGameState);
+
         response.status(400).json(
             {                  
-                message: 'Bad Request data in request UserID:' + strUserID + ' AccessKey:' + strAccessKey + ' Game State' + staGameState
+                message: 'Bad Request data in request UserID:' + lUserID + ' AccessKey:' + lUserKey + ' Game State' + staGameState
             }
         );
 
         return;
     }
 
+    console.log('Not Bad Input');
+
     //check if already exists 
-    const GatewayAccessKeyAddress = admin.database().ref('Gateways').child(strUserID).child('AccessKey');
+    const adrGatewayAccessKeyAddress = admin.database().ref('Gateways').child(lUserID.toString()).child('m_lUserKey');
     
     //get gateway access key
-    GatewayAccessKeyAddress.once('value').then((result) => 
+    adrGatewayAccessKeyAddress.once('value').then((result) => 
     {
         console.log('Result from get gateway for user' + result.val());
 
-        if(result.val() === null || result.val() === strAccessKey)
+        if(result.val() === null || result.val() === lUserKey)
         {
-            const GatewayAddress = admin.database().ref('Gateways').child(strUserID);
+            const GatewayAddress = admin.database().ref('Gateways').child(lUserID.toString());
 
             //let GatewayConnectPromise = []
 
@@ -407,7 +421,7 @@ export const SetGateway = functions.https.onRequest((request, response) =>
             //    return true;
             //});
 
-            return GatewayAddress.set(GateDetaild).then(()=>
+            return GatewayAddress.set(gdtGateDetails).then(()=>
             {
                 return true;
             })
@@ -428,15 +442,19 @@ export const SetGateway = functions.https.onRequest((request, response) =>
         }
         else
         {
+            console.log('Error Incorrect key passed: ' + lUserKey);
+
             response.status(400).json(
                 {                  
-                    message: 'Incorrect Key, Passed key:' + strAccessKey
+                    message: 'Incorrect Key, Passed key:' + lUserKey
                 }
             );
         }
 
     }).catch((error)=>
     {
+        console.log('Error:' + error);
+
         //send reply message 
         response.status(500).json(
         {                  
@@ -452,47 +470,47 @@ export const GetGateway = functions.https.onRequest((request, response) =>
     //matching world location / other deets 
 
     //get all gateways
-    const Gateways = admin.database().ref('Gateways');
+    const adrGateways = admin.database().ref('Gateways');
   
-    const ActiveGateways = new Array<GatewayDetails>()
-    const DeadGateways = new Array<string>()
+    const gdtActiveGateways = new Array<GatewayDetails>()
+    const strDeadGateways = new Array<string>()
     
     //get gateway details
-    Gateways.once('value').then((result) =>
+    adrGateways.once('value').then((result) =>
     {        
         if(result.val() !== null)
         {
             //the oldest time for an active gateway 
-            const OldestValidGateTime:number = Date.now() - (1000 * 20);
+            const dtmOldestValidGateTime:number = Date.now() - (1000 * 20);
 
             result.forEach((gateway) =>
             {
-                console.log('GetGatewayValue: last active time:' + gateway.val().m_iLastActiveTime + ' oldest Valid Time:' + OldestValidGateTime)
+                console.log('GetGatewayValue: last active time:' + gateway.val().m_dtmLastActiveTime + ' oldest Valid Time:' + dtmOldestValidGateTime)
 
-                if(Number(gateway.val().m_iLastActiveTime) < OldestValidGateTime)
+                if(Number(gateway.val().m_dtmLastActiveTime) < dtmOldestValidGateTime)
                 {
-                    DeadGateways.push(String(gateway.key));
+                    strDeadGateways.push(String(gateway.key));
                 }
                 else if(Number(gateway.val().m_staGameState.m_iRemainingSlots) > 0)
                 {
-                    ActiveGateways.push(gateway.val() as GatewayDetails)
+                    gdtActiveGateways.push(gateway.val() as GatewayDetails)
                 }
             })
         }
     }).then(() =>
     {
-        const RemoveGatePromises = []
+        const prsRemoveGatePromises = []
 
-        for(let i = 0 ; i < DeadGateways.length; i++)
+        for(let i = 0 ; i < strDeadGateways.length; i++)
         {
-            RemoveGatePromises.push(Gateways.child(DeadGateways[i]).remove())
+            prsRemoveGatePromises.push(adrGateways.child(strDeadGateways[i]).remove())
         }
 
-        return Promise.all(RemoveGatePromises).then();
+        return Promise.all(prsRemoveGatePromises).then();
     }).then(() =>
     {
         //if there are no gateways return a 404 and let the user create a new one
-        if(ActiveGateways.length === 0)
+        if(gdtActiveGateways.length === 0)
         {
             
             response.status(404).json(
@@ -504,34 +522,30 @@ export const GetGateway = functions.https.onRequest((request, response) =>
             return;
         };
 
-        let BestGateway = null
+        let BestGateway = gdtActiveGateways[0]
 
-        for(let i = 0 ; i < ActiveGateways.length; i++)
+        for(let i = 1 ; i < gdtActiveGateways.length; i++)
         {
-            if(BestGateway == null)
+            if(BestGateway.m_staGameState.m_iRemainingSlots < gdtActiveGateways[i].m_staGameState.m_iRemainingSlots)
             {
-                BestGateway = ActiveGateways[i];
-            }
-            else if(BestGateway.m_staGameState.m_iRemainingSlots < ActiveGateways[i].m_staGameState.m_iRemainingSlots)
-            {
-                BestGateway = ActiveGateways[i];
+                BestGateway = gdtActiveGateways[i];
             }
 
         }
 
         response.status(200).json(
             {                  
-                BestGatewayOwner: BestGateway?.m_strUserID
+                m_lGateOwnerUserID: BestGateway.m_lUserID
             }
         );
-       
+               
     }).catch((error) =>
     {
+        console.log('Error:' + error)
         //send reply message 
         response.status(500).json(
         {                  
             Error: error
         });
     })
-
 });

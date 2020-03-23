@@ -154,7 +154,7 @@ namespace GameManagers
             //request gateway from webinterface
             if (m_winWebInterface.SearchForGateway() == false)
             {
-                Debug.Log($"User:{m_winWebInterface.PlayerID} Encountered error when searching for gateway");
+                Debug.Log($"User:{m_winWebInterface.UserID} Encountered error when searching for gateway");
 
                 //error has occured searching for gateway exit active game state
                 State = ActiveGameState.Error;
@@ -193,7 +193,7 @@ namespace GameManagers
             //tell p2p network to start a new connection through gateway
 
             //get the gateway peer
-            long lConnectionID = m_winWebInterface.ExternalGateway.Value.m_lOwningPlayerId;
+            long lConnectionID = m_winWebInterface.ExternalGateway.Value.m_lGateOwnerUserID;
 
             //tell the connection propegator who to try to connect to
             m_ncpConnectionPropegator.StartRequest(lConnectionID);
@@ -427,7 +427,7 @@ namespace GameManagers
                 //check if getting messages from server when you dont need to be
                 if (m_winWebInterface.IsGettingMessagesFromServer())
                 {
-                    Debug.Log($"User:{m_winWebInterface.PlayerID} stopping getting messages from server");
+                    Debug.Log($"User:{m_winWebInterface.UserID} stopping getting messages from server");
                     m_winWebInterface.StopGettingMessages();
                 }
             }
@@ -436,7 +436,7 @@ namespace GameManagers
         protected void SetupNetworking()
         {
             //create network
-            m_ncnNetworkConnection = new NetworkConnection(m_winWebInterface.PlayerID, new FakeWebRTCFactory());
+            m_ncnNetworkConnection = new NetworkConnection(m_winWebInterface.UserID, new FakeWebRTCFactory());
 
             //add network processors
             m_ncnNetworkConnection.AddPacketProcessor(new TimeNetworkProcessor());

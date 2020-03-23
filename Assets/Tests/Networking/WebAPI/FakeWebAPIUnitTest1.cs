@@ -43,7 +43,7 @@ namespace Tests
                 bFinished = true;
             } ;
 
-            FakeWebAPI.Instance.CreateUserWithLoginCredentials(strLoginCreds, actCallback);
+            FakeWebAPI.Instance.GetUserWithLoginCredentials(strLoginCreds, actCallback);
 
             while(bFinished == false)
             {

@@ -26,7 +26,6 @@ namespace Networking
 
         public IEnumerator CreateUserTest()
         {
-
             yield return null;
 
             string strUser1LoginCreds = $"LogInCred{Random.Range(0, int.MaxValue)}";
@@ -44,7 +43,7 @@ namespace Networking
                 bUser1Finished = true;
             };
 
-            FakeWebAPI.Instance.CreateUserWithLoginCredentials(strUser1LoginCreds, actCallback1);
+            FakeWebAPI.Instance.GetUserWithLoginCredentials(strUser1LoginCreds, actCallback1);
 
             while (bUser1Finished == false)
             {
@@ -72,7 +71,7 @@ namespace Networking
                 bUser2Finished = true;
             };
 
-            FakeWebAPI.Instance.CreateUserWithLoginCredentials(strUser2LoginCreds, actCallback2);
+            FakeWebAPI.Instance.GetUserWithLoginCredentials(strUser2LoginCreds, actCallback2);
 
             while (bUser2Finished == false)
             {
@@ -121,15 +120,54 @@ namespace Networking
 
             Debug.Log("Starting send message Test");
 
-            long lUser1ID = 0;
+            string strUser1UDID = "asdf";
+            long strUser1ID = 0;
+            long strUser1Key = 0;
+            bool bFinishedGetUser1ID = false;
 
-            long lUser2ID = 1;
+
+            string strUser2UDID = "fghj";
+            long strUser2ID = 1;
+            long strUser2Key = 1;
+            bool bFinishedGetUser2ID = false;
+
+            Action<bool, string> actOnGetUser1 = (bool bWasSuccess, string strUserDetails) =>
+                 {
+                     UserIDDetails uidUserDetails = JsonUtility.FromJson<UserIDDetails>(strUserDetails);
+                     strUser1ID = uidUserDetails.m_lUserID;
+                     strUser1Key = uidUserDetails.m_lUserKey;
+                     bFinishedGetUser1ID = true;
+                 };
+
+            Action<bool, string> actOnGetUser2 = (bool bWasSuccess, string strUserDetails) =>
+            {
+                UserIDDetails uidUserDetails = JsonUtility.FromJson<UserIDDetails>(strUserDetails);
+                strUser2ID = uidUserDetails.m_lUserID;
+                strUser2Key = uidUserDetails.m_lUserKey;
+                bFinishedGetUser2ID = true;
+            };
+
+            //create users
+            FakeWebAPI.Instance.GetUserWithLoginCredentials(strUser1UDID, actOnGetUser1);
+            FakeWebAPI.Instance.GetUserWithLoginCredentials(strUser2UDID, actOnGetUser2);
+
+            //wait for users to be created
+            while (bFinishedGetUser1ID == false || bFinishedGetUser2ID == false)
+            {
+                yield return null;
+            }
 
             bool bLoop = true;
             bool bActionResult = false;
             string strActionValue = "";
 
             // get user 1 messages
+            GetMessageRequest gmrGetMessageRequest = new GetMessageRequest()
+            {
+                m_lUserKey = strUser1Key,
+                m_lUserID = strUser1ID
+            };
+
 
             Action<bool, string> actGetMessagesCallback = (bool bDidSucceed, string strReturnValue) =>
              {
@@ -137,23 +175,23 @@ namespace Networking
                  bActionResult = bDidSucceed;
                  strActionValue = strReturnValue;
              };
-
-            Debug.Log($"running inital get messages test on user {lUser1ID.ToString()}");
-            FakeWebAPI.Instance.GetDeleteUserMessages(lUser1ID.ToString(), actGetMessagesCallback);
+                        
+            Debug.Log($"running inital get messages test on user {JsonUtility.ToJson(gmrGetMessageRequest) }");
+            FakeWebAPI.Instance.GetDeleteUserMessages(JsonUtility.ToJson(gmrGetMessageRequest), actGetMessagesCallback);
 
             while (bLoop)
             {
                 yield return null;
             }
 
-            Debug.Assert(bActionResult, $"Get delete messages for user {lUser1ID.ToString()} Failed with return value {strActionValue}");
+            Debug.Assert(bActionResult, $"Get delete messages for user {strUser1ID} Failed with return value {strActionValue}");
 
             //user 2 send messages 
             SendMessageCommand smcSendMessageCommand = new SendMessageCommand()
             {
                 m_iType = 0,
-                m_lFromID = lUser2ID,
-                m_lToID = lUser1ID,
+                m_lFromID = strUser2ID,
+                m_lToID = strUser1ID,
                 m_strMessage = "Test Message From User 2"
 
             };
@@ -162,7 +200,7 @@ namespace Networking
 
             bLoop = true;
 
-            Debug.Log($"Sending Message: {strMessageCommand} to user {lUser1ID.ToString()}");
+            Debug.Log($"Sending Message: {strMessageCommand} to user {strUser1ID.ToString()}");
             FakeWebAPI.Instance.AddNewMessage(strMessageCommand, actGetMessagesCallback);
 
             while (bLoop)
@@ -176,17 +214,17 @@ namespace Networking
 
             // get user 1 messages again
             bLoop = true;
-            Debug.Log($" get messages test on user {lUser1ID.ToString()} again to get new message");
-            FakeWebAPI.Instance.GetDeleteUserMessages(lUser1ID.ToString(), actGetMessagesCallback);
+            Debug.Log($" get messages test on user {JsonUtility.ToJson(gmrGetMessageRequest)} again to get new message");
+            FakeWebAPI.Instance.GetDeleteUserMessages(JsonUtility.ToJson(gmrGetMessageRequest), actGetMessagesCallback);
 
             while (bLoop)
             {
                 yield return null;
             }
 
-            Debug.Assert(bActionResult, $"Get messages for user: {lUser1ID.ToString()} Failed with return value {strActionValue}");
+            Debug.Assert(bActionResult, $"Get messages for user: {strUser1ID.ToString()} Failed with return value {strActionValue}");
 
-            Debug.Log($"User:{lUser1ID.ToString()} Messages: {strActionValue} retrieved successfully");
+            Debug.Log($"User:{strUser1ID.ToString()} Messages: {strActionValue} retrieved successfully");
 
             GetMessageReturn gmrMessageReturn = JsonUtility.FromJson<GetMessageReturn>(strActionValue);
 
@@ -195,7 +233,7 @@ namespace Networking
                 "Returned message did not match sent message"
                 );
 
-            Debug.Log($"User:{lUser1ID.ToString()} recieved Message: {gmrMessageReturn.m_usmUserMessages[0].m_strMessage} successfully");
+            Debug.Log($"User:{strUser1ID.ToString()} recieved Message: {gmrMessageReturn.m_usmUserMessages[0].m_strMessage} successfully");
         }
 
         public IEnumerator CreateGatewayTest()
@@ -216,20 +254,22 @@ namespace Networking
                 strActionValue = strReturnValue;
             };
 
-            long lUser1ID = 0;
+            long strUser1ID = 0;
+            long strUser1Key = 0;
 
             //----------- Set Gateway --------------------------------------------------
 
 
             SetGatewayCommand ugwUpdateGatewayCommand = new SetGatewayCommand()
             {
-                
-                m_sstStatus = new SimStatus()
+
+                m_staGameState = new SimStatus()
                 {
                     m_iRemainingSlots = 2,
                     m_iSimStatus = (int)SimStatus.State.Lobby
                 },
-                m_lOwningPlayerId = lUser1ID
+                m_lUserID = strUser1ID,
+                m_lUserKey = strUser1Key
             };
 
             string strUpdateGatewayCommand = JsonUtility.ToJson(ugwUpdateGatewayCommand);
@@ -237,7 +277,7 @@ namespace Networking
             bLoop = true;
 
 
-            Debug.Log($"trying to update gateway for user: {lUser1ID.ToString()} with command: {strUpdateGatewayCommand}");
+            Debug.Log($"trying to update gateway for user: {strUser1ID} with command: {strUpdateGatewayCommand}");
 
             FakeWebAPI.Instance.SetGateway(strUpdateGatewayCommand, actWebAPICallback);
 
@@ -248,28 +288,28 @@ namespace Networking
 
             Debug.Assert(bActionResult, $"Update Gateway command: {strUpdateGatewayCommand} Failed with result {strActionValue}");
 
-            Debug.Log($"gateway for user: {lUser1ID.ToString()} updated ");
+            Debug.Log($"gateway for user: {strUser1ID} updated ");
 
 
 
             //----------- search for gateway ----------------------------------------------
 
-            long lUser2ID = 1;
+            string strUser2ID = "fghj";
 
             bLoop = true;
 
-            Debug.Log($"Searching for gateway for user: {lUser2ID.ToString()}");
+            Debug.Log($"Searching for gateway for user: {strUser2ID}");
 
-            FakeWebAPI.Instance.SearchForGateway(lUser2ID.ToString(), actWebAPICallback);
+            FakeWebAPI.Instance.SearchForGateway(strUser2ID, actWebAPICallback);
 
             while (bLoop)
             {
                 yield return null;
             }
 
-            Debug.Assert(bActionResult && strActionValue != string.Empty, $"Failed to find gateway for user {lUser2ID.ToString()} with result {strActionValue}");
+            Debug.Assert(bActionResult && strActionValue != string.Empty, $"Failed to find gateway for user {strUser2ID.ToString()} with result {strActionValue}");
 
-            Debug.Log($"gateway : {strActionValue} found for user: {lUser2ID.ToString()} ");
+            Debug.Log($"gateway : {strActionValue} found for user: {strUser2ID.ToString()} ");
         }
 
 #endif

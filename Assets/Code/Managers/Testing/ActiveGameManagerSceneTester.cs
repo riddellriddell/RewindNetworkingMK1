@@ -132,7 +132,7 @@ namespace GameManagers
 
             Debug.Log("Starting active game manager Test");
 
-            m_wbiWebInterface = new WebInterface();
+            m_wbiWebInterface = new WebInterface(this);
 
             if(m_strUniqueDeviceID == string.Empty)
             {
@@ -176,7 +176,7 @@ namespace GameManagers
 
         protected void UpdateNetworkDebug()
         {
-            m_lPeerID = m_agmActiveGameManager.m_winWebInterface.PlayerID;
+            m_lPeerID = m_agmActiveGameManager.m_winWebInterface.UserID;
 
             NetworkGlobalMessengerProcessor gmpGlobalMessagingProcessor = m_agmActiveGameManager.m_ncnNetworkConnection.GetPacketProcessor<NetworkGlobalMessengerProcessor>();
             TimeNetworkProcessor tnpTimeProcessor = m_agmActiveGameManager.m_ncnNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
