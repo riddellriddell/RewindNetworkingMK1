@@ -502,7 +502,12 @@ namespace Networking
                 yield break;
             }
 
-            string strGateReturnValue = JsonUtility.ToJson(gtwGate.Value);
+            SearchForGatewayReturn sgrReturnValue = new SearchForGatewayReturn()
+            {
+                m_lGateOwnerUserID = gtwGate.Value.m_lUserID
+            };
+
+            string strGateReturnValue = JsonUtility.ToJson(sgrReturnValue);
 
             actSearchCallback?.Invoke(true, strGateReturnValue);
         }

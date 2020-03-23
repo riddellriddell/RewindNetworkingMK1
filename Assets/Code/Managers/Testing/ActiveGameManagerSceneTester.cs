@@ -52,6 +52,8 @@ namespace GameManagers
 
     public class ActiveGameManagerSceneTester : MonoBehaviour
     {
+        public bool m_bTestLocally = true;
+
         public string m_strUniqueDeviceID;
 
         public WebInterface m_wbiWebInterface;
@@ -134,7 +136,9 @@ namespace GameManagers
 
             m_wbiWebInterface = new WebInterface(this);
 
-            if(m_strUniqueDeviceID == string.Empty)
+            m_wbiWebInterface.TestLocally = m_bTestLocally;
+
+            if (m_strUniqueDeviceID == string.Empty)
             {
                 NewPeerID();
             }

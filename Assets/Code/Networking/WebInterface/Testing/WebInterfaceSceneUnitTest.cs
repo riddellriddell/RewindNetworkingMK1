@@ -21,7 +21,7 @@ namespace Networking
             m_winWebInterface2 = new WebInterface(this);
 
             m_winWebInterface1.TestLocally = m_bUseFakeWebApi;
-            m_winWebInterface1.TestLocally = m_bUseFakeWebApi;
+            m_winWebInterface2.TestLocally = m_bUseFakeWebApi;
 
             StartCoroutine(TestCoroutine());
         }

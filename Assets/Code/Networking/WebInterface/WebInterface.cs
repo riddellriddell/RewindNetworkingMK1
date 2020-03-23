@@ -159,12 +159,12 @@ namespace Networking
         //when running coroutunes this is the object the routines will be run off
         public MonoBehaviour CoroutineExecutionObject { get; private set; } 
 
-        public WebAPICommunicationTracker PlayerIDCommunicationStatus { get; private set; } = WebAPICommunicationTracker.StartState(5);
+        public WebAPICommunicationTracker PlayerIDCommunicationStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
 
         //all the messages fetched from the server
         public Queue<UserMessage> MessagesFromServer { get; } = new Queue<UserMessage>();
-        public WebAPICommunicationTracker MessageFetchStatus { get; private set; } = WebAPICommunicationTracker.StartState(5);
-        public float TimeBetweenMessageUpdates { get; } = 1;
+        public WebAPICommunicationTracker MessageFetchStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
+        public float TimeBetweenMessageUpdates { get; } = 3;
 
         protected Queue<SendMessageCommand> MessagesToSend { get; } = new Queue<SendMessageCommand>();
         public int MessageSendQueueCount
@@ -174,15 +174,15 @@ namespace Networking
                 return MessagesToSend.Count;
             }
         }
-        public WebAPICommunicationTracker MessageSendStatus { get; private set; } = WebAPICommunicationTracker.StartState(5);
-        public float TimeBetweenMessageSendAttempts { get; } = 3;
+        public WebAPICommunicationTracker MessageSendStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
+        public float TimeBetweenMessageSendAttempts { get; } = 5;
 
         public SetGatewayCommand LocalGatewaySimStatus { get; private set; }
-        public WebAPICommunicationTracker SetGatewayStatus { get; private set; } = WebAPICommunicationTracker.StartState(5);
-        public float TimeBetweenGatewayUpdates { get; } = 2;
+        public WebAPICommunicationTracker SetGatewayStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
+        public float TimeBetweenGatewayUpdates { get; } = 5;
 
         public SearchForGatewayReturn? ExternalGateway { get; private set; }
-        public WebAPICommunicationTracker ExternalGatewayCommunicationStatus { get; private set; } = WebAPICommunicationTracker.StartState(5);
+        public WebAPICommunicationTracker ExternalGatewayCommunicationStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
         public bool NoGatewayExistsOnServer { get; private set; } = false;
 
         protected string m_strUniqueDeviceIdentifier = string.Empty;
