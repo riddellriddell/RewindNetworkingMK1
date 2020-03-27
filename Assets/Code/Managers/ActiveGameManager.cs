@@ -48,6 +48,8 @@ namespace GameManagers
 
         public NetworkConnectionPropagatorProcessor m_ncpConnectionPropegator;
 
+        public IPeerTransmitterFactory m_ptfTransmitterFactory;
+
         //the amount of time to wait to get gateway before timing out and starting again
         protected float m_fGettingGatewayTimeout = 20f;
 
@@ -58,14 +60,20 @@ namespace GameManagers
         //the timeout time for getting sim state from cluster
         protected float m_fGettingSimStateTimeOut = 20f;
         protected DateTime m_dtmGettingSimStateStart;
-
-
-        public ActiveGameManager(WebInterface winWebInterface)
+        
+        public ActiveGameManager(WebInterface winWebInterface, IPeerTransmitterFactory ptfTransmitterFactory)
         {
+            m_ptfTransmitterFactory = ptfTransmitterFactory;
             m_winWebInterface = winWebInterface;
 
             //start the connection process
             EnterGettingGateway();
+        }
+
+        public void OnCleanup()
+        {
+            //clean up existing connections
+            m_ncnNetworkConnection?.OnCleanup();
         }
 
         public void UpdateGame(float fDeltaTime)
@@ -435,8 +443,11 @@ namespace GameManagers
 
         protected void SetupNetworking()
         {
+            //clean up existing network
+            m_ncnNetworkConnection?.OnCleanup();
+
             //create network
-            m_ncnNetworkConnection = new NetworkConnection(m_winWebInterface.UserID, new FakeWebRTCFactory());
+            m_ncnNetworkConnection = new NetworkConnection(m_winWebInterface.UserID, m_ptfTransmitterFactory);
 
             //add network processors
             m_ncnNetworkConnection.AddPacketProcessor(new TimeNetworkProcessor());

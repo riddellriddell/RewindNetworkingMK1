@@ -325,6 +325,10 @@ namespace Networking
         {
             OnConnectionLost?.Invoke();
         }
+
+        public void OnCleanup()
+        {
+        }
         #endregion
     }
 }

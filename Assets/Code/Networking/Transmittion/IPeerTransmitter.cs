@@ -28,6 +28,9 @@ namespace Networking
         //try to shut down the connection
         void Disconnect();
 
+        //clean up the resources used by this transmitter
+        void OnCleanup();
+
         //called when message for connection negotiation is created
         Action<string> OnNegotiationMessageCreated { get; set; }
 
@@ -45,5 +48,7 @@ namespace Networking
 
         //send data through internet 
         bool SentData(byte[] data);
+
+
     }
 }

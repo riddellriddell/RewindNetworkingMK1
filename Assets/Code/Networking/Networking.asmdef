@@ -1,8 +1,8 @@
 {
     "name": "Networking",
     "references": [
-        "Utility",
-        "Unity.WebRTC"
+        "Unity.WebRTC",
+        "Utility"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

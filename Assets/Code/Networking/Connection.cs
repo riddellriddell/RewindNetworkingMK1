@@ -177,6 +177,9 @@ namespace Networking
             //stored in packet processors 
             OnConnectionReset();
 
+            //clean up existing transmitter
+            m_ptrTransmitter?.OnCleanup();
+
             //reset the peer transmitter
             m_ptrTransmitter = m_ptfTransmitterFactory.CreatePeerTransmitter();
 
@@ -207,6 +210,13 @@ namespace Networking
             SetStatus(ConnectionStatus.Initializing);
         }
 
+        public void OnCleanup()
+        {
+            DisconnectFromPeer();
+
+            m_ptrTransmitter?.OnCleanup();
+            m_ptrTransmitter = null;
+        }
         #region TransmittionHandling
 
         /// <summary>

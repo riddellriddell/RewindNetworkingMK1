@@ -54,9 +54,13 @@ namespace GameManagers
     {
         public bool m_bTestLocally = true;
 
+        public bool m_bUseWebRTCTransmitter = false;
+
         public string m_strUniqueDeviceID;
 
         public WebInterface m_wbiWebInterface;
+
+        public IPeerTransmitterFactory m_ptfTransmitterFactory;
 
         public ActiveGameManager m_agmActiveGameManager;
 
@@ -88,13 +92,28 @@ namespace GameManagers
         // Start is called before the first frame update
         void Start()
         {
-            
+            if(m_bUseWebRTCTransmitter)
+            {
+                m_ptfTransmitterFactory = new WebRTCFactory(this);
+            }
+            else
+            {
+                m_ptfTransmitterFactory = new FakeWebRTCFactory();
+            }
         }
 
         // Update is called once per frame
         void Update()
         {
 
+        }
+
+        private void OnDestroy()
+        {
+            //clean up code
+            m_agmActiveGameManager?.OnCleanup();
+
+            m_agmActiveGameManager = null;
         }
 
         private void OnEnable()
@@ -123,6 +142,8 @@ namespace GameManagers
 
             m_wbiWebInterface = null;
 
+            m_agmActiveGameManager?.OnCleanup();
+            
             m_agmActiveGameManager = null;
         }
 
@@ -158,7 +179,9 @@ namespace GameManagers
                 yield break;
             }
 
-            m_agmActiveGameManager = new ActiveGameManager(m_wbiWebInterface);
+            m_agmActiveGameManager?.OnCleanup();
+
+            m_agmActiveGameManager = new ActiveGameManager(m_wbiWebInterface, m_ptfTransmitterFactory);
 
             while(m_bAlive)
             {              
@@ -254,10 +277,19 @@ namespace GameManagers
 
                 stcConnection.m_ptsTransmitterState = cnlConnectionLayout.Value.ParentConnection.m_ptrTransmitter.State;
 
-                stcConnection.m_bMakingOffer = (cnlConnectionLayout.Value.ParentConnection.m_ptrTransmitter as FakeWebRTCTransmitter).m_bMakingOffer;
+                if (m_bUseWebRTCTransmitter == false)
+                {
 
-                stcConnection.m_iNumberOfIceCandidatesRecieved = (cnlConnectionLayout.Value.ParentConnection.m_ptrTransmitter as FakeWebRTCTransmitter).m_iIceCandidatesRecieved;
+                    stcConnection.m_bMakingOffer = (cnlConnectionLayout.Value.ParentConnection.m_ptrTransmitter as FakeWebRTCTransmitter).m_bMakingOffer;
 
+                    stcConnection.m_iNumberOfIceCandidatesRecieved = (cnlConnectionLayout.Value.ParentConnection.m_ptrTransmitter as FakeWebRTCTransmitter).m_iIceCandidatesRecieved;
+
+                }
+                else
+                {
+                    stcConnection.m_bMakingOffer = false;
+                    stcConnection.m_iNumberOfIceCandidatesRecieved = 0;
+                }
                 stcConnection.m_lConnectedPeers = new List<long>();
 
 

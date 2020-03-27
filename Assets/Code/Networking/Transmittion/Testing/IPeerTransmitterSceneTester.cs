@@ -23,6 +23,12 @@ namespace Networking
             StartCoroutine(Test());
         }
 
+        private void OnDestroy()
+        {
+            m_ptrTransmitter1?.OnCleanup();
+            m_ptrTransmitter2?.OnCleanup();
+        }
+
         // Update is called once per frame
         void Update()
         {

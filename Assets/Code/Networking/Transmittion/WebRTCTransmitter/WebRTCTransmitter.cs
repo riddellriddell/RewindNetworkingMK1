@@ -1,7 +1,5 @@
-﻿using Networking;
-using System;
+﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using Unity.WebRTC;
 using UnityEngine;
 
@@ -29,6 +27,7 @@ namespace Networking
         private static string s_strIceID = "ICE";
 
         private static int s_iActiveTransmitters = 0;
+        private static bool s_bWebRTCSetup = false;
 
         public PeerTransmitterState State { get; private set; } = PeerTransmitterState.New;
 
@@ -40,7 +39,8 @@ namespace Networking
         private RTCPeerConnection m_pcnPeerConnection;
         private RTCDataChannel m_dchDataChannel;
         private MonoBehaviour m_monCoroutineExecutionObject;
-        private RTCSessionDescription m_sdcSessionDescription;
+        private RTCSessionDescription m_sdcLocalSessionDescription;
+        private RTCSessionDescription m_sdcRemoteSessionDescription;
 
         private RTCOfferOptions m_ofoOfferOptions = new RTCOfferOptions
         {
@@ -58,8 +58,10 @@ namespace Networking
         {
             s_iActiveTransmitters++;
 
-            if(s_iActiveTransmitters == 1)
+            if (s_iActiveTransmitters == 1 && s_bWebRTCSetup == false)
             {
+                Debug.Log("Initialize WebRTC");
+                s_bWebRTCSetup = true;
                 WebRTC.Initialize();
             }
 
@@ -71,15 +73,15 @@ namespace Networking
             //create peer connection
             m_pcnPeerConnection = new RTCPeerConnection(ref cnfConfig);
 
-            m_pcnPeerConnection.OnDataChannel = OnDataChannelCreated;
+            m_pcnPeerConnection.OnDataChannel = OnDataChannelRecieved;
             m_pcnPeerConnection.OnIceCandidate = OnIceCandidate;
         }
-
+               
         #region IPeerTransmitterInterface
 
         public void Disconnect()
         {
-            if(State == PeerTransmitterState.Connected)
+            if (State == PeerTransmitterState.Connected)
             {
                 State = PeerTransmitterState.Disconnected;
 
@@ -94,6 +96,7 @@ namespace Networking
             //clean up
             m_dchDataChannel?.Close();
             m_dchDataChannel?.Dispose();
+            m_dchDataChannel = null;
 
             m_pcnPeerConnection.Close();
             m_pcnPeerConnection.Dispose();
@@ -102,7 +105,7 @@ namespace Networking
         public bool ProcessNegotiationMessage(string strMessage)
         {
             //check if in the correct state to process messages
-            if(State == PeerTransmitterState.Disconnected)
+            if (State == PeerTransmitterState.Disconnected)
             {
                 return false;
             }
@@ -110,7 +113,7 @@ namespace Networking
             int iLength = strMessage.Length;
 
             //check that negotiation message at least has enough characters to work out message type
-            if(iLength < 3)
+            if (iLength < 3)
             {
                 Debug.LogError("Negotiation message too small");
                 return false;
@@ -127,13 +130,14 @@ namespace Networking
 
                 return true;
             }
-            else if(strMessageType == s_strOfferID)
+            else if (strMessageType == s_strOfferID)
             {
+                m_monCoroutineExecutionObject.StartCoroutine(ProcessOffer(strMessage));
                 return true;
             }
-            else if(strMessageType == s_strAnswerID)
+            else if (strMessageType == s_strAnswerID)
             {
-
+                m_monCoroutineExecutionObject.StartCoroutine(ProcessAnswer(strMessage));
                 return true;
             }
 
@@ -144,14 +148,14 @@ namespace Networking
 
         public bool SentData(byte[] data)
         {
-            if(State != PeerTransmitterState.Connected)
+            if (State != PeerTransmitterState.Connected)
             {
                 Debug.LogError($"Cant send data in non conencted state Data:{data}");
 
                 return false;
             }
 
-            if(m_dchDataChannel == null)
+            if (m_dchDataChannel == null)
             {
                 Debug.LogError($"Cant send data due to null data channel Data:{data}");
 
@@ -166,7 +170,7 @@ namespace Networking
         public void StartNegotiation()
         {
             //check that the transmitter is in the right state 
-            if(State != PeerTransmitterState.New)
+            if (State != PeerTransmitterState.New)
             {
                 //cant start negotiation on an already negotiated connection
                 Debug.LogError("cant start negotiation on an already negotiated WebRTC connection");
@@ -177,11 +181,11 @@ namespace Networking
             State = PeerTransmitterState.Negotiating;
 
             //setup unreliable data channel
-            RTCDataChannelInit dciDataChannelInit = new RTCDataChannelInit(false);
-            dciDataChannelInit.maxRetransmits = 0;
-            dciDataChannelInit.maxRetransmitTime = 0;
-            dciDataChannelInit.ordered = false;
-            dciDataChannelInit.reliable = false;
+            RTCDataChannelInit dciDataChannelInit = new RTCDataChannelInit(true);
+            //dciDataChannelInit.maxRetransmits = 0;
+            //dciDataChannelInit.maxRetransmitTime = 0;
+            //dciDataChannelInit.ordered = false;
+            //dciDataChannelInit.reliable = false;
 
             //create data channel and link all callbacks 
             OnDataChannelCreated(m_pcnPeerConnection.CreateDataChannel("data", ref dciDataChannelInit));
@@ -189,6 +193,18 @@ namespace Networking
             //start negotiation process 
             m_monCoroutineExecutionObject.StartCoroutine(CreateOfferCoroutine());
 
+        }
+
+        public void OnCleanup()
+        {
+            s_iActiveTransmitters--;
+
+            if (s_iActiveTransmitters <= 0 && s_bWebRTCSetup == true)
+            {
+                Debug.Log("Finalize WebRTC");
+                s_bWebRTCSetup = false;
+                WebRTC.Finalize();
+            }
         }
 
         #endregion
@@ -222,17 +238,17 @@ namespace Networking
 
             RTCSessionDescriptionWrapper sdwSessionDescriptionWrapper = JsonUtility.FromJson<RTCSessionDescriptionWrapper>(strOffer);
 
-            m_sdcSessionDescription = new RTCSessionDescription()
+            m_sdcRemoteSessionDescription = new RTCSessionDescription()
             {
                 sdp = sdwSessionDescriptionWrapper.sdp,
                 type = (RTCSdpType)sdwSessionDescriptionWrapper.type
             };
 
-            //set the local description 
-            yield return m_monCoroutineExecutionObject.StartCoroutine(SetLocalDescriptionCoroutine());
+            //set the remote description 
+            yield return m_monCoroutineExecutionObject.StartCoroutine(SetRemoteDescriptionCoroutine());
 
             //check that we are still negotiating connected and nothing has gone wrong
-            if( State != PeerTransmitterState.Negotiating)
+            if (State != PeerTransmitterState.Negotiating)
             {
                 yield break;
             }
@@ -254,19 +270,21 @@ namespace Networking
 
             RTCSessionDescriptionWrapper sdwSessionDescriptionWrapper = JsonUtility.FromJson<RTCSessionDescriptionWrapper>(strAnswer);
 
-            m_sdcSessionDescription = new RTCSessionDescription()
+            m_sdcRemoteSessionDescription = new RTCSessionDescription()
             {
                 sdp = sdwSessionDescriptionWrapper.sdp,
                 type = (RTCSdpType)sdwSessionDescriptionWrapper.type
             };
 
             //set the local description 
-            yield return m_monCoroutineExecutionObject.StartCoroutine(SetLocalDescriptionCoroutine());
+            yield return m_monCoroutineExecutionObject.StartCoroutine(SetRemoteDescriptionCoroutine());
         }
 
-        protected void OnError()
+        protected void OnDataChannelRecieved(RTCDataChannel dchDataChannel)
         {
+            OnDataChannelCreated(dchDataChannel);
 
+            OnDataChannelOpen();
         }
 
         protected void OnDataChannelCreated(RTCDataChannel dchDataChannel)
@@ -279,7 +297,7 @@ namespace Networking
 
         protected void OnDataChannelOpen()
         {
-            if(State != PeerTransmitterState.Negotiating)
+            if (State != PeerTransmitterState.Negotiating)
             {
                 Debug.LogError("Should Not be transitioning from a non negotiating connection to a connected state");
 
@@ -319,7 +337,7 @@ namespace Networking
 
         protected void OnMessage(byte[] bytes)
         {
-            if(State != PeerTransmitterState.Connected)
+            if (State != PeerTransmitterState.Connected)
             {
                 Debug.LogError($"Cand recieve data when not in the connected state Data: {bytes}");
 
@@ -332,10 +350,10 @@ namespace Networking
         protected IEnumerator CreateOfferCoroutine()
         {
             //start creating offerr
-            RTCSessionDescriptionAsyncOperation sdoAsyncOpperation =  m_pcnPeerConnection.CreateOffer(ref m_ofoOfferOptions);
+            RTCSessionDescriptionAsyncOperation sdoAsyncOpperation = m_pcnPeerConnection.CreateOffer(ref m_ofoOfferOptions);
 
             yield return sdoAsyncOpperation;
-            
+
             //check if there was an error creating offer
             if (sdoAsyncOpperation.isError == false)
             {
@@ -343,7 +361,7 @@ namespace Networking
                 if (State == PeerTransmitterState.Negotiating)
                 {
                     //set the offer description
-                    m_sdcSessionDescription = sdoAsyncOpperation.desc;
+                    m_sdcLocalSessionDescription = sdoAsyncOpperation.desc;
                     yield return m_monCoroutineExecutionObject.StartCoroutine(SetLocalDescriptionCoroutine());
                 }
             }
@@ -362,13 +380,13 @@ namespace Networking
             }
 
             //if an error was not encountered 
-            if(State == PeerTransmitterState.Negotiating)
+            if (State == PeerTransmitterState.Negotiating)
             {
                 //fill in wrapper class for serialization
                 RTCSessionDescriptionWrapper sdwWrapper = new RTCSessionDescriptionWrapper()
                 {
-                    sdp = m_sdcSessionDescription.sdp,
-                    type = (int)m_sdcSessionDescription.type
+                    sdp = m_sdcLocalSessionDescription.sdp,
+                    type = (int)m_sdcLocalSessionDescription.type
                 };
 
                 //send negotiation message 
@@ -390,7 +408,7 @@ namespace Networking
                 if (State == PeerTransmitterState.Negotiating)
                 {
                     //set the offer description
-                    m_sdcSessionDescription = sdoAsyncOpperation.desc;
+                    m_sdcLocalSessionDescription = sdoAsyncOpperation.desc;
                     yield return m_monCoroutineExecutionObject.StartCoroutine(SetLocalDescriptionCoroutine());
                 }
             }
@@ -414,18 +432,18 @@ namespace Networking
                 //fill in wrapper class for serialization
                 RTCSessionDescriptionWrapper sdwWrapper = new RTCSessionDescriptionWrapper()
                 {
-                    sdp = m_sdcSessionDescription.sdp,
-                    type = (int)m_sdcSessionDescription.type
+                    sdp = m_sdcLocalSessionDescription.sdp,
+                    type = (int)m_sdcLocalSessionDescription.type
                 };
 
                 //send negotiation message 
-                OnNegotiationMessageCreated?.Invoke(JsonUtility.ToJson(sdwWrapper) + s_strOfferID);
+                OnNegotiationMessageCreated?.Invoke(JsonUtility.ToJson(sdwWrapper) + s_strAnswerID);
             }
         }
 
         protected IEnumerator SetLocalDescriptionCoroutine()
         {
-            RTCSessionDescriptionAsyncOperation sdoAsyncOpperation = m_pcnPeerConnection.SetLocalDescription(ref m_sdcSessionDescription);
+            RTCSessionDescriptionAsyncOperation sdoAsyncOpperation = m_pcnPeerConnection.SetLocalDescription(ref m_sdcLocalSessionDescription);
 
             yield return sdoAsyncOpperation;
 
@@ -435,16 +453,43 @@ namespace Networking
             }
             else
             {
+                Debug.Log($"Failed to set local description {m_sdcLocalSessionDescription.sdp}. Error {sdoAsyncOpperation.error} ");
+
                 //change state 
                 State = PeerTransmitterState.Disconnected;
 
                 //clean up as best as possible
-                m_dchDataChannel.Dispose();
+                m_dchDataChannel?.Dispose();
 
                 //tell listeners that the conenction failed 
                 OnConnectionLost?.Invoke();
             }
 
+        }
+
+        protected IEnumerator SetRemoteDescriptionCoroutine()
+        {
+            RTCSessionDescriptionAsyncOperation sdoAsyncOpperation = m_pcnPeerConnection.SetRemoteDescription(ref m_sdcRemoteSessionDescription);
+
+            yield return sdoAsyncOpperation;
+
+            if (sdoAsyncOpperation.isError == false)
+            {
+                Debug.Log($"Set Remote description Succeded for {m_pcnPeerConnection}");
+            }
+            else
+            {
+                Debug.Log($"Failed to set Remote description {m_sdcRemoteSessionDescription.sdp}. Error {sdoAsyncOpperation.error} ");
+
+                //change state 
+                State = PeerTransmitterState.Disconnected;
+
+                //clean up as best as possible
+                m_dchDataChannel?.Dispose();
+
+                //tell listeners that the conenction failed 
+                OnConnectionLost?.Invoke();
+            }
         }
 
         protected RTCConfiguration GetSelectedSdpSemantics()
@@ -457,16 +502,5 @@ namespace Networking
 
             return cnfConfig;
         }
-
-        ~WebRTCTransmitter()
-        {
-            s_iActiveTransmitters--;
-
-            if(s_iActiveTransmitters <= 0)
-            {
-                WebRTC.Finalize();
-            }
-        }
-
     }
 }
