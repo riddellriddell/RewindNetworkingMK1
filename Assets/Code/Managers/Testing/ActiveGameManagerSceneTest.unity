@@ -165,7 +165,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
-  m_bUseWebRTCTransmitter: 0
+  m_bUseWebRTCTransmitter: 1
   m_strUniqueDeviceID: user5
   m_bAlive: 1
   m_lPeerID: 0
@@ -297,7 +297,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
-  m_bUseWebRTCTransmitter: 0
+  m_bUseWebRTCTransmitter: 1
   m_strUniqueDeviceID: user2
   m_bAlive: 1
   m_lPeerID: 0
@@ -350,7 +350,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_bTestLocally: 0
+  m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 1
   m_strUniqueDeviceID: user1
   m_bAlive: 1
@@ -405,7 +405,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
-  m_bUseWebRTCTransmitter: 0
+  m_bUseWebRTCTransmitter: 1
   m_strUniqueDeviceID: user3
   m_bAlive: 1
   m_lPeerID: 0
@@ -473,7 +473,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
-  m_bUseWebRTCTransmitter: 0
+  m_bUseWebRTCTransmitter: 1
   m_strUniqueDeviceID: user4
   m_bAlive: 1
   m_lPeerID: 0
@@ -635,7 +635,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
-  m_bUseWebRTCTransmitter: 0
+  m_bUseWebRTCTransmitter: 1
   m_strUniqueDeviceID: user6
   m_bAlive: 1
   m_lPeerID: 0
@@ -727,7 +727,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_bTestLocally: 0
+  m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 1
   m_strUniqueDeviceID: user0
   m_bAlive: 1

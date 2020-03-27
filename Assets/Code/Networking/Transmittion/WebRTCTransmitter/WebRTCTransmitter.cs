@@ -181,7 +181,7 @@ namespace Networking
             State = PeerTransmitterState.Negotiating;
 
             //setup unreliable data channel
-            RTCDataChannelInit dciDataChannelInit = new RTCDataChannelInit(true);
+            RTCDataChannelInit dciDataChannelInit = new RTCDataChannelInit(false);
             //dciDataChannelInit.maxRetransmits = 0;
             //dciDataChannelInit.maxRetransmitTime = 0;
             //dciDataChannelInit.ordered = false;
