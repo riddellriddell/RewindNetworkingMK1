@@ -32,5 +32,10 @@ namespace Sim
         {
             m_ncnNetworkConnection.UpdateConnectionsAndProcessors();
         }
+
+        public void OnDestroy()
+        {
+            m_ncnNetworkConnection.OnCleanup();
+        }
     }
 }

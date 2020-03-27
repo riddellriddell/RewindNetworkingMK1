@@ -7,6 +7,8 @@ namespace Networking
 {
     public class IPeerTransmitterSceneTester : MonoBehaviour
     {
+        public bool m_bUseFakeTransmitters = true;
+
         public IPeerTransmitter m_ptrTransmitter1;
 
         public IPeerTransmitter m_ptrTransmitter2;
@@ -21,6 +23,12 @@ namespace Networking
             StartCoroutine(Test());
         }
 
+        private void OnDestroy()
+        {
+            m_ptrTransmitter1?.OnCleanup();
+            m_ptrTransmitter2?.OnCleanup();
+        }
+
         // Update is called once per frame
         void Update()
         {
@@ -32,7 +40,14 @@ namespace Networking
 
             Debug.Log("Peer Transmitter Test Started");
 
-            SetupFakeTransmitters();
+            if (m_bUseFakeTransmitters)
+            {
+                SetupFakeTransmitters();
+            }
+            else
+            {
+                SetupWebTRCTransmitters();
+            }
 
             m_ptrTransmitter1.OnNegotiationMessageCreated += OnTransmitter1NegotiationMessage;
             m_ptrTransmitter2.OnNegotiationMessageCreated += OnTransmitter2NegotiationMessage;
@@ -117,6 +132,12 @@ namespace Networking
         {
             m_ptrTransmitter1 = new FakeWebRTCTransmitter();
             m_ptrTransmitter2 = new FakeWebRTCTransmitter();
+        }
+
+        protected void SetupWebTRCTransmitters()
+        {
+            m_ptrTransmitter1 = new WebRTCTransmitter(this);
+            m_ptrTransmitter2 = new WebRTCTransmitter(this);
         }
     }
 }

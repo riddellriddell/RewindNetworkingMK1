@@ -66,6 +66,14 @@ namespace Networking
 
         }
 
+        public void OnCleanup()
+        {
+            foreach(Connection conConnection in ConnectionList.Values)
+            {
+                conConnection.OnCleanup();
+            }
+        }
+
         public void AddPacketProcessor(BaseNetworkPacketProcessor nppProcessor)
         {
             if (NetworkPacketProcessors.Add(nppProcessor) == false)
@@ -147,6 +155,8 @@ namespace Networking
                     //tell packet processor that user has disconnected
                     bppProcessor.OnConnectionDisconnect(conTargetConnection);
                 }
+
+                conTargetConnection.OnCleanup();
             }
         }
 
