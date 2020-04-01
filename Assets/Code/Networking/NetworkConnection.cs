@@ -38,6 +38,9 @@ namespace Networking
         //is this peer connected to a swarm
         public bool m_bIsConnectedToSwarm = false;
 
+        //the tiem this peer connected to the swarm 
+        public DateTime m_dtmConnectionTime = DateTime.MinValue;
+
         //list of all the network connection PacketManagers 
         public SortedSet<BaseNetworkPacketProcessor> NetworkPacketProcessors { get; } = new SortedSet<BaseNetworkPacketProcessor>(new PacketProcessorComparer());
 
@@ -219,12 +222,6 @@ namespace Networking
             return iConnectionCount;
         }
 
-        //get the synchronised network time 
-        public float NetworkTime()
-        {
-            return Time.timeSinceLevelLoad;
-        }
-
         public void OnFirstPeerInSwarm()
         {
             foreach (BaseNetworkPacketProcessor nppProcessor in NetworkPacketProcessors)
@@ -239,6 +236,9 @@ namespace Networking
             if (m_bIsConnectedToSwarm == false)
             {
                 m_bIsConnectedToSwarm = true;
+
+                //store the base time of connection
+                m_dtmConnectionTime = GetPacketProcessor<TimeNetworkProcessor>().BaseTime;
 
                 foreach (BaseNetworkPacketProcessor nppProcessor in NetworkPacketProcessors)
                 {

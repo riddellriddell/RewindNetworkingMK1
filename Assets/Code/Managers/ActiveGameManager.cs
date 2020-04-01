@@ -48,6 +48,8 @@ namespace GameManagers
 
         public NetworkConnectionPropagatorProcessor m_ncpConnectionPropegator;
 
+        public NetworkGlobalMessengerProcessor m_ngpGlobalMessagingProcessor;
+
         public IPeerTransmitterFactory m_ptfTransmitterFactory;
 
         //the amount of time to wait to get gateway before timing out and starting again
@@ -257,6 +259,12 @@ namespace GameManagers
 
             //check if sim state has been fetched from cluster
             bool bHasFetchedSimState = true;
+
+            if(m_ngpGlobalMessagingProcessor.m_staState != NetworkGlobalMessengerProcessor.State.Active)
+            {
+                bHasFetchedSimState = false;
+            }
+
             if (bHasFetchedSimState)
             {
                 //set sim state using fetched state 
@@ -460,7 +468,8 @@ namespace GameManagers
             m_ncpConnectionPropegator = new NetworkConnectionPropagatorProcessor();
             m_ncnNetworkConnection.AddPacketProcessor(m_ncpConnectionPropegator);
 
-            m_ncnNetworkConnection.AddPacketProcessor(new NetworkGlobalMessengerProcessor());
+            m_ngpGlobalMessagingProcessor = new NetworkGlobalMessengerProcessor();
+            m_ncnNetworkConnection.AddPacketProcessor(m_ngpGlobalMessagingProcessor);
 
         }
     }

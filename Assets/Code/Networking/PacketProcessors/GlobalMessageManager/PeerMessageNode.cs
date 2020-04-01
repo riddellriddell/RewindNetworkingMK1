@@ -140,9 +140,9 @@ namespace Networking
 
             lPartA = (ulong)m_dtmMessageCreationTime.Ticks;
 
-            lPartB = m_iPeerMessageIndex << sizeof(UInt32);
+            lPartB = m_iPeerMessageIndex << (sizeof(UInt32) * 8);
 
-            lPartB += (ulong)(m_lMessagePayloadHash >> sizeof(Int32));
+            lPartB += (ulong)(m_lMessagePayloadHash >> (sizeof(Int32) * 8 ));
 
             //create sorting value
             m_svaMessageSortingValue = new SortingValue(lPartA, lPartB);

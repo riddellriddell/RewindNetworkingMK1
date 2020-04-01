@@ -25,17 +25,21 @@ namespace Networking
         {
             get
             {
+                //TODO:Remove this testing code 
+                //return BaseTime;
+
+
                 //calcualte network time
                 DateTime dtmNetworkTime = BaseTime - m_tspCurrentTimeOffset;
-
+                
                 //make sure never to run time backwards 
                 if(dtmNetworkTime < m_dtmOldestTime)
                 {
                     return m_dtmOldestTime;
                 }
-
+                
                 m_dtmOldestTime = dtmNetworkTime;
-
+                
                 return dtmNetworkTime;
             }
 

@@ -52,6 +52,11 @@ namespace Networking
         // propegating through the swarm 
         public static TimeSpan JoinVoteGracePeriod { get; } = TimeSpan.FromSeconds(3);
 
+        //to stop a connecting peer thinking its in the global messaging system too early by mistaking an old connection
+        //with the same user id that is still in the process of being kicked as a new one voting in reconnecting peer connections are filtered 
+        //by connection start time, this is not garanteed to be 100% accurate so this padding is added just in case
+        public static TimeSpan OldConnectionFilterPadding { get; } = TimeSpan.FromSeconds(1);
+
         //fixed max player count but in future will be dynamic? 
         public static int MaxPlayerCount { get; } = 6;
 
@@ -140,7 +145,7 @@ namespace Networking
                 case State.ConnectAsAdditionalPeer:
                     if (m_bStartStateCandidatesDirty)
                     {
-                        m_chmChainManager.EvaluateStartCandidates(ParentNetworkConnection.m_lPeerID);
+                        m_chmChainManager.EvaluateStartCandidates(ParentNetworkConnection.m_lPeerID, false);
                         m_bStartStateCandidatesDirty = false;
                     }
 
@@ -148,12 +153,20 @@ namespace Networking
                     break;
 
                 case State.Connected:
-                    //check if peer has been assigned to a channel
-                    if (m_chmChainManager.m_chlBestChainHead.m_gmsState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iIndex))
-                    {
-                        m_staState = State.Active;
+                    //get state of connection
+                    GlobalMessagingState gmsState = m_chmChainManager.m_chlBestChainHead.m_gmsState;
 
-                        SetTimeOfNextPeerChainLink(m_tnpNetworkTime.NetworkTime);
+                    //check if peer has been assigned to a channel
+                    if (gmsState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iIndex))
+                    {
+                        //check if peer was assigned that channel recently 
+                        if(gmsState.m_gmcMessageChannels[iIndex].m_dtmVoteTime > (ParentNetworkConnection.m_dtmConnectionTime - m_tnpNetworkTime.TimeOffset) - OldConnectionFilterPadding)
+                        {
+                            m_staState = State.Active;
+
+                            SetTimeOfNextPeerChainLink(m_tnpNetworkTime.NetworkTime);
+                        }
+
                     }
                     break;
 
@@ -239,7 +252,7 @@ namespace Networking
 
                 clpChainLinkPacket.m_chlLink.CalculateLocalValuesForRecievedLink(m_cifGlobalMessageFactory);
 
-                m_chmChainManager.AddChainLinkPreConnection(clpChainLinkPacket.m_chlLink, m_gmbMessageBuffer);
+                m_chmChainManager.AddChainLinkPreConnection(ParentNetworkConnection.m_lPeerID, clpChainLinkPacket.m_chlLink, m_gmbMessageBuffer);
 
                 m_bStartStateCandidatesDirty = true;
             }
@@ -250,12 +263,19 @@ namespace Networking
 
                 clpChainLinkPacket.m_chlLink.CalculateLocalValuesForRecievedLink(m_cifGlobalMessageFactory);
 
-                m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, clpChainLinkPacket.m_chlLink, m_gkmKeyManager, m_gmbMessageBuffer, out bool bIsMessageBufferDirty);
+                bool bIsActivePeer = false;
+
+                if(m_staState == State.Active)
+                {
+                    bIsActivePeer = true;
+                }
+
+                m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, bIsActivePeer, clpChainLinkPacket.m_chlLink, m_gkmKeyManager, m_gmbMessageBuffer, out bool bIsMessageBufferDirty);
 
                 if (bIsMessageBufferDirty)
                 {
                     //update the final unconfirmed message state 
-                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, m_chmChainManager.m_chlBestChainHead.m_gmsState);
+                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_chmChainManager.m_chlBestChainHead.m_gmsState);
                 }
             }
         }
@@ -292,12 +312,12 @@ namespace Networking
                 SetTimeOfNextPeerChainLink(dtmNetworkTime);
 
                 //add link to local link tracker 
-                m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, chlNextLink, m_gkmKeyManager, m_gmbMessageBuffer, out bool bIsMessageBufferDirty);
+                m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, true, chlNextLink, m_gkmKeyManager, m_gmbMessageBuffer, out bool bIsMessageBufferDirty);
 
                 if (bIsMessageBufferDirty)
                 {
                     //update the final unconfirmed message state 
-                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, m_chmChainManager.m_chlBestChainHead.m_gmsState);
+                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, true, m_chmChainManager.m_chlBestChainHead.m_gmsState);
                 }
 
                 //send link to peers
@@ -329,7 +349,7 @@ namespace Networking
         public void StartAsFirstPeerInSystem()
         {
             //setup the inital state of the chain
-            m_chmChainManager.SetStartState(ParentNetworkConnection.m_lPeerID, MaxPlayerCount);
+            m_chmChainManager.SetStartState(ParentNetworkConnection.m_lPeerID, MaxPlayerCount,m_tnpNetworkTime.NetworkTime);
 
             DateTime dtmNetworkTime = m_tnpNetworkTime.NetworkTime;
 
@@ -353,10 +373,10 @@ namespace Networking
             ChainLink chlLink = CreateFirstChainLink(iLastChainLinkForPeer);
 
             //add link to chain manager
-            m_chmChainManager.AddFirstChainLink(ParentNetworkConnection.m_lPeerID, chlLink);
+            m_chmChainManager.AddFirstChainLink(ParentNetworkConnection.m_lPeerID, true, chlLink);
 
             //update buffer final state
-            m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, m_chmChainManager.m_chlBestChainHead.m_gmsState);
+            m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, true, m_chmChainManager.m_chlBestChainHead.m_gmsState);
 
             //update the time of the next chian link
             SetTimeOfNextPeerChainLink(dtmNetworkTime);
@@ -389,10 +409,11 @@ namespace Networking
 
             if (m_tnpNetworkTime.BaseTime - m_dtmTimeOfStateCollectionStart > StateCollectionTimeOutTime)
             {
-                bForceConnection = true;
+                //TODO:: This is only false for testing reasons 
+                bForceConnection = false;
             }
 
-            //check if enough ststes have been recieved
+            //check if enough states have been recieved
             if (fPercentOfStatesRecieved < MinPercentOfStartStatesFromPeers && bForceConnection == false)
             {
                 return;
@@ -418,10 +439,10 @@ namespace Networking
             {
                 m_staState = State.Connected;
 
-                m_chmChainManager.SetChainStartState(ParentNetworkConnection.m_lPeerID, MaxPlayerCount, sscStartStateCandidate.m_gmsStateCandidate, sscStartStateCandidate.m_chlNextLink);
+                m_chmChainManager.SetChainStartState(ParentNetworkConnection.m_lPeerID, false, MaxPlayerCount, sscStartStateCandidate.m_gmsStateCandidate, sscStartStateCandidate.m_chlNextLink);
 
                 //update message buffer final state
-                m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, m_chmChainManager.m_chlBestChainHead.m_gmsState);
+                m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, false, m_chmChainManager.m_chlBestChainHead.m_gmsState);
             }
         }
 
@@ -627,13 +648,15 @@ namespace Networking
                 }
 
                 //check if peer has just connected and local peer has not had time to make conenction
-                if (m_tnpNetworkTime.NetworkTime - m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[lActivePeers[i].Item1].m_dtmVoteStartTime < JoinVoteGracePeriod)
+                if (m_tnpNetworkTime.NetworkTime - m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[lActivePeers[i].Item1].m_dtmVoteTime < JoinVoteGracePeriod)
                 {
                     continue;
                 }
 
                 //if the target peer has no connection to the local pper or the target peer is in the process of disconnectin 
                 if (ChildConnectionProcessors.TryGetValue(lActivePeers[i].Item2, out ConnectionGlobalMessengerProcessor cgmProcessor) == false
+                    || cgmProcessor.ParentConnection.Status == Connection.ConnectionStatus.New
+                    || cgmProcessor.ParentConnection.Status == Connection.ConnectionStatus.Initializing
                     || cgmProcessor.ParentConnection.Status == Connection.ConnectionStatus.Disconnecting
                     || cgmProcessor.ParentConnection.Status == Connection.ConnectionStatus.Disconnected)
                 {
@@ -727,6 +750,14 @@ namespace Networking
             //if connected or active
             if (m_staState == State.Connected || m_staState == State.Active)
             {
+
+                bool bIsActivePeer = false;
+
+                if (m_staState == State.Active)
+                {
+                    bIsActivePeer = true;
+                }
+
                 //check if message is being created behind head
                 if (m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue.CompareTo(pmnMessage.m_svaMessageSortingValue) > 0)
                 {
@@ -736,13 +767,13 @@ namespace Networking
                     if (bDidHeadCHange)
                     {
                         //rebuild message state 
-                        m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, m_chmChainManager.m_chlBestChainHead.m_gmsState);
+                        m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_chmChainManager.m_chlBestChainHead.m_gmsState);
                     }
                 }
                 else
                 {
                     //rebuild message state 
-                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, m_chmChainManager.m_chlBestChainHead.m_gmsState);
+                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_chmChainManager.m_chlBestChainHead.m_gmsState);
                 }
             }
         }
@@ -837,7 +868,6 @@ namespace Networking
                     chlLinksToSend.Add(chlLink);
                     chlLink = chlLink.m_chlParentChainLink;
                 }
-
 
                 //set state
                 cspStatePacket.m_sscStartStateCandidate = new GlobalMessageStartStateCandidate();

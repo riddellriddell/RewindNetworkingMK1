@@ -208,7 +208,7 @@ namespace Networking
             }
         }
                
-        public void CaluclateGlobalMessagingStateAtEndOflink(long lLocalPeerID, GlobalMessagingState gmsStateAtLinkStart)
+        public void CaluclateGlobalMessagingStateAtEndOflink(long lLocalPeerID, bool bActivePeer, GlobalMessagingState gmsStateAtLinkStart)
         {
             if(m_gmsState == null)
             {
@@ -220,7 +220,7 @@ namespace Networking
 
             for(int i = 0; i < m_pmnMessages.Count; i++)
             {
-                m_gmsState.ProcessMessage(lLocalPeerID, m_pmnMessages[i]);
+                m_gmsState.ProcessMessage(lLocalPeerID, bActivePeer, m_pmnMessages[i]);
             }
 
             //check that end state matches expected state
@@ -303,15 +303,15 @@ namespace Networking
 
             lPartA = m_iLinkIndex;
 
-            lPartA = lPartA << sizeof(UInt32);
+            lPartA = lPartA << (sizeof(UInt32) * 8);
 
-            ulong iPartAPeerID =  (ulong)m_lPeerID >> sizeof(UInt32);
+            ulong iPartAPeerID =  (ulong)m_lPeerID >> (sizeof(UInt32) * 8);
 
             lPartA += iPartAPeerID;
 
-            lPartB = (ulong)m_lPeerID << sizeof(UInt32);
+            lPartB = (ulong)m_lPeerID << (sizeof(UInt32) * 8);
 
-            ulong lPartBHash = (ulong)m_lLinkPayloadHash >> sizeof(UInt32);
+            ulong lPartBHash = (ulong)m_lLinkPayloadHash >> (sizeof(UInt32) * 8);
             
             m_svaChainSortingValue = new SortingValue(lPartA, lPartB);
 

@@ -50,6 +50,8 @@ namespace Networking
 
         protected NetworkLayoutProcessor m_nlpNetworkLayoutProcessor;
 
+        protected NetworkGlobalMessengerProcessor m_gmpGLobalMessagingProcessor;
+
         public override void Update()
         {
             base.Update();
@@ -64,6 +66,24 @@ namespace Networking
                     return;
                 }
 
+                //check that this client is connected to the global messaging system and can accept new connections into the system
+                if (m_gmpGLobalMessagingProcessor == null)
+                {
+                    m_gmpGLobalMessagingProcessor = ParentNetworkConnection.GetPacketProcessor<NetworkGlobalMessengerProcessor>();
+                }
+
+                if (m_gmpGLobalMessagingProcessor != null)
+                {
+                    if (m_gmpGLobalMessagingProcessor.m_staState != NetworkGlobalMessengerProcessor.State.Active)
+                    {
+                        return;
+                    }
+                }
+                else
+                {
+                    return;
+                }
+
                 //is there an active gate in the cluster
                 bool bActiveGate = false;
 
@@ -74,7 +94,7 @@ namespace Networking
                 foreach (ConnectionGatewayManager cgmConnection in ChildConnectionProcessors.Values)
                 {
                     //skip disconnected peers
-                    if(cgmConnection.ParentConnection.Status != Connection.ConnectionStatus.Connected)
+                    if (cgmConnection.ParentConnection.Status != Connection.ConnectionStatus.Connected)
                     {
                         continue;
                     }
@@ -287,7 +307,7 @@ namespace Networking
 
         public override void OnConnectionStateChange(Connection.ConnectionStatus cstOldState, Connection.ConnectionStatus cstNewState)
         {
-            if(cstNewState == Connection.ConnectionStatus.Disconnected || cstNewState == Connection.ConnectionStatus.Disconnecting)
+            if (cstNewState == Connection.ConnectionStatus.Disconnected || cstNewState == Connection.ConnectionStatus.Disconnecting)
             {
                 TimeOfLastGatewayNotification = DateTime.MinValue;
             }

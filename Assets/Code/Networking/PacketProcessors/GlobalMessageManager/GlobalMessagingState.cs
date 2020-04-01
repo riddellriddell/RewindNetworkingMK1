@@ -26,16 +26,16 @@ namespace Networking
             Init(iNumberOfItems);
         }
 
-        public GlobalMessagingState(int iNumberOfItems, long lFirstPeer)
+        public GlobalMessagingState(int iNumberOfItems, long lFirstPeer, DateTime dtmStartTime)
         {
             Init(iNumberOfItems);
 
-            AssignFirstPeer(lFirstPeer);
+            AssignFirstPeer(lFirstPeer, dtmStartTime);
         }
 
-        public void AssignFirstPeer(long lFirstPeer)
+        public void AssignFirstPeer(long lFirstPeer, DateTime dtmTimeOfAdd)
         {
-            m_gmcMessageChannels[0].AssignPeerToChannel(lFirstPeer);
+            m_gmcMessageChannels[0].AssignPeerToChannel(lFirstPeer, dtmTimeOfAdd);
         }
 
         //perform deep clone of this object
@@ -56,7 +56,7 @@ namespace Networking
 
         //process a message lLocalPeer is the user in controll of this computer
         //and must be in the "Kept" group when split occures 
-        public void ProcessMessage(long lLocalPeer, PeerMessageNode pmnMessageNode)
+        public void ProcessMessage(long lLocalPeer, bool bActivePeer, PeerMessageNode pmnMessageNode)
         {
             //update the most recent sorting value 
             m_svaLastMessageSortValue = SortingValue.Max(m_svaLastMessageSortValue, pmnMessageNode.m_svaMessageSortingValue);
@@ -71,7 +71,7 @@ namespace Networking
                 if (pmnMessageNode.m_bMessageType == VoteMessage.TypeID)
                 {
                     //apply votes
-                    ApplyVotesToChannel(lLocalPeer, iIndexOfMessageChannel, pmnMessageNode.m_dtmMessageCreationTime, pmnMessageNode.m_gmbMessage as VoteMessage);
+                    ApplyVotesToChannel(lLocalPeer, bActivePeer, iIndexOfMessageChannel, pmnMessageNode.m_dtmMessageCreationTime, pmnMessageNode.m_gmbMessage as VoteMessage);
                 }
             }
             else
@@ -146,10 +146,10 @@ namespace Networking
         }
 
         //perform join
-        public void AddPeerToGlobalMessenger(int iChannelIndex)
+        public void AddPeerToGlobalMessenger(int iChannelIndex, DateTime dtmTimeOfJoin)
         {
             //assign peer to channel
-            m_gmcMessageChannels[iChannelIndex].AssignPeerToChannel(m_gmcMessageChannels[iChannelIndex].m_lChannelPeer);
+            m_gmcMessageChannels[iChannelIndex].AssignPeerToChannel(m_gmcMessageChannels[iChannelIndex].m_lChannelPeer, dtmTimeOfJoin);
 
             //clear any votes on channel
             for (int i = 0; i < m_gmcMessageChannels.Count; i++)
@@ -223,7 +223,7 @@ namespace Networking
                 }
 
                 //compare vote start time to current time
-                TimeSpan tspTimeSinceVoteStart =  dtmTime - m_gmcMessageChannels[i].m_dtmVoteStartTime;
+                TimeSpan tspTimeSinceVoteStart =  dtmTime - m_gmcMessageChannels[i].m_dtmVoteTime;
 
                 //check if vote has timed out
                 if(tspTimeSinceVoteStart > s_tspVoteTimeout)
@@ -313,7 +313,7 @@ namespace Networking
         }
 
         //apply the vote command to the peer
-        protected void ApplyVotesToChannel(long lLocalPeerID, int iMessageChannel, DateTime dtmMessageCreationTime, VoteMessage vmsMessageNode)
+        protected void ApplyVotesToChannel(long lLocalPeerID, bool bActivePeer, int iMessageChannel, DateTime dtmMessageCreationTime, VoteMessage vmsMessageNode)
         {
             for (int i = 0; i < vmsMessageNode.m_tupActionPerPeer.Length; i++)
             {
@@ -374,11 +374,11 @@ namespace Networking
 
 
             //process kick messages 
-            ProcessSplitVotes(lLocalPeerID, iMessageChannel, dtmMessageCreationTime);
+            ProcessSplitVotes(lLocalPeerID, bActivePeer, iMessageChannel, dtmMessageCreationTime);
         }
 
         //process split vote
-        protected void ProcessSplitVotes(long lLocalPeerID, int iChangedMessageChannel, DateTime dtmTimeOfVote)
+        protected void ProcessSplitVotes(long lLocalPeerID, bool bActivePeer, int iChangedMessageChannel, DateTime dtmTimeOfVote)
         {
             //get list of kick and non kick
             List<int> iKeepList = new List<int>();
@@ -453,7 +453,7 @@ namespace Networking
             bool bIsInKickGroup = false;
 
             //get the channel controlled by the local peer
-            if (TryGetIndexForPeer(lLocalPeerID, out int iIndexOfLoclPeerChannel))
+            if (bActivePeer && TryGetIndexForPeer(lLocalPeerID, out int iIndexOfLoclPeerChannel))
             {
                 for (int i = 0; i < iKickList.Count; i++)
                 {
@@ -561,7 +561,7 @@ namespace Networking
             {
                 if (tupJoinRequest[i].Item2 >= iMinVotesNeeded)
                 {
-                    AddPeerToGlobalMessenger(tupJoinRequest[i].Item1);
+                    AddPeerToGlobalMessenger(tupJoinRequest[i].Item1, dtmTimeOfVote);
                 }
             }
         }

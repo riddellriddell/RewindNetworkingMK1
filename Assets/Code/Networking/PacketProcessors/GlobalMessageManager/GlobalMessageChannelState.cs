@@ -54,7 +54,7 @@ namespace Networking
         public long m_lChannelPeer;
 
         //the time when voting on assigning peer to this channel started
-        public DateTime m_dtmVoteStartTime;
+        public DateTime m_dtmVoteTime;
 
         //the current state of this channel
         public State m_staState;
@@ -84,7 +84,7 @@ namespace Networking
         {
             m_lChannelPeer = chsChannelState.m_lChannelPeer;
 
-            m_dtmVoteStartTime = chsChannelState.m_dtmVoteStartTime;
+            m_dtmVoteTime = chsChannelState.m_dtmVoteTime;
 
             m_staState = chsChannelState.m_staState;
 
@@ -100,6 +100,8 @@ namespace Networking
             m_iLastMessageIndexProcessed = chsChannelState.m_iLastMessageIndexProcessed;
 
             m_lChainLinkHeadHash = chsChannelState.m_lChainLinkHeadHash;
+
+            m_msvLastSortValue = chsChannelState.m_msvLastSortValue;
         }
 
         //setup
@@ -110,7 +112,7 @@ namespace Networking
 
             m_staState = State.Empty;
 
-            m_dtmVoteStartTime = DateTime.MinValue;
+            m_dtmVoteTime = DateTime.MinValue;
 
             m_chvVotes = new List<ChannelVote>(iMaxPeerCount);
 
@@ -161,7 +163,7 @@ namespace Networking
 
             //reset peer
             m_lChannelPeer = long.MinValue;
-            m_dtmVoteStartTime = DateTime.MinValue;
+            m_dtmVoteTime = DateTime.MinValue;
             m_staState = State.Empty;
 
             //reset hash head
@@ -189,23 +191,24 @@ namespace Networking
         {
             ClearVotes();
             m_lChannelPeer = lPeerID;
-            m_dtmVoteStartTime = dtmVoteStartTime;
+            m_dtmVoteTime = dtmVoteStartTime;
             m_staState = State.VoteJoin;
         }
 
         public void StartVoteKickForPeer(DateTime dtmVoteStartTime)
         {
-            m_dtmVoteStartTime = dtmVoteStartTime;
+            m_dtmVoteTime = dtmVoteStartTime;
             m_staState = State.VoteKick;
         }
 
         //make the peer with id lPeerID in control of this channel
-        public void AssignPeerToChannel(long lPeerID)
+        public void AssignPeerToChannel(long lPeerID, DateTime dtmTimeOfJoin)
         {
             ClearVotes();
 
             m_lChannelPeer = lPeerID;
             m_staState = State.Assigned;
+            m_dtmVoteTime = dtmTimeOfJoin;
         }
 
         //gets index of any vote for peer 
@@ -321,7 +324,7 @@ namespace Networking
             Serialize(rbsByteStream, ref Output.m_lChannelPeer);
             
             //time of last vote start
-            Serialize(rbsByteStream, ref Output.m_dtmVoteStartTime);
+            Serialize(rbsByteStream, ref Output.m_dtmVoteTime);
 
             //state
             byte bState = 0;
@@ -360,7 +363,7 @@ namespace Networking
             Serialize(wbsByteStream, ref Input.m_lChannelPeer);
 
             //time of last vote
-            Serialize(wbsByteStream, ref Input.m_dtmVoteStartTime);
+            Serialize(wbsByteStream, ref Input.m_dtmVoteTime);
 
             //state
             byte bState = (byte)Input.m_staState;
@@ -390,7 +393,7 @@ namespace Networking
             }
 
             iSize += DataSize(Input.m_lChainLinkHeadHash);
-            iSize += DataSize(Input.m_dtmVoteStartTime);
+            iSize += DataSize(Input.m_dtmVoteTime);
             iSize += DataSize(Input.m_iLastMessageIndexProcessed);
             iSize += DataSize(Input.m_lChannelPeer);
             iSize += DataSize(Input.m_lHashOfLastNodeProcessed);

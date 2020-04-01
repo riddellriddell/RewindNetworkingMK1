@@ -75,7 +75,7 @@ namespace Networking
 
         //adds the effect of all the messages after the last message processed by gmsStartMessageState state 
         //and stores the result in LatestState
-        public void UpdateFinalMessageState(long lLocalPeerID, GlobalMessagingState gmsStartMessageState)
+        public void UpdateFinalMessageState(long lLocalPeerID, bool bActivePeer, GlobalMessagingState gmsStartMessageState)
         {
             LatestState.ResetToState(gmsStartMessageState);
 
@@ -87,7 +87,7 @@ namespace Networking
 
             for (int i = iStartIndex; i < UnConfirmedMessageBuffer.Count; i++)
             {
-                LatestState.ProcessMessage(lLocalPeerID, UnConfirmedMessageBuffer.Values[i]);
+                LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i]);
             }
         }
 

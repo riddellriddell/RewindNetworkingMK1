@@ -75,10 +75,12 @@ namespace GameManagers
 
         [SerializeField]
         public int m_iTotalChainLinks;
-
-
+        
         [SerializeField]
         public int m_iActiveChainLinks;
+
+        [SerializeField]
+        public int m_iBaseChainLinkIndex;
 
         [SerializeField]
         public int m_iGlobalMessagingChannelIndex;      
@@ -218,6 +220,9 @@ namespace GameManagers
 
                 //the number of links in the active chain
                 m_iActiveChainLinks = (int)(gmpGlobalMessagingProcessor.m_chmChainManager.m_chlBestChainHead.m_iChainLength - gmpGlobalMessagingProcessor.m_chmChainManager.m_chlChainBase.m_iChainLength);
+
+                //get the index of the base link
+                m_iBaseChainLinkIndex = (int)gmpGlobalMessagingProcessor.m_chmChainManager.m_chlChainBase.m_iLinkIndex;
 
                 if (gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(m_agmActiveGameManager.m_ncnNetworkConnection.m_lPeerID, out int iIndex))
                 {
