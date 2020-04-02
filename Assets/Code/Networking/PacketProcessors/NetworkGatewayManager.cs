@@ -170,6 +170,17 @@ namespace Networking
         //process message from matchmaking server
         public void ProcessMessageFromGateway(UserMessage usmMessage)
         {
+            //check message is fully formed
+            if(usmMessage.m_lFromUser == 0 || 
+                string.IsNullOrEmpty(usmMessage.m_strMessage) ||
+               usmMessage.m_iMessageType == 0 ||
+               usmMessage.m_dtmTimeOfMessage == 0)
+            {
+                Debug.LogError("Mallformed message from server");
+
+                return;
+            }
+
             //check message type
             switch (usmMessage.m_iMessageType)
             {

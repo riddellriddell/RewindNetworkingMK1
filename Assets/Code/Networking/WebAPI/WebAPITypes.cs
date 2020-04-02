@@ -33,6 +33,7 @@ namespace Networking
     //todo find a better way to do this
     public enum MessageType
     {
+        None, //use to detect defective messages that were not correctly serializd 
         GatewayMessage
     }
 
