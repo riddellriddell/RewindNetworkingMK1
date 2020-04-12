@@ -113,8 +113,7 @@ namespace Networking
             base.OnAddToNetwork(ncnNetwork);
 
             m_tnpNetworkTime = ParentNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
-
-
+            
             //add all the data packet classes this processor relies on to the main class factory 
             GlobalMessagePacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalMessagePacket>(GlobalMessagePacket.TypeID);
 
@@ -123,7 +122,6 @@ namespace Networking
             GLobalChainLinkPacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GLobalChainLinkPacket>(GLobalChainLinkPacket.TypeID);
 
             GlobalChainStatePacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalChainStatePacket>(GlobalChainStatePacket.TypeID);
-
 
         }
 
