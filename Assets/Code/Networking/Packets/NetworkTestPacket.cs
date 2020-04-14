@@ -11,16 +11,7 @@ namespace Networking
     /// </summary>
     public class NetTestSendPacket : DataPacket
     {
-        public static int TypeID
-        {
-            get
-            {
-                return 2;
-            }
-        }
-
-        //the value to echo back 
-        public byte m_bEcho;
+        public static int TypeID { get; set; } = int.MinValue;
 
         public override int GetTypeID
         {
@@ -29,6 +20,9 @@ namespace Networking
                 return TypeID;
             }
         }
+        
+        //the value to echo back 
+        public byte m_bEcho;
 
         public override int PacketPayloadSize
         {
@@ -69,19 +63,7 @@ namespace Networking
 
     public class NetTestReplyPacket : DataPacket
     {
-        public static int TypeID
-        {
-            get
-            {
-                return 3;
-            }
-        }
-
-        //the time on this computer 
-        public long m_lLocalBaseTimeTicks;
-
-        //the value to echo back 
-        public byte m_bEcho;
+        public static int TypeID { get; set; } = int.MinValue;
 
         public override int GetTypeID
         {
@@ -90,6 +72,13 @@ namespace Networking
                 return TypeID;
             }
         }
+
+
+        //the time on this computer 
+        public long m_lLocalBaseTimeTicks;
+
+        //the value to echo back 
+        public byte m_bEcho;
 
         public override int PacketPayloadSize
         {

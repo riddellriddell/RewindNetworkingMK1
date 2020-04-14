@@ -10,14 +10,6 @@ namespace Networking
     {
         public static int TypeID { get; set; } = int.MinValue;
 
-        public static bool HasBeedAddedToClassFactory
-        {
-            get
-            {
-                return TypeID != int.MinValue;
-            }
-        }
-
         public override int GetTypeID
         {
             get
@@ -51,14 +43,6 @@ namespace Networking
     public class SimStateSyncHashMapPacket : DataPacket
     {
         public static int TypeID { get; set; } = int.MinValue;
-
-        public static bool HasBeedAddedToClassFactory
-        {
-            get
-            {
-                return TypeID != int.MinValue;
-            }
-        }
 
         public override int GetTypeID
         {
@@ -98,14 +82,6 @@ namespace Networking
     {
         public static int TypeID { get; set; } = int.MinValue;
 
-        public static bool HasBeedAddedToClassFactory
-        {
-            get
-            {
-                return TypeID != int.MinValue;
-            }
-        }
-
         public override int GetTypeID
         {
             get
@@ -138,14 +114,6 @@ namespace Networking
     public class SimSegmentSyncDataPacket : DataPacket
     {
         public static int TypeID { get; set; } = int.MinValue;
-
-        public static bool HasBeedAddedToClassFactory
-        {
-            get
-            {
-                return TypeID != int.MinValue;
-            }
-        }
 
         public override int GetTypeID
         {

@@ -7,7 +7,7 @@ namespace Networking
     /// <summary>
     /// if a packet is too large to fit inside the mtu this packet processor breaks it up and reassebles it at the other end
     /// </summary>
-    public class NetworkdLargePacketTransferManager : ManagedNetworkPacketProcessor<ConnectionLargePacketTransferManager>
+    public class NetworkLargePacketTransferManager : ManagedNetworkPacketProcessor<ConnectionLargePacketTransferManager>
     {
         public static int s_iStartBufferSize = 2000;
 
@@ -23,12 +23,12 @@ namespace Networking
 
         protected override void AddDependentPacketsToPacketFactory(ClassWithIDFactory cifPacketFactory)
         {
-            cifPacketFactory.AddType<LargePacket>(LargePacket.TypeID);
+            LargePacket.TypeID = cifPacketFactory.AddType<LargePacket>(LargePacket.TypeID);
         }
 
     }
 
-    public class ConnectionLargePacketTransferManager : ManagedConnectionPacketProcessor<NetworkdLargePacketTransferManager>
+    public class ConnectionLargePacketTransferManager : ManagedConnectionPacketProcessor<NetworkLargePacketTransferManager>
     {
         public override int Priority { get; } = 12;
         protected List<LargePacket> LargePacketSections { get; } = new List<LargePacket>();

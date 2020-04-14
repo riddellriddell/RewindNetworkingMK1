@@ -204,7 +204,7 @@ namespace Networking
 
             for (int i = 0; i < iItems; i++)
             {
-                Byte value = 0;
+                Int32 value = 0;
                 Serialize(rbsStream, ref value);
                 Output[i] = value;
             }
@@ -296,7 +296,7 @@ namespace Networking
 
             for (int i = 0; i < iItems; i++)
             {
-                Byte value = 0;
+                Int64 value = 0;
                 Serialize(rbsStream, ref value);
                 Output[i] = value;
             }

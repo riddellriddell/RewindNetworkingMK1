@@ -153,8 +153,8 @@ namespace Networking
 
         protected override void AddDependentPacketsToPacketFactory(ClassWithIDFactory cifPacketFactory)
         {
-            cifPacketFactory.AddType<NetTestSendPacket>(NetTestSendPacket.TypeID);
-            cifPacketFactory.AddType<NetTestReplyPacket>(NetTestReplyPacket.TypeID);
+            NetTestSendPacket.TypeID = cifPacketFactory.AddType<NetTestSendPacket>(NetTestSendPacket.TypeID);
+            NetTestReplyPacket.TypeID = cifPacketFactory.AddType<NetTestReplyPacket>(NetTestReplyPacket.TypeID);
         }
     }
 

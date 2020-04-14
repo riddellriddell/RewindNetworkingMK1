@@ -10,7 +10,7 @@ namespace Networking
         //the maximum size a single segment of the sim state will be
         public static int MaxSegmentSize { get; } = 300;
 
-        public static TimeSpan StateRequestTimeOut { get; } = TimeSpan.FromSeconds(5);
+        public static TimeSpan StateRequestTimeOut { get; } = TimeSpan.FromSeconds(10);
         public static TimeSpan SegmentRequestTimeOut { get; } = TimeSpan.FromSeconds(2);
 
         public static float MaxFailedRequestPercent = 0.5f;
@@ -28,7 +28,7 @@ namespace Networking
         public State m_staState = State.None;
 
         //has the sim state byte array been fully filled? note this does not mean the state is the final / reliable state
-        public bool m_bIsFullStateSynced;
+        public bool m_bIsFullStateSynced = false;
 
         //has the hash of the sim state changes on one of the peers 
         public bool m_bIsConnectedPeerStateHashDirty = false;
@@ -125,23 +125,35 @@ namespace Networking
             }
         }
 
+        protected override void AddDependentPacketsToPacketFactory(ClassWithIDFactory cifPacketFactory)
+        {
+            //add all the data packet classes this processor relies on to the main class factory 
+            SimStateSyncRequestPacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<SimStateSyncRequestPacket>(SimStateSyncRequestPacket.TypeID);
+            SimStateSyncHashMapPacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<SimStateSyncHashMapPacket>(SimStateSyncHashMapPacket.TypeID);
+            SimSegmentSyncRequestPacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<SimSegmentSyncRequestPacket>(SimSegmentSyncRequestPacket.TypeID);
+            SimSegmentSyncDataPacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<SimSegmentSyncDataPacket>(SimSegmentSyncDataPacket.TypeID);
+        }
+
         public override void OnAddToNetwork(NetworkConnection ncnNetwork)
         {
             base.OnAddToNetwork(ncnNetwork);
 
             m_tnpNetworkTime = ParentNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
+            
+            //set start valuse 
+            m_dtmRequestTimeOut = DateTime.MinValue;
 
-            //add all the data packet classes this processor relies on to the main class factory 
-            SimStateSyncRequestPacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalMessagePacket>(SimStateSyncRequestPacket.TypeID);
+            //set when current system will time out 
+            m_dtmTimeOfNextTimeout = DateTime.MaxValue;
         }
 
         public override DataPacket ProcessReceivedPacket(long lFromUserID, DataPacket pktInputPacket)
         {
-            if(pktInputPacket is SimSegmentSyncDataPacket)
+            if (pktInputPacket is SimSegmentSyncDataPacket)
             {
                 SimSegmentSyncDataPacket ssdSegmentData = pktInputPacket as SimSegmentSyncDataPacket;
 
-                OnRecieveSegment(ref ssdSegmentData.m_bSegmentData,lFromUserID);
+                OnRecieveSegment(ref ssdSegmentData.m_bSegmentData, lFromUserID);
 
                 return null;
             }
@@ -236,6 +248,10 @@ namespace Networking
 
             m_lAgreedSimHash = 0;
 
+            m_sPendingSegments = new HashSet<ushort>();
+
+            m_sUnAssignedSegments = new HashSet<ushort>();
+
             m_iPeersWithSimHash = 0;
 
             m_iSimStateSize = 0;
@@ -292,11 +308,11 @@ namespace Networking
 
                     lCurrentStateHash = lHashOptions[i].Item1;
 
-                    lCurrentStateHash = 1;
+                    iCurrentStateCount = 1;
                 }
                 else
                 {
-                    lCurrentStateHash++;
+                    iCurrentStateCount++;
                 }
 
                 if (iCurrentStateCount > iCommonStateCount)
@@ -369,6 +385,8 @@ namespace Networking
             {
                 m_bSimState = new byte[m_iSimStateSize];
             }
+
+            m_bIsFullStateSynced = false;
         }
 
         //reset all the requests for segments on target sim data hash change 
@@ -415,7 +433,7 @@ namespace Networking
             //search for corresponding segment 
             for (ushort i = 0; i < m_lSimDataSegmentsHash.Length; i++)
             {
-                if (m_lSimDataSegmentsHash[i] == lSegmentHash)
+                if (m_lSimDataSegmentsHash[i] == (lSegmentHash ^ i))
                 {
                     sDataSegment = i;
                     break;
@@ -457,6 +475,8 @@ namespace Networking
             //check if all data segments have been recieved 
             if (m_sPendingSegments.Count == 0)
             {
+                m_bIsFullStateSynced = true;
+
                 //TODO: fire some kind of event telling sim to get new state 
             }
 
@@ -496,7 +516,11 @@ namespace Networking
                         sscStateSyncConnection.m_sRequestedSegment == ushort.MaxValue)
                     {
                         //get next segment 
-                        ushort sSegmentIndex = m_sUnAssignedSegments.GetEnumerator().Current;
+                        HashSet<ushort>.Enumerator enmEnumerator = m_sUnAssignedSegments.GetEnumerator();
+
+                        enmEnumerator.MoveNext();
+
+                        ushort sSegmentIndex = enmEnumerator.Current;
 
                         //remove from unassigned pool
                         m_sUnAssignedSegments.Remove(sSegmentIndex);
@@ -528,6 +552,8 @@ namespace Networking
             //check for any requests that have timed out 
             if (dtmBaseTime > m_dtmTimeOfNextTimeout)
             {
+                m_dtmTimeOfNextTimeout = DateTime.MaxValue;
+
                 foreach (SimStateSyncConnectionProcessor sscStateSyncConnections in ChildConnectionProcessors.Values)
                 {
                     //update the timeout for any channels 
@@ -538,26 +564,26 @@ namespace Networking
             }
         }
 
-        public List<Tuple<DateTime,long>> GetRequestedTimeOfSimStates()
+        public List<Tuple<DateTime, long>> GetRequestedTimeOfSimStates()
         {
             List<Tuple<DateTime, long>> dtmSimTimes = new List<Tuple<DateTime, long>>();
 
-            foreach(SimStateSyncConnectionProcessor sscConnection in ChildConnectionProcessors.Values)
+            foreach (SimStateSyncConnectionProcessor sscConnection in ChildConnectionProcessors.Values)
             {
-                if(sscConnection.m_ostOutState == SimStateSyncConnectionProcessor.OutState.Pending)
-                {                  
-                    dtmSimTimes.Add(new Tuple<DateTime, long>(sscConnection.m_dtmTimeOfOutSimState,sscConnection.ParentConnection.m_lUserUniqueID));
+                if (sscConnection.m_ostOutState == SimStateSyncConnectionProcessor.OutState.Pending)
+                {
+                    dtmSimTimes.Add(new Tuple<DateTime, long>(sscConnection.m_dtmTimeOfOutSimState, sscConnection.ParentConnection.m_lUserUniqueID));
                 }
             }
 
-            dtmSimTimes.Sort((x,y) =>(x.Item1.CompareTo( y.Item1)));
+            dtmSimTimes.Sort((x, y) => (x.Item1.CompareTo(y.Item1)));
 
             return dtmSimTimes;
         }
 
         public void SetSimDataForPeer(long lPeerID, byte[] bData)
         {
-            if(ChildConnectionProcessors.TryGetValue(lPeerID, out SimStateSyncConnectionProcessor sscConnection))
+            if (ChildConnectionProcessors.TryGetValue(lPeerID, out SimStateSyncConnectionProcessor sscConnection))
             {
                 sscConnection.OnSimDataChange(bData);
             }
@@ -620,6 +646,49 @@ namespace Networking
         public ushort m_sRequestedSegment;
 
         #endregion
+
+        public override void Start()
+        {
+            base.Start();
+
+            #region SendingState
+
+            m_ostOutState = OutState.NotRequested;
+
+            //the state of the sim when the peer requested sim state hash 
+            m_bSimDataAtPeerRequest = new byte[0];
+
+            //hash of each of the segments of the chain 
+            m_lOutSimDataSegmentsHash = new long[0];
+
+            m_dtmTimeOfOutSimState = DateTime.MinValue;
+
+            #endregion
+
+            #region RecievingState 
+
+            //the state of the data sync
+            m_istInState = InState.NotRequested;
+
+            //the time the segment request was made 
+            m_dtmRequestTimeOut = DateTime.MinValue;
+
+            //the hash of the entire state sent by peer 
+            //this value is calculated locally based of data segment hash
+            m_lInTotalStateHash = 0;
+
+            //hash of each of the segments of the chain 
+            m_lInSimDataSegmentsHash = new long[0];
+
+            //the size of the sim state that the peer has 
+            m_iTotalByteCount = 0;
+
+            //the segment the local peer has requsted the remote peer send
+            m_sRequestedSegment = ushort.MaxValue;
+
+            #endregion
+        }
+
 
         public override void OnConnectionReset()
         {
@@ -691,7 +760,7 @@ namespace Networking
 
                 return null;
             }
-            else if(pktInputPacket is SimStateSyncHashMapPacket)
+            else if (pktInputPacket is SimStateSyncHashMapPacket)
             {
                 SimStateSyncHashMapPacket shmHashMap = pktInputPacket as SimStateSyncHashMapPacket;
 
@@ -699,7 +768,7 @@ namespace Networking
 
                 return null;
             }
-            else if(pktInputPacket is SimSegmentSyncRequestPacket)
+            else if (pktInputPacket is SimSegmentSyncRequestPacket)
             {
                 SimSegmentSyncRequestPacket ssrSegmentRequest = pktInputPacket as SimSegmentSyncRequestPacket;
 
@@ -722,7 +791,7 @@ namespace Networking
         public void OnSimDataChange(byte[] bSimDataAtPeerRequest)
         {
             //check if connection active
-            if(ParentConnection.Status != Connection.ConnectionStatus.Connected)
+            if (ParentConnection.Status != Connection.ConnectionStatus.Connected)
             {
                 return;
             }
@@ -772,7 +841,7 @@ namespace Networking
 
                     //fill segment data array
                     Array.Copy(m_bSimDataAtPeerRequest, iStart, ssdSegmentData.m_bSegmentData, 0, iCount);
-                    
+
                     //send data tp peer
                     ParentConnection.QueuePacketToSend(ssdSegmentData);
 
@@ -808,7 +877,7 @@ namespace Networking
                     byte[] bHash = md5Hash.ComputeHash(m_bSimDataAtPeerRequest, iOffset, iCount);
 
                     //convert hash to long for convienience 
-                    m_lOutSimDataSegmentsHash[i] = BitConverter.ToInt64(bHash, 0);
+                    m_lOutSimDataSegmentsHash[i] = BitConverter.ToInt64(bHash, 0) ^ i;
                 }
             }
 
@@ -866,7 +935,7 @@ namespace Networking
             m_iTotalByteCount = uByteCount;
 
             //merge all the hashes togeather in a sort of criptographicalaly secure way
-            m_lInTotalStateHash = 0;
+            m_lInTotalStateHash = m_iTotalByteCount;
 
             for (int i = 0; i < lSimHash.Length; i++)
             {
@@ -874,12 +943,6 @@ namespace Networking
                 {
                     m_lInTotalStateHash = m_lInTotalStateHash + m_lInTotalStateHash + m_lInTotalStateHash + lSimHash[i];
                 }
-            }
-
-            //add the total number of bytes to the hash
-            unchecked
-            {
-                m_lInTotalStateHash = m_lInTotalStateHash + m_lInTotalStateHash + m_lInTotalStateHash + uByteCount;
             }
 
             m_istInState = InState.Recieved;

@@ -459,7 +459,7 @@ namespace GameManagers
 
             //add network processors
             m_ncnNetworkConnection.AddPacketProcessor(new TimeNetworkProcessor());
-            m_ncnNetworkConnection.AddPacketProcessor(new NetworkdLargePacketTransferManager());
+            m_ncnNetworkConnection.AddPacketProcessor(new NetworkLargePacketTransferManager());
             m_ncnNetworkConnection.AddPacketProcessor(new NetworkLayoutProcessor());
 
             m_ngmGatewayManager = new NetworkGatewayManager();

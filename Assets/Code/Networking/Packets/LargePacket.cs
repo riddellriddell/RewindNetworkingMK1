@@ -6,11 +6,13 @@ namespace Networking
 {
     public class LargePacket : DataPacket
     {
-        public static int TypeID
+        public static int TypeID { get; set; } = int.MinValue;
+
+        public override int GetTypeID
         {
             get
             {
-                return 0;
+                return TypeID;
             }
         }
 
@@ -25,14 +27,6 @@ namespace Networking
                 iSize += sizeof(int); //the size of the byte array
                 iSize += TypeHeaderSize; //the type def for the entire packet
                 return iSize;
-            }
-        }
-
-        public override int GetTypeID
-        {
-            get
-            {
-                return TypeID;
             }
         }
 

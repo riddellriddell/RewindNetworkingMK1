@@ -4,8 +4,6 @@ namespace Networking
 {
     public abstract class GlobalMessageBase
     {
-        public abstract bool AddedToClassFactory { get; }
-
         public abstract int TypeNumber { get; set; }
 
         public abstract void Serialize(ReadByteStream rbsByteStream);
@@ -20,14 +18,6 @@ namespace Networking
     public class VoteMessage : GlobalMessageBase
     {
         public static int TypeID { get; set; } = int.MinValue;
-
-        public override bool AddedToClassFactory
-        {
-            get
-            {
-                return TypeID == int.MinValue;
-            }
-        }
 
         public override int TypeNumber
         {
