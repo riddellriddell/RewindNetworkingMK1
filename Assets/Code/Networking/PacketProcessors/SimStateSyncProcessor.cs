@@ -570,7 +570,7 @@ namespace Networking
 
             foreach (SimStateSyncConnectionProcessor sscConnection in ChildConnectionProcessors.Values)
             {
-                if (sscConnection.m_ostOutState == SimStateSyncConnectionProcessor.OutState.Pending)
+                if (sscConnection.m_ostOutState == SimStateSyncConnectionProcessor.OutState.Pending || sscConnection.m_ostOutState == SimStateSyncConnectionProcessor.OutState.Active)
                 {
                     dtmSimTimes.Add(new Tuple<DateTime, long>(sscConnection.m_dtmTimeOfOutSimState, sscConnection.ParentConnection.m_lUserUniqueID));
                 }

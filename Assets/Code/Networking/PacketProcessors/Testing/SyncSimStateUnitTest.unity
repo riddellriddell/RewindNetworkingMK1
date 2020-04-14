@@ -326,9 +326,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ccc095eb5b2172f429f42eee2b2d8d4e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_bEnableLag: 0
-  m_fMinLag: 0.25
-  m_fMaxLag: 1
+  m_bEnableLag: 1
+  m_fMinLag: 0.15
+  m_fMaxLag: 0.2
   m_bEnableOutages: 0
   m_fMinOutage: 0.25
   m_fMaxOutage: 8
@@ -362,8 +362,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de5740b712ae48a438963e5d44d8be96, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_iNumberOfPeersToCreate: 2
+  m_iNumberOfPeersToCreate: 6
   m_bAllPeersConnected: 0
-  m_iSourceDataSize: 1
-  m_lSourceDataHash: 0
-  m_bSourceData: 
+  m_iSourceDataASize: 1000
+  m_lSourceDataAHash: 0
+  m_bSourceDataA: 
+  m_iSourceDataBSize: 1000
+  m_lSourceDataBHash: 0
+  m_bSourceDataB: 
+  m_lSetDataHash: 
+  m_fChaceOfWrongData: 0.8
+  m_fChanceOfCorrectingMistake: 0.05
