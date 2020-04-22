@@ -119,7 +119,7 @@ namespace Networking
 
             GlobalLinkRequest.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalLinkRequest>(GlobalLinkRequest.TypeID);
 
-            GLobalChainLinkPacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GLobalChainLinkPacket>(GLobalChainLinkPacket.TypeID);
+            GlobalChainLinkPacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalChainLinkPacket>(GlobalChainLinkPacket.TypeID);
 
             GlobalChainStatePacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalChainStatePacket>(GlobalChainStatePacket.TypeID);
 
@@ -208,9 +208,9 @@ namespace Networking
 
                 return null;
             }
-            else if (pktInputPacket is GLobalChainLinkPacket)
+            else if (pktInputPacket is GlobalChainLinkPacket)
             {
-                GLobalChainLinkPacket clpChainLinkPacket = pktInputPacket as GLobalChainLinkPacket;
+                GlobalChainLinkPacket clpChainLinkPacket = pktInputPacket as GlobalChainLinkPacket;
 
                 ProcessLinkPacket(clpChainLinkPacket);
 
@@ -240,7 +240,7 @@ namespace Networking
             }
         }
 
-        public void ProcessLinkPacket(GLobalChainLinkPacket clpChainLinkPacket)
+        public void ProcessLinkPacket(GlobalChainLinkPacket clpChainLinkPacket)
         {
             //check if still collecting start states
             if (m_staState == State.ConnectAsAdditionalPeer)
@@ -334,7 +334,7 @@ namespace Networking
         public void SendChainLinkToPeers(ChainLink chlLink)
         {
             //create packet
-            GLobalChainLinkPacket clpLinkPacket = ParentNetworkConnection.PacketFactory.CreateType<GLobalChainLinkPacket>(GLobalChainLinkPacket.TypeID);
+            GlobalChainLinkPacket clpLinkPacket = ParentNetworkConnection.PacketFactory.CreateType<GlobalChainLinkPacket>(GlobalChainLinkPacket.TypeID);
 
             clpLinkPacket.m_chlLink = chlLink;
 
@@ -818,7 +818,7 @@ namespace Networking
                 //if link found send it back to the requester
                 if (chlLink != null)
                 {
-                    GLobalChainLinkPacket clpLinkPacket = ParentConnection.m_cifPacketFactory.CreateType<GLobalChainLinkPacket>(GLobalChainLinkPacket.TypeID);
+                    GlobalChainLinkPacket clpLinkPacket = ParentConnection.m_cifPacketFactory.CreateType<GlobalChainLinkPacket>(GlobalChainLinkPacket.TypeID);
 
                     clpLinkPacket.m_chlLink = chlLink;
 
@@ -880,7 +880,7 @@ namespace Networking
                 //send all the chain links attached to local peers chain link head (best link) starting from the oldest 
                 for (int i = chlLinksToSend.Count - 1; i > -1; i--)
                 {
-                    GLobalChainLinkPacket clpChainLinkPacket = ParentConnection.m_cifPacketFactory.CreateType<GLobalChainLinkPacket>(GLobalChainLinkPacket.TypeID);
+                    GlobalChainLinkPacket clpChainLinkPacket = ParentConnection.m_cifPacketFactory.CreateType<GlobalChainLinkPacket>(GlobalChainLinkPacket.TypeID);
 
                     clpChainLinkPacket.m_chlLink = chlLinksToSend[i];
 

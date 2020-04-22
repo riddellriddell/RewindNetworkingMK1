@@ -93,7 +93,7 @@ namespace Networking
         }
     }
 
-    public class GLobalChainLinkPacket : DataPacket
+    public class GlobalChainLinkPacket : DataPacket
     {
         public static int TypeID { get; set; } = int.MinValue;
 
