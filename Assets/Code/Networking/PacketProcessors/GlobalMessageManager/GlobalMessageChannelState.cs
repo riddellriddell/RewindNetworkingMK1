@@ -254,9 +254,37 @@ namespace Networking
 
         public object Clone()
         {
-            throw new NotImplementedException();
-        }
+            GlobalMessageChannelState mcsOutState = new GlobalMessageChannelState(m_chvVotes.Count);
 
+            //the peer that is currently assigned to this input channel
+            mcsOutState.m_lChannelPeer = m_lChannelPeer;
+
+            //the time when voting on assigning peer to this channel started
+            mcsOutState.m_dtmVoteTime = m_dtmVoteTime;
+
+            //the current state of this channel
+            mcsOutState.m_staState = m_staState;
+
+            //list of all the active votes by this channel on other channels
+            for(int i = 0; i < mcsOutState.m_chvVotes.Count; i++)
+            {
+                mcsOutState.m_chvVotes[i] = m_chvVotes[i];
+            }            
+
+            //the hash of the last valid node processed for this channel
+            mcsOutState.m_lHashOfLastNodeProcessed = m_lHashOfLastNodeProcessed;
+
+            //the index of the last valid message processed 
+            mcsOutState.m_iLastMessageIndexProcessed = m_iLastMessageIndexProcessed;
+
+            //the chain link head this peer is using in the last valid message 
+            mcsOutState.m_lChainLinkHeadHash = m_lChainLinkHeadHash;
+
+            //the message sort value of the last valid message processed by this channel
+            mcsOutState.m_msvLastSortValue = m_msvLastSortValue;
+
+            return mcsOutState;
+        }
     }
 
     public partial class ByteStream

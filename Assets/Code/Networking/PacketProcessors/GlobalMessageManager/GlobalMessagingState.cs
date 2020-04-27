@@ -56,7 +56,7 @@ namespace Networking
 
         //process a message lLocalPeer is the user in controll of this computer
         //and must be in the "Kept" group when split occures 
-        public void ProcessMessage(long lLocalPeer, bool bActivePeer, PeerMessageNode pmnMessageNode)
+        public void ProcessMessage(long lLocalPeer, bool bActivePeer, PeerMessageNode pmnMessageNode, GlobalSimMessageBuffer smbSimMessageBuffer = null)
         {
             //update the most recent sorting value 
             m_svaLastMessageSortValue = SortingValue.Max(m_svaLastMessageSortValue, pmnMessageNode.m_svaMessageSortingValue);
@@ -67,16 +67,25 @@ namespace Networking
                 //validate message 
                 bool bIsValidMessage = ValidateAndApplyMessageChangeToChannel(iIndexOfMessageChannel, pmnMessageNode);
 
-                //check if message is a vote
-                if (pmnMessageNode.m_bMessageType == VoteMessage.TypeID)
+                //filter invalid messages
+                if (bIsValidMessage == true)
                 {
-                    //apply votes
-                    ApplyVotesToChannel(lLocalPeer, bActivePeer, iIndexOfMessageChannel, pmnMessageNode.m_dtmMessageCreationTime, pmnMessageNode.m_gmbMessage as VoteMessage);
+                    //check if message is a vote
+                    if (pmnMessageNode.m_bMessageType == VoteMessage.TypeID)
+                    {
+                        //apply votes
+                        ApplyVotesToChannel(lLocalPeer, bActivePeer, iIndexOfMessageChannel, pmnMessageNode, smbSimMessageBuffer);
+                    }
+                    else if (smbSimMessageBuffer != null && pmnMessageNode.m_gmbMessage is ISimMessagePayload)
+                    {
+                        //store sim message 
+                        smbSimMessageBuffer.QueueSimMessage(pmnMessageNode.m_svaMessageSortingValue, pmnMessageNode.m_lPeerID, iIndexOfMessageChannel, pmnMessageNode.m_gmbMessage as ISimMessagePayload);
+                    }
                 }
             }
             else
             {
-                //peer cant vote because they are not part of the global message system
+                //peer cant vote or create inputs because they are not part of the global message system
             }
         }
 
@@ -143,19 +152,6 @@ namespace Networking
             }
 
             return iActiveChannels;
-        }
-
-        //perform join
-        public void AddPeerToGlobalMessenger(int iChannelIndex, DateTime dtmTimeOfJoin)
-        {
-            //assign peer to channel
-            m_gmcMessageChannels[iChannelIndex].AssignPeerToChannel(m_gmcMessageChannels[iChannelIndex].m_lChannelPeer, dtmTimeOfJoin);
-
-            //clear any votes on channel
-            for (int i = 0; i < m_gmcMessageChannels.Count; i++)
-            {
-                m_gmcMessageChannels[i].ClearVotesForChannelIndex(iChannelIndex);
-            }
         }
 
         //check for failed votes and reset 
@@ -313,8 +309,12 @@ namespace Networking
         }
 
         //apply the vote command to the peer
-        protected void ApplyVotesToChannel(long lLocalPeerID, bool bActivePeer, int iMessageChannel, DateTime dtmMessageCreationTime, VoteMessage vmsMessageNode)
+        protected void ApplyVotesToChannel(long lLocalPeerID, bool bActivePeer, int iMessageChannel,PeerMessageNode pmnMessage , GlobalSimMessageBuffer smbSimMessageBuffer = null)
         {
+
+            DateTime dtmMessageCreationTime = pmnMessage.m_dtmMessageCreationTime;
+            VoteMessage vmsMessageNode = pmnMessage.m_gmbMessage as VoteMessage;
+
             for (int i = 0; i < vmsMessageNode.m_tupActionPerPeer.Length; i++)
             {
                 // a value of 0 is kick 1 is join
@@ -370,19 +370,31 @@ namespace Networking
             }
             
             //process join votes
-            ProcessJoin(iMessageChannel, dtmMessageCreationTime);
-
-
+            ProcessJoin(iMessageChannel, dtmMessageCreationTime, out List<int> iJoinPeers);
+                                  
             //process kick messages 
-            ProcessSplitVotes(lLocalPeerID, bActivePeer, iMessageChannel, dtmMessageCreationTime);
+            ProcessSplitVotes(lLocalPeerID, bActivePeer, iMessageChannel, dtmMessageCreationTime, out List<int> iKickPeers);
+
+            //changes are only stored in the sim messsage buffer if updating the main branch or unconfimed message head 
+            if (smbSimMessageBuffer != null)
+            {
+                //create a sim message for peers joining or leaving game
+                AddPeerChangeMessageToSimBuffer(pmnMessage.m_svaMessageSortingValue, iKickPeers, iJoinPeers, smbSimMessageBuffer);
+            }
+
+            //assign peers to channels
+            AddPeersToGlobalMessenger(iJoinPeers, dtmMessageCreationTime);
+
+            //remove peer channels for kicked group
+            KickPeers(iKickPeers);
         }
 
         //process split vote
-        protected void ProcessSplitVotes(long lLocalPeerID, bool bActivePeer, int iChangedMessageChannel, DateTime dtmTimeOfVote)
+        protected void ProcessSplitVotes(long lLocalPeerID, bool bActivePeer, int iChangedMessageChannel, DateTime dtmTimeOfVote, out List<int> iKickPeers)
         {
             //get list of kick and non kick
             List<int> iKeepList = new List<int>();
-            List<int> iKickList = new List<int>();
+            iKickPeers = new List<int>();
 
             GlobalMessageChannelState gmcChangedChannel = m_gmcMessageChannels[iChangedMessageChannel];
 
@@ -393,7 +405,7 @@ namespace Networking
                 if (gmcChangedChannel.m_chvVotes[i].m_vtpVoteType == GlobalMessageChannelState.ChannelVote.VoteType.Kick &&
                     gmcChangedChannel.m_chvVotes[i].IsActive(dtmTimeOfVote, s_tspVoteTimeout))
                 {
-                    iKickList.Add(i);
+                    iKickPeers.Add(i);
                 }
                 else if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Assigned) //get non kick peer list
                 {
@@ -402,7 +414,7 @@ namespace Networking
             }
 
             //check if anyone is getting kicked
-            if (iKickList.Count == 0)
+            if (iKickPeers.Count == 0)
             {
                 return;
             }
@@ -422,10 +434,10 @@ namespace Networking
                 GlobalMessageChannelState gmcInGroupChannel = m_gmcMessageChannels[iChannelToProcess];
 
                 //cycle through all the channels to kick
-                for (int j = iKickList.Count - 1; j > -1; j--)
+                for (int j = iKickPeers.Count - 1; j > -1; j--)
                 {
                     //get kick target
-                    int iKickTargetChannel = iKickList[j];
+                    int iKickTargetChannel = iKickPeers[j];
 
                     //get in group peer vote for target
                     GlobalMessageChannelState.ChannelVote cvtVote = gmcInGroupChannel.m_chvVotes[iKickTargetChannel];
@@ -436,13 +448,13 @@ namespace Networking
                         m_gmcMessageChannels[iKickTargetChannel].m_lChannelPeer != cvtVote.m_lPeerID)
                     {
                         //remove kick target from kick group and add them to the in group
-                        iKickList.RemoveAt(j);
+                        iKickPeers.RemoveAt(j);
                         iKeepList.Add(iKickTargetChannel);
                     }
                 }
 
                 //check if there is anyone left in the kick group
-                if (iKickList.Count == 0)
+                if (iKickPeers.Count == 0)
                 {
                     //stop processing kick vote (vote has failed at this point)
                     return;
@@ -455,9 +467,9 @@ namespace Networking
             //get the channel controlled by the local peer
             if (bActivePeer && TryGetIndexForPeer(lLocalPeerID, out int iIndexOfLoclPeerChannel))
             {
-                for (int i = 0; i < iKickList.Count; i++)
+                for (int i = 0; i < iKickPeers.Count; i++)
                 {
-                    if (iKickList[i] == iIndexOfLoclPeerChannel)
+                    if (iKickPeers[i] == iIndexOfLoclPeerChannel)
                     {
                         bIsInKickGroup = true;
 
@@ -470,38 +482,19 @@ namespace Networking
             if (bIsInKickGroup)
             {
                 List<int> iTemp = iKeepList;
-                iKeepList = iKickList;
-                iKickList = iTemp;
+                iKeepList = iKickPeers;
+                iKickPeers = iTemp;
             }
 
-            //remove peer channels for kicked group
-            KickPeers(iKickList);
-        }
-
-        //perfotm split
-        protected void KickPeers(List<int> iKickList)
-        {
-            //for each item in the kick list
-            for (int i = 0; i < iKickList.Count; i++)
-            {
-                int ikickTarget = iKickList[i];
-
-                //clear kicked channel
-                m_gmcMessageChannels[ikickTarget].ClearChannel();
-
-                for (int j = 0; j < m_gmcMessageChannels.Count; j++)
-                {
-                    //clear any votes for kicked player
-                    m_gmcMessageChannels[j].ClearVotesForChannelIndex(ikickTarget);
-                }
-            }
         }
 
         //process join vote
-        protected void ProcessJoin(int iMessagingChannel, DateTime dtmTimeOfVote)
+        protected void ProcessJoin(int iMessagingChannel, DateTime dtmTimeOfVote, out List<int> iJoinPeers)
         {
             //first value is the channel seccond is number of voted
             List<Tuple<int, int>> tupJoinRequest = new List<Tuple<int, int>>();
+
+            iJoinPeers = new List<int>();
 
             GlobalMessageChannelState gcsUpdatedChannel = m_gmcMessageChannels[iMessagingChannel];
 
@@ -561,11 +554,73 @@ namespace Networking
             {
                 if (tupJoinRequest[i].Item2 >= iMinVotesNeeded)
                 {
-                    AddPeerToGlobalMessenger(tupJoinRequest[i].Item1, dtmTimeOfVote);
+
+                    iJoinPeers.Add(tupJoinRequest[i].Item1);
                 }
             }
         }
-  
+        
+        //adds a messaget to the sim message buffer that a peer or peers have joined or left the global messaging system 
+        protected void AddPeerChangeMessageToSimBuffer(SortingValue svaChangeTime, in List<int> iPeersToKick, in List<int> iPeersToAdd, GlobalSimMessageBuffer smbSimMessageBuffer)
+        {
+            if(iPeersToKick.Count == 0 || iPeersToAdd.Count == 0)
+            {
+                return;
+            }
+
+            //build kick and join message
+            GlobalSimMessageBuffer.UserConnecionChange uccConnectionChange = new GlobalSimMessageBuffer.UserConnecionChange(iPeersToKick.Count, iPeersToAdd.Count);
+
+            for(int i = 0; i < iPeersToKick.Count; i++)
+            {
+                uccConnectionChange.m_lKickPeerID[i] = m_gmcMessageChannels[iPeersToKick[i]].m_lChannelPeer;
+                uccConnectionChange.m_iKickPeerChannelIndex[i] = iPeersToKick[i];
+            }
+
+            for (int i = 0; i < iPeersToAdd.Count; i++)
+            {
+                uccConnectionChange.m_lJoinPeerID[i] = m_gmcMessageChannels[iPeersToAdd[i]].m_lChannelPeer;
+                uccConnectionChange.m_iJoinPeerChannelIndex[i] = iPeersToAdd[i];
+            }
+
+            smbSimMessageBuffer.QueuePlayerChangeMessage(svaChangeTime, uccConnectionChange);
+        }
+
+        //perform join
+        protected void AddPeersToGlobalMessenger(List<int> iJoinList, DateTime dtmTimeOfJoin)
+        {
+            for (int i = 0; i < iJoinList.Count; i++)
+            {
+                //assign peer to channel
+                m_gmcMessageChannels[iJoinList[i]].AssignPeerToChannel(m_gmcMessageChannels[iJoinList[i]].m_lChannelPeer, dtmTimeOfJoin);
+
+                //clear any votes on channel
+                for (int j = 0; j < m_gmcMessageChannels.Count; j++)
+                {
+                    m_gmcMessageChannels[j].ClearVotesForChannelIndex(iJoinList[i]);
+                }
+            }
+        }
+
+        //perfotm split
+        protected void KickPeers(List<int> iKickList)
+        {
+            //for each item in the kick list
+            for (int i = 0; i < iKickList.Count; i++)
+            {
+                int ikickTarget = iKickList[i];
+
+                //clear kicked channel
+                m_gmcMessageChannels[ikickTarget].ClearChannel();
+
+                for (int j = 0; j < m_gmcMessageChannels.Count; j++)
+                {
+                    //clear any votes for kicked player
+                    m_gmcMessageChannels[j].ClearVotesForChannelIndex(ikickTarget);
+                }
+            }
+        }
+
     }
 
     public partial class ByteStream

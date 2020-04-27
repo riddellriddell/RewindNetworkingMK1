@@ -229,7 +229,7 @@ namespace Networking
             if (State != PeerTransmitterState.New)
             {
                 //cant start negotiation on an already negotiated connection
-                Debug.LogError("cant procecss an offer message on an already negotiated WebRTC connection");
+                //Debug.LogError("cant procecss an offer message on an already negotiated WebRTC connection");
 
                 yield break;
             }
@@ -313,7 +313,7 @@ namespace Networking
         {
             if (State != PeerTransmitterState.Connected)
             {
-                Debug.LogError("Should Not be transitioning from a non negotiating connection to a disconnected state");
+                Debug.LogError($"Should Not be transitioning from a non negotiating connection state {State} to a disconnected state");
 
                 return;
             }

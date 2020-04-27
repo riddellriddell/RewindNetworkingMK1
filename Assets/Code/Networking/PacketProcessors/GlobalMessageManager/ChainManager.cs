@@ -59,7 +59,7 @@ namespace Networking
             m_gmsChainStartState = new GlobalMessagingState(iMaxPeerCount, lFirstPeerID, dtmStartTime);
         }
 
-        public void AddFirstChainLink(long lLocalPeerID, bool bActivePeer, ChainLink chkChainLink)
+        public void AddFirstChainLink(long lLocalPeerID, bool bActivePeer, ChainLink chkChainLink, GlobalSimMessageBuffer smbSimMessageBuffer)
         {
             //add chain links to buffer 
             ChainLinks.Add(chkChainLink.m_svaChainSortingValue, chkChainLink);
@@ -75,7 +75,7 @@ namespace Networking
             chkChainLink.m_bIsConnectedToBase = true;
 
             //calculate chain state 
-            chkChainLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, bActivePeer, m_gmsChainStartState);
+            chkChainLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, bActivePeer, m_gmsChainStartState, smbSimMessageBuffer);
 
             //setup acknoledgements 
             chkChainLink.m_bIsChannelBranch = new List<bool>(m_iChannelCount);
@@ -90,7 +90,7 @@ namespace Networking
             chkChainLink.m_bIsChannelBranch[0] = true;
         }
 
-        public void AddChainLink(long lLocalPeerID, bool bActivePeer, ChainLink chlLink, GlobalMessageKeyManager gkmKeyManager, GlobalMessageBuffer gmbGlobalMessageBuffer, out bool bDirtyUnconfirmedMessageBufferState)
+        public void AddChainLink(long lLocalPeerID, bool bActivePeer, ChainLink chlLink, GlobalMessageKeyManager gkmKeyManager, GlobalMessageBuffer gmbGlobalMessageBuffer, GlobalSimMessageBuffer smbSimMessageBuffer, out bool bDirtyUnconfirmedMessageBufferState)
         {
             //validate chainlink to make sure all peers are seeing the samme thing 
             ChainLinkVerifier.RegisterLink(chlLink, lLocalPeerID);
@@ -115,27 +115,22 @@ namespace Networking
 
             //merge messages into the message buffer 
             //bIsDirty is true if new messages were added
-            MergeChainLinkMessagesIntoBuffer(chlLink, gmbGlobalMessageBuffer, out bool bIsDirty);
+            MergeChainLinkMessagesIntoBuffer(chlLink, gmbGlobalMessageBuffer, out bDirtyUnconfirmedMessageBufferState);
 
             //recalculate chain values
             ReprocessAllChainLinks(lLocalPeerID, bActivePeer);
 
-            //store the old chain head
-            ChainLink chlOldHead = m_chlBestChainHead;
-
             //update the best chain
-            bool bDidHeadChange = UpdateBestHeadChainLink(gmbGlobalMessageBuffer);
+            ChainLink chlBestLink = GetBestHeadChainLink(gmbGlobalMessageBuffer);
 
             //check that chain head changed 
-            if (bDidHeadChange)
+            if (chlBestLink != m_chlBestChainHead)
             {
-                //remove old items from the chain 
-                UpdateBaseLink(lLocalPeerID, bActivePeer, gmbGlobalMessageBuffer);
+                //apply change to message buffer 
+                OnBestHeadChange(chlBestLink, lLocalPeerID, bActivePeer, smbSimMessageBuffer, gmbGlobalMessageBuffer);
 
                 bDirtyUnconfirmedMessageBufferState = true;
             }
-
-            bDirtyUnconfirmedMessageBufferState = bIsDirty;
         }
 
         //find a link searching back from iStartIndex that matches bHash
@@ -161,6 +156,60 @@ namespace Networking
             //start at the most recent as thats the most likely
             // link to be searching for
             return FindLink(ChainLinks.Count - 1, lHash);
+        }
+
+        //finds all the chain links from a shared base to GetChainLinksTo returns false if no shared base is found
+        public bool GetChainLinksFromSharedBase(ChainLink chlGetLinksTo, ChainLink chlFromSharedBase, ref List<ChainLink> chlLinksFromSharedBase)
+        {
+            if (chlFromSharedBase == null)
+            {
+                while(chlGetLinksTo != null)
+                {
+                    chlLinksFromSharedBase.Add(chlGetLinksTo);
+
+                    chlGetLinksTo = chlGetLinksTo.m_chlParentChainLink;
+                }
+
+                return false;
+            }
+
+            chlLinksFromSharedBase.Add(chlGetLinksTo);
+
+            while(chlGetLinksTo.m_chlParentChainLink != chlFromSharedBase)
+            {
+                if(chlGetLinksTo.m_chlParentChainLink == null )
+                {
+                    return false;
+                }
+
+                if(chlFromSharedBase == null || chlGetLinksTo.m_chlParentChainLink.m_iLinkIndex > chlFromSharedBase.m_iLinkIndex)
+                {
+                    chlGetLinksTo = chlGetLinksTo.m_chlParentChainLink;
+
+                    chlLinksFromSharedBase.Add(chlGetLinksTo);
+                }
+                else
+                {
+                    chlFromSharedBase = chlFromSharedBase.m_chlParentChainLink;
+                }
+            }
+
+            return true;
+        }
+
+        public void ApplyChangesToSimMessageBuffer(long lLocalPeer, bool bIsActive, List<ChainLink> chlLinkChanges, GlobalSimMessageBuffer smbSimMessageBuffer)
+        {
+            GlobalMessagingState gsmMessageState = chlLinkChanges[chlLinkChanges.Count - 1].m_chlParentChainLink.m_gmsState as GlobalMessagingState;
+
+            //loop through all the new chain links and apply the changes to the sim message buffer 
+            for (int i = chlLinkChanges.Count -1; i  > -1; i--)
+            {
+                //loop through all the messages and apply them to the game state 
+                for(int j = 0; j < chlLinkChanges[i].m_pmnMessages.Count; j++)
+                {
+                    gsmMessageState.ProcessMessage(lLocalPeer, bIsActive, chlLinkChanges[i].m_pmnMessages[j], smbSimMessageBuffer);
+                }
+            }
         }
 
         public void SetChannelAcknowledgements(int iChannelIndex, ChainLink chlAcknowledgedLink)
@@ -217,8 +266,7 @@ namespace Networking
             {
                 SetupChannelAckArray(chlLink, m_iChannelCount);
             }
-
-
+            
             //check if link needs to find parent and is not base which will have no parent
             if (chlLink.m_chlParentChainLink == null)
             {
@@ -479,7 +527,7 @@ namespace Networking
         }
 
         //set the first chain link and associated start state
-        public void SetChainStartState(long lLocalPeerID, bool bActivePeer, int iMaxPlayerCount, GlobalMessagingState gmsStartState, ChainLink chlFirstLink)
+        public void SetChainStartState(long lLocalPeerID, bool bActivePeer, int iMaxPlayerCount, GlobalMessagingState gmsStartState, ChainLink chlFirstLink, GlobalSimMessageBuffer smbSimMessageBuffer)
         {
             m_gmsChainStartState = gmsStartState;
             m_chlChainBase = chlFirstLink;
@@ -493,7 +541,7 @@ namespace Networking
             SetupChannelAckArray(chlFirstLink, iMaxPlayerCount);
 
             //get state at end of first link
-            chlFirstLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, bActivePeer, gmsStartState);
+            chlFirstLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, bActivePeer, gmsStartState, smbSimMessageBuffer);
 
             foreach (ChainLink chlLink in ChainLinks.Values)
             {
@@ -620,7 +668,7 @@ namespace Networking
         //get best Chain Head
         //gets the best chain to extend with next link 
         //returns true if best chainlink head changed
-        public bool UpdateBestHeadChainLink(GlobalMessageBuffer gmbMessageBuffer)
+        public ChainLink GetBestHeadChainLink(GlobalMessageBuffer gmbMessageBuffer)
         {
             int iBestChainLink = int.MinValue;
             ChainLink chlBestLink = null;
@@ -637,14 +685,24 @@ namespace Networking
                 }
             }
 
-            if(chlBestLink != m_chlBestChainHead)
-            {
-                m_chlBestChainHead = chlBestLink;
+            return chlBestLink;
+        }
 
-                return true;
-            }
+        public void OnBestHeadChange(ChainLink chlNewLink, long lLocalPeerID, bool bActivePeer, GlobalSimMessageBuffer smbSimMessageBuffer, GlobalMessageBuffer gmbGlobalMessageBuffer)
+        {
+            List<ChainLink> chlNewBranchLinks = new List<ChainLink>();
 
-            return false;
+            //get list of all the new chain links in the new branch to the new chian link head
+            GetChainLinksFromSharedBase(chlNewLink, m_chlBestChainHead, ref chlNewBranchLinks);
+
+            //apply messages from new branch to sim messages 
+            ApplyChangesToSimMessageBuffer(lLocalPeerID, bActivePeer, chlNewBranchLinks, smbSimMessageBuffer);
+
+            //set new best chain head
+            m_chlBestChainHead = chlNewLink;
+
+            //remove old items from the chain 
+            UpdateBaseLink(lLocalPeerID, bActivePeer, gmbGlobalMessageBuffer);
         }
 
         //function to evaluate the best chain link

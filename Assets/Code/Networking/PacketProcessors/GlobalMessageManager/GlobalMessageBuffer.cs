@@ -75,7 +75,7 @@ namespace Networking
 
         //adds the effect of all the messages after the last message processed by gmsStartMessageState state 
         //and stores the result in LatestState
-        public void UpdateFinalMessageState(long lLocalPeerID, bool bActivePeer, GlobalMessagingState gmsStartMessageState)
+        public void UpdateFinalMessageState(long lLocalPeerID, bool bActivePeer, GlobalMessagingState gmsStartMessageState,GlobalSimMessageBuffer smbSimMessageBuffer)
         {
             LatestState.ResetToState(gmsStartMessageState);
 
@@ -87,7 +87,7 @@ namespace Networking
 
             for (int i = iStartIndex; i < UnConfirmedMessageBuffer.Count; i++)
             {
-                LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i]);
+                LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i], smbSimMessageBuffer);
             }
         }
 
@@ -204,7 +204,17 @@ namespace Networking
         //function to remove messages upto point in buffer 
         public void RemoveItemsUpTo(SortingValue msvRemoveToo)
         {
-            //UnConfirmedMessageBuffer.re(pmnMessage => msvRemoveToo.CompareTo(pmnMessage) > 0);
+            while(UnConfirmedMessageBuffer.Count > 0)
+            {
+                if(UnConfirmedMessageBuffer.Keys[0].CompareTo(msvRemoveToo) < 0)
+                {
+                    UnConfirmedMessageBuffer.RemoveAt(0);
+                }
+                else
+                {
+                    break;
+                }
+            }            
         }
 
         //update the hash for the buffer

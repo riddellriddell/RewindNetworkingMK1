@@ -50,6 +50,9 @@ namespace GameManagers
 
         public NetworkGlobalMessengerProcessor m_ngpGlobalMessagingProcessor;
 
+        //TODO: replace with bridge data structure for passing all data from networking to sim 
+        public GlobalSimMessageBuffer m_smbSimMessageBuffer;
+
         public IPeerTransmitterFactory m_ptfTransmitterFactory;
 
         //the amount of time to wait to get gateway before timing out and starting again
@@ -468,7 +471,9 @@ namespace GameManagers
             m_ncpConnectionPropegator = new NetworkConnectionPropagatorProcessor();
             m_ncnNetworkConnection.AddPacketProcessor(m_ncpConnectionPropegator);
 
-            m_ngpGlobalMessagingProcessor = new NetworkGlobalMessengerProcessor();
+            m_smbSimMessageBuffer = new GlobalSimMessageBuffer();
+
+            m_ngpGlobalMessagingProcessor = new NetworkGlobalMessengerProcessor(m_smbSimMessageBuffer);
             m_ncnNetworkConnection.AddPacketProcessor(m_ngpGlobalMessagingProcessor);
 
         }
