@@ -199,7 +199,7 @@ namespace Networking
 
         public void ApplyChangesToSimMessageBuffer(long lLocalPeer, bool bIsActive, List<ChainLink> chlLinkChanges, GlobalSimMessageBuffer smbSimMessageBuffer)
         {
-            GlobalMessagingState gsmMessageState = chlLinkChanges[chlLinkChanges.Count - 1].m_chlParentChainLink.m_gmsState as GlobalMessagingState;
+            GlobalMessagingState gsmMessageState = chlLinkChanges[chlLinkChanges.Count - 1].m_chlParentChainLink.m_gmsState.Clone() as GlobalMessagingState;
 
             //loop through all the new chain links and apply the changes to the sim message buffer 
             for (int i = chlLinkChanges.Count -1; i  > -1; i--)
