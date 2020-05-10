@@ -36,6 +36,8 @@ namespace Networking
         //as a peer finished / failed / become available to suply a segment of data 
         public bool m_bIsStateSegmentAsignmentDirty = false;
 
+        public bool m_bIsRequestedOutDataDirty = false;
+
         //all the peers that are active in the global messaging system
         public List<long> m_lAuthorativePeers;
 
@@ -66,14 +68,57 @@ namespace Networking
 
         //the time by which this request needs to be filled on not filled 
         public DateTime m_dtmRequestTimeOut;
+        
+        //when will the next request for in data time out
+        public DateTime m_dtmTimeOfNextInDataTimeOut;
 
+        //when will the next request for outbound data time out
+        public DateTime m_dtmTimeOfNextOutDataTimeOut;
+
+        //a sorted list of all the sim data times requested
+        public List<Tuple<DateTime, long>> m_lRequestedSimDataTimes;
+
+        //network time tracker
         public TimeNetworkProcessor m_tnpNetworkTime;
 
-        //when will the next request time out
-        public DateTime m_dtmTimeOfNextTimeout;
+        //data structure for transfering information between the networking layer and the sim managment components
+        public NetworkingDataBridge m_ndbNetworkDataBridge;
+
+        public SimStateSyncNetworkProcessor(NetworkingDataBridge ndbNetworkDataBridge): base()
+        {
+            m_ndbNetworkDataBridge = ndbNetworkDataBridge;
+        }
 
         public override void Update()
         {
+            //-------- Out Data Management -----------------
+
+            //update requests for sim data
+            UpdateOutDataTimeOut();
+
+            //check if any requests for data have timed out or if new requests have been added 
+            if (m_bIsRequestedOutDataDirty)
+            {
+                m_bIsRequestedOutDataDirty = false;
+
+                m_ndbNetworkDataBridge.m_tupActiveRequestedDataAtTimeForPeers = GetRequestedTimeOfSimStates();
+            }
+
+            //check if any new states have been added to the data bridge 
+            if (m_ndbNetworkDataBridge.m_tupDataAtTimeForPeers.Count > 0)
+            {
+                //check if there are any active requests 
+                foreach (Tuple<DateTime, long, byte[]> tupDataAtTime in m_ndbNetworkDataBridge.m_tupDataAtTimeForPeers.Values)
+                {
+                    //set data for peer
+                    SetSimDataForPeer(tupDataAtTime.Item2, tupDataAtTime.Item1, tupDataAtTime.Item3);
+                }
+
+                m_ndbNetworkDataBridge.m_tupDataAtTimeForPeers.Clear();
+            }
+
+            //-------------- In Data Management --------------------------
+
             //check if peer is syncing state 
             if (m_staState != State.GettingStateData)
             {
@@ -123,6 +168,8 @@ namespace Networking
                 //mark segment assignemnt as nolonger dirty 
                 m_bIsStateSegmentAsignmentDirty = false;
             }
+
+
         }
 
         protected override void AddDependentPacketsToPacketFactory(ClassWithIDFactory cifPacketFactory)
@@ -139,12 +186,12 @@ namespace Networking
             base.OnAddToNetwork(ncnNetwork);
 
             m_tnpNetworkTime = ParentNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
-            
+
             //set start valuse 
             m_dtmRequestTimeOut = DateTime.MinValue;
 
             //set when current system will time out 
-            m_dtmTimeOfNextTimeout = DateTime.MaxValue;
+            m_dtmTimeOfNextInDataTimeOut = DateTime.MaxValue;
         }
 
         public override DataPacket ProcessReceivedPacket(long lFromUserID, DataPacket pktInputPacket)
@@ -176,6 +223,7 @@ namespace Networking
                 if (m_sPendingSegments.Count > 0)
                 {
                     m_staState = State.SyncFailed;
+                    m_ndbNetworkDataBridge.m_sssSimStartStateSyncStatus = m_staState;
 
                     return;
                 }
@@ -186,11 +234,13 @@ namespace Networking
                 if (m_iPeersWithSimHash < m_lAuthorativePeers.Count - iMaxNumberOfFailedRequests)
                 {
                     m_staState = State.SyncFailed;
+                    m_ndbNetworkDataBridge.m_sssSimStartStateSyncStatus = m_staState;
 
                     return;
                 }
 
                 m_staState = State.StateSynced;
+                m_ndbNetworkDataBridge.m_sssSimStartStateSyncStatus = m_staState;
             }
         }
 
@@ -269,6 +319,13 @@ namespace Networking
                     }
                 }
             }
+
+            //tell network data bride data syncing has started 
+
+            m_ndbNetworkDataBridge.m_sssSimStartStateSyncStatus = m_staState;
+            m_ndbNetworkDataBridge.m_bHasSimDataBeenProcessedBySim = true;
+            m_ndbNetworkDataBridge.m_dtmSimStateSyncRequestTime = m_dtmTimeOfAgreedState;
+
         }
 
         //public void Calculate the most common hash for game state and return true if hash has changed 
@@ -477,6 +534,10 @@ namespace Networking
             {
                 m_bIsFullStateSynced = true;
 
+                //update the data in the sim segment buffer 
+                m_ndbNetworkDataBridge.UpdateSimStateAtTime(m_dtmTimeOfAgreedState, m_bSimState);
+
+
                 //TODO: fire some kind of event telling sim to get new state 
             }
 
@@ -497,13 +558,13 @@ namespace Networking
         {
             //check if any segment requests have not been filled 
             UpdateSegmentTimeOut();
+
         }
 
         // if there are any segments yet to be recieved this function assignes the segment to 
         // a free peer that is authorative and does not currently have a segment assigned
         public void AssignSegmentsToAvailablePeers()
         {
-
             //check if there are segments left to assign
             if (m_sUnAssignedSegments.Count > 0)
             {
@@ -529,7 +590,7 @@ namespace Networking
                         DateTime dtmRequestTimeOut = m_tnpNetworkTime.BaseTime + SegmentRequestTimeOut;
 
                         //update the next request to time out 
-                        m_dtmTimeOfNextTimeout = new DateTime(Math.Min(m_dtmTimeOfNextTimeout.Ticks, dtmRequestTimeOut.Ticks));
+                        m_dtmTimeOfNextInDataTimeOut = new DateTime(Math.Min(m_dtmTimeOfNextInDataTimeOut.Ticks, dtmRequestTimeOut.Ticks));
 
                         //apply that to peer 
                         sscStateSyncConnection.OnAssignSegment(sSegmentIndex, dtmRequestTimeOut);
@@ -550,17 +611,37 @@ namespace Networking
             DateTime dtmBaseTime = m_tnpNetworkTime.BaseTime;
 
             //check for any requests that have timed out 
-            if (dtmBaseTime > m_dtmTimeOfNextTimeout)
+            if (dtmBaseTime > m_dtmTimeOfNextInDataTimeOut)
             {
-                m_dtmTimeOfNextTimeout = DateTime.MaxValue;
+                m_dtmTimeOfNextInDataTimeOut = DateTime.MaxValue;
 
                 foreach (SimStateSyncConnectionProcessor sscStateSyncConnections in ChildConnectionProcessors.Values)
                 {
                     //update the timeout for any channels 
-                    sscStateSyncConnections.UpdateRequestTimeout(ref m_dtmTimeOfNextTimeout, dtmBaseTime);
+                    sscStateSyncConnections.UpdateInDataRequestTimeout(ref m_dtmTimeOfNextInDataTimeOut, dtmBaseTime);
                 }
 
                 m_bIsStateSegmentAsignmentDirty = true;
+            }
+        }
+
+        public void UpdateOutDataTimeOut()
+        {
+            //get current time
+            DateTime dtmNetworkTime = m_tnpNetworkTime.NetworkTime;
+
+            //check for any requests that have timed out 
+            if (dtmNetworkTime > m_dtmTimeOfNextInDataTimeOut)
+            {
+                m_dtmTimeOfNextInDataTimeOut = DateTime.MaxValue;
+
+                foreach (SimStateSyncConnectionProcessor sscStateSyncConnections in ChildConnectionProcessors.Values)
+                {
+                    //update the timeout for any channels 
+                    sscStateSyncConnections.UpdateOutDataRequestTimeOut(ref m_dtmTimeOfNextInDataTimeOut, dtmNetworkTime);
+                }
+
+                m_bIsRequestedOutDataDirty = true;
             }
         }
 
@@ -581,14 +662,30 @@ namespace Networking
             return dtmSimTimes;
         }
 
-        public void SetSimDataForPeer(long lPeerID, byte[] bData)
+        public void SetSimDataForPeer(long lPeerID, DateTime dtmTargetTime, byte[] bData)
         {
             if (ChildConnectionProcessors.TryGetValue(lPeerID, out SimStateSyncConnectionProcessor sscConnection))
             {
-                sscConnection.OnSimDataChange(bData);
+                if (sscConnection.m_dtmTimeOfOutSimState == dtmTargetTime && sscConnection.m_ostOutState != SimStateSyncConnectionProcessor.OutState.NotRequested)
+                {
+                    sscConnection.OnSimDataChange(bData);
+                }
             }
         }
 
+        public void OnNewRequestForSimDataAtTime( DateTime dtmTimeOfRequest, long lNewRequestFromPeerID)
+        {
+            DateTime dtmTimeOutTime = dtmTimeOfRequest + SimStateSyncNetworkProcessor.StateRequestTimeOut;
+
+            if (m_dtmTimeOfNextOutDataTimeOut > dtmTimeOutTime)
+            {
+                m_dtmTimeOfNextOutDataTimeOut = dtmTimeOutTime;
+            }
+
+             m_bIsRequestedOutDataDirty = true;
+            
+            m_ndbNetworkDataBridge.m_tupNewRequestedDataAtTimeForPeers.Add(new Tuple<DateTime, long>(dtmTimeOfRequest, lNewRequestFromPeerID));
+        }
     }
 
     public class SimStateSyncConnectionProcessor : ManagedConnectionPacketProcessor<SimStateSyncNetworkProcessor>
@@ -688,8 +785,7 @@ namespace Networking
 
             #endregion
         }
-
-
+        
         public override void OnConnectionReset()
         {
             #region SendingState
@@ -784,8 +880,13 @@ namespace Networking
         public void OnRequestStateForTime(DateTime dtmTime)
         {
             m_ostOutState = OutState.Pending;
-
             m_dtmTimeOfOutSimState = dtmTime;
+
+
+
+            //add to new list of requests 
+            m_tParentPacketProcessor.OnNewRequestForSimDataAtTime(dtmTime, ParentConnection.m_lUserUniqueID);
+
         }
 
         public void OnSimDataChange(byte[] bSimDataAtPeerRequest)
@@ -881,6 +982,38 @@ namespace Networking
                 }
             }
 
+        }
+
+        public void UpdateOutDataRequestTimeOut(ref DateTime dtmTimeOfNextRequestTimeOut, DateTime dtmCurrentTime)
+        {
+            if (m_ostOutState == OutState.NotRequested)
+            {
+                return;
+            }
+
+            DateTime dtmTimeOutTime = m_dtmTimeOfOutSimState + SimStateSyncNetworkProcessor.StateRequestTimeOut;
+            
+            //check if request for game state has timed out
+            if (dtmTimeOutTime < dtmCurrentTime)
+            {
+                //reset all outbound values
+                m_ostOutState = OutState.NotRequested;
+
+                m_bSimDataAtPeerRequest = new byte[0];
+
+                m_lOutSimDataSegmentsHash = new long[0];
+
+                m_dtmTimeOfOutSimState = DateTime.MinValue;
+
+                return;
+            }
+            
+            if (dtmTimeOutTime < dtmTimeOfNextRequestTimeOut)
+            {
+                dtmTimeOfNextRequestTimeOut = dtmTimeOutTime;
+            }
+
+            return;
         }
         #endregion
 
@@ -984,7 +1117,7 @@ namespace Networking
         }
 
         //check if the request has timed out and if it has returns true
-        public void UpdateRequestTimeout(ref DateTime dtmNextTimeOut, DateTime dtmTime)
+        public void UpdateInDataRequestTimeout(ref DateTime dtmNextTimeOut, DateTime dtmTime)
         {
             //check if assigned a segment
             if (m_sRequestedSegment == ushort.MaxValue)

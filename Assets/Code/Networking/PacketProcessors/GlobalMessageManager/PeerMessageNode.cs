@@ -115,25 +115,6 @@ namespace Networking
 
         public void CalculateSortingValue()
         {
-            //Byte[] bSortingValue = new byte[SortingValue.c_TotalBytes];
-
-            //int iStartIndex = 0;
-
-            ////store the message creation time
-            //Array.Copy(BitConverter.GetBytes(m_dtmMessageCreationTime.Ticks), 0, bSortingValue, iStartIndex, sizeof(Int64));
-
-            //iStartIndex += sizeof(Int64);
-
-            ////store the link index
-            //Array.Copy(BitConverter.GetBytes(m_iPeerMessageIndex), bSortingValue, sizeof(UInt32));
-
-            //iStartIndex += sizeof(UInt32);
-
-            ////store part of the hash
-            //Array.Copy(BitConverter.GetBytes(m_lMessagePayloadHash), 0, bSortingValue, iStartIndex, sizeof(Int32));
-
-            ////should also store part of the peer id here 
-
             ulong lPartA = 0;
 
             ulong lPartB = 0;

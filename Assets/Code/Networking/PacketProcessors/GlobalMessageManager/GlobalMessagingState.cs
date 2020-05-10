@@ -56,7 +56,7 @@ namespace Networking
 
         //process a message lLocalPeer is the user in controll of this computer
         //and must be in the "Kept" group when split occures 
-        public void ProcessMessage(long lLocalPeer, bool bActivePeer, PeerMessageNode pmnMessageNode, GlobalSimMessageBuffer smbSimMessageBuffer = null)
+        public void ProcessMessage(long lLocalPeer, bool bActivePeer, PeerMessageNode pmnMessageNode, NetworkingDataBridge ndbNetworkingDataBridge = null)
         {
             //update the most recent sorting value 
             m_svaLastMessageSortValue = SortingValue.Max(m_svaLastMessageSortValue, pmnMessageNode.m_svaMessageSortingValue);
@@ -74,12 +74,12 @@ namespace Networking
                     if (pmnMessageNode.m_bMessageType == VoteMessage.TypeID)
                     {
                         //apply votes
-                        ApplyVotesToChannel(lLocalPeer, bActivePeer, iIndexOfMessageChannel, pmnMessageNode, smbSimMessageBuffer);
+                        ApplyVotesToChannel(lLocalPeer, bActivePeer, iIndexOfMessageChannel, pmnMessageNode, ndbNetworkingDataBridge);
                     }
-                    else if (smbSimMessageBuffer != null && pmnMessageNode.m_gmbMessage is ISimMessagePayload)
+                    else if (ndbNetworkingDataBridge != null && pmnMessageNode.m_gmbMessage is ISimMessagePayload)
                     {
                         //store sim message 
-                        smbSimMessageBuffer.QueueSimMessage(pmnMessageNode.m_svaMessageSortingValue, pmnMessageNode.m_lPeerID, iIndexOfMessageChannel, pmnMessageNode.m_gmbMessage as ISimMessagePayload);
+                        ndbNetworkingDataBridge.QueueSimMessage(pmnMessageNode.m_svaMessageSortingValue, pmnMessageNode.m_lPeerID, iIndexOfMessageChannel, pmnMessageNode.m_gmbMessage as ISimMessagePayload);
                     }
                 }
             }
@@ -104,7 +104,23 @@ namespace Networking
             }
 
             return lOutput;
+        }
 
+        //returns a list of the active peer ID's
+        public List<long> GetActivePeerIDs()
+        {
+            List<long> lOutput = new List<long>();
+
+            for (int i = 0; i < m_gmcMessageChannels.Count; i++)
+            {
+                if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Assigned ||
+                   m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.VoteKick)
+                {
+                    lOutput.Add(m_gmcMessageChannels[i].m_lChannelPeer);
+                }
+            }
+
+            return lOutput;
         }
 
         //get the channel index for a peer with id lPeerID
@@ -309,7 +325,7 @@ namespace Networking
         }
 
         //apply the vote command to the peer
-        protected void ApplyVotesToChannel(long lLocalPeerID, bool bActivePeer, int iMessageChannel,PeerMessageNode pmnMessage , GlobalSimMessageBuffer smbSimMessageBuffer = null)
+        protected void ApplyVotesToChannel(long lLocalPeerID, bool bActivePeer, int iMessageChannel,PeerMessageNode pmnMessage , NetworkingDataBridge ndbNetworkingDataBridge = null)
         {
 
             DateTime dtmMessageCreationTime = pmnMessage.m_dtmMessageCreationTime;
@@ -376,10 +392,10 @@ namespace Networking
             ProcessSplitVotes(lLocalPeerID, bActivePeer, iMessageChannel, dtmMessageCreationTime, out List<int> iKickPeers);
 
             //changes are only stored in the sim messsage buffer if updating the main branch or unconfimed message head 
-            if (smbSimMessageBuffer != null)
+            if (ndbNetworkingDataBridge != null)
             {
                 //create a sim message for peers joining or leaving game
-                AddPeerChangeMessageToSimBuffer(pmnMessage.m_svaMessageSortingValue, iKickPeers, iJoinPeers, smbSimMessageBuffer);
+                AddPeerChangeMessageToSimBuffer(pmnMessage.m_svaMessageSortingValue, iKickPeers, iJoinPeers, ndbNetworkingDataBridge);
             }
 
             //assign peers to channels
@@ -561,7 +577,7 @@ namespace Networking
         }
         
         //adds a messaget to the sim message buffer that a peer or peers have joined or left the global messaging system 
-        protected void AddPeerChangeMessageToSimBuffer(SortingValue svaChangeTime, in List<int> iPeersToKick, in List<int> iPeersToAdd, GlobalSimMessageBuffer smbSimMessageBuffer)
+        protected void AddPeerChangeMessageToSimBuffer(SortingValue svaChangeTime, in List<int> iPeersToKick, in List<int> iPeersToAdd, NetworkingDataBridge ndbNetworkingDataBridge)
         {
             if(iPeersToKick.Count == 0 || iPeersToAdd.Count == 0)
             {
@@ -569,7 +585,7 @@ namespace Networking
             }
 
             //build kick and join message
-            GlobalSimMessageBuffer.UserConnecionChange uccConnectionChange = new GlobalSimMessageBuffer.UserConnecionChange(iPeersToKick.Count, iPeersToAdd.Count);
+            NetworkingDataBridge.UserConnecionChange uccConnectionChange = new NetworkingDataBridge.UserConnecionChange(iPeersToKick.Count, iPeersToAdd.Count);
 
             for(int i = 0; i < iPeersToKick.Count; i++)
             {
@@ -583,7 +599,7 @@ namespace Networking
                 uccConnectionChange.m_iJoinPeerChannelIndex[i] = iPeersToAdd[i];
             }
 
-            smbSimMessageBuffer.QueuePlayerChangeMessage(svaChangeTime, uccConnectionChange);
+            ndbNetworkingDataBridge.QueuePlayerChangeMessage(svaChangeTime, uccConnectionChange);
         }
 
         //perform join

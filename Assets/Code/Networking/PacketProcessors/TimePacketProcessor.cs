@@ -54,6 +54,11 @@ namespace Networking
             }
         }
 
+        //the latency to the worst active connection
+        public TimeSpan LargetsRTT { get; private set; } = TimeSpan.Zero;
+
+        public TimeSpan AverageRTT { get; private set; } = TimeSpan.Zero;
+
         public override int Priority
         {
             get
@@ -70,6 +75,7 @@ namespace Networking
         private TimeSpan m_tspTimeLerpSpeed = TimeSpan.FromSeconds(1);
         private TimeSpan m_tspMaxLerpDistance = TimeSpan.FromSeconds(1);
         private TimeSpan m_tspUpdateRate = TimeSpan.FromSeconds(1);
+        private TimeSpan m_tspMaxLatencyUsedInCalculations = TimeSpan.FromSeconds(2);
         private List<TimeSpan> m_dtoTempTimeOffsets = new List<TimeSpan>();
 
 
@@ -89,16 +95,33 @@ namespace Networking
         {
             m_dtoTempTimeOffsets.Clear();
 
+            LargetsRTT = TimeSpan.Zero;
+
+            AverageRTT = TimeSpan.Zero;
+
             // generate an array of all the offsets for all conenctions 
             //loop through all the conenctions 
-            foreach(TimeConnectionProcessor tcpConnectionTime in ChildConnectionProcessors.Values)
+            foreach (TimeConnectionProcessor tcpConnectionTime in ChildConnectionProcessors.Values)
             {
-                //add offset to list
-                m_dtoTempTimeOffsets.Add(tcpConnectionTime.Offset);
+                if (tcpConnectionTime.ParentConnection.Status == Connection.ConnectionStatus.Connected)
+                {
+                    //add offset to list
+                    m_dtoTempTimeOffsets.Add(tcpConnectionTime.Offset);
+
+                    TimeSpan tspLatency = TimeSpan.FromTicks(Math.Min(m_tspMaxLatencyUsedInCalculations.Ticks, tcpConnectionTime.RTT.Ticks));
+
+                    LargetsRTT = TimeSpan.FromTicks(Math.Max(tspLatency.Ticks, LargetsRTT.Ticks));
+
+                    AverageRTT += tspLatency;
+
+                }
             }
 
             //add local offset
             m_dtoTempTimeOffsets.Add(TimeSpan.FromSeconds(0));
+
+            //calculate average rtt
+            AverageRTT = TimeSpan.FromTicks(AverageRTT.Ticks / m_dtoTempTimeOffsets.Count);
 
             //sort list from big to small 
             m_dtoTempTimeOffsets.Sort((x, y) => (int)(x.Ticks - y.Ticks));

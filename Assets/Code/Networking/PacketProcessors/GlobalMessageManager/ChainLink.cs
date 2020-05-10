@@ -208,7 +208,7 @@ namespace Networking
             }
         }
                
-        public void CaluclateGlobalMessagingStateAtEndOflink(long lLocalPeerID, bool bActivePeer, GlobalMessagingState gmsStateAtLinkStart,GlobalSimMessageBuffer smbSimMessageBuffer = null)
+        public void CaluclateGlobalMessagingStateAtEndOflink(long lLocalPeerID, bool bActivePeer, GlobalMessagingState gmsStateAtLinkStart,NetworkingDataBridge ndbNetworkingDataBridge = null)
         {
             if(m_gmsState == null)
             {
@@ -220,7 +220,7 @@ namespace Networking
 
             for(int i = 0; i < m_pmnMessages.Count; i++)
             {
-                m_gmsState.ProcessMessage(lLocalPeerID, bActivePeer, m_pmnMessages[i], smbSimMessageBuffer);
+                m_gmsState.ProcessMessage(lLocalPeerID, bActivePeer, m_pmnMessages[i], ndbNetworkingDataBridge);
             }
 
             //check that end state matches expected state

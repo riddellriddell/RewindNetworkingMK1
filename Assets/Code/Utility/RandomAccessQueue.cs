@@ -1,12 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 
 public class RandomAccessQueue<T> : ICloneable
 {
-    private List<T> m_lstStorage;
-    private int m_iQueueEnter = 0;
-    private int m_iQueueExit = 0;
-    private int m_iCount = 0;
+    protected const int c_iDefaultItemCount = 8;
+    protected T[] m_tStorage;
+    protected int m_iQueueEnter = 0;
+    protected int m_iQueueExit = 0;
+    protected int m_iCount = 0;
 
     public int Count
     {
@@ -20,7 +20,7 @@ public class RandomAccessQueue<T> : ICloneable
     {
         get
         {
-            return m_lstStorage.Count;
+            return m_tStorage.Length;
         }
     }
 
@@ -28,50 +28,47 @@ public class RandomAccessQueue<T> : ICloneable
     {
         get
         {
-            return m_lstStorage[RemapIndex(key)];
+            return m_tStorage[RemapIndex(key)];
         }
         set
         {
-            m_lstStorage[RemapIndex(key)] = value;
+            m_tStorage[RemapIndex(key)] = value;
         }
     }
 
     public RandomAccessQueue()
     {
-        m_lstStorage = new List<T>();
+        m_tStorage = new T[c_iDefaultItemCount];
     }
 
     public RandomAccessQueue(int iStartCount)
     {
-        m_lstStorage = new List<T>(iStartCount);
-
-        for (int i = 0; i < iStartCount; i++)
-        {
-            m_lstStorage.Add(default(T));
-        }
+        m_tStorage = new T[c_iDefaultItemCount];
     }
 
     public void Enqueue(T itemToQueue)
     {
         //check if the base data structure is too small
-        if (m_iCount >= m_lstStorage.Count)
+        if (m_iCount >= m_tStorage.Length)
         {
             //expand list
-            ExpandList(itemToQueue);
+            ChangeCapacity(m_tStorage.Length * 2);
         }
         else if (m_iCount == 0)
         {
             //set item 
-            m_lstStorage[m_iQueueEnter] = itemToQueue;
-        }
-        else
-        {
-            //shift enter index forwards
-            m_iQueueEnter = (m_iQueueEnter + 1) % m_lstStorage.Count;
+            m_tStorage[m_iQueueEnter] = itemToQueue;
 
-            //set item 
-            m_lstStorage[m_iQueueEnter] = itemToQueue;
+            m_iCount++;
+
+            return;
         }
+
+        //shift enter index forwards
+        m_iQueueEnter = (m_iQueueEnter + 1) % m_tStorage.Length;
+
+        //set item 
+        m_tStorage[m_iQueueEnter] = itemToQueue;
 
         m_iCount++;
     }
@@ -89,14 +86,14 @@ public class RandomAccessQueue<T> : ICloneable
         if (m_iCount > 1)
         {
             //index queue exit forwards
-            m_iQueueExit = (m_iQueueExit + 1) % m_lstStorage.Count;
+            m_iQueueExit = (m_iQueueExit + 1) % m_tStorage.Length;
         }
 
         //reduce number of items in list
         m_iCount--;
 
         //return item at old pos
-        return m_lstStorage[iIndex];
+        return m_tStorage[iIndex];
 
     }
 
@@ -107,7 +104,7 @@ public class RandomAccessQueue<T> : ICloneable
             return default(T);
         }
 
-        return m_lstStorage[m_iQueueExit];
+        return m_tStorage[m_iQueueExit];
     }
 
     public T PeakEnqueue()
@@ -117,7 +114,7 @@ public class RandomAccessQueue<T> : ICloneable
             return default(T);
         }
 
-        return m_lstStorage[m_iQueueEnter];
+        return m_tStorage[m_iQueueEnter];
     }
 
     public void Clear()
@@ -126,9 +123,9 @@ public class RandomAccessQueue<T> : ICloneable
         m_iQueueExit = 0;
         m_iCount = 0;
 
-        for (int i = 0; i < m_lstStorage.Count; i++)
+        for (int i = 0; i < m_tStorage.Length; i++)
         {
-            m_lstStorage[i] = default(T);
+            m_tStorage[i] = default(T);
         }
     }
 
@@ -156,14 +153,13 @@ public class RandomAccessQueue<T> : ICloneable
         else
         {
             //copy underlying storage
-            raqClonedQueue.m_lstStorage = new List<T>(this.m_lstStorage);
+            m_tStorage.CopyTo(raqClonedQueue.m_tStorage, 0);
             raqClonedQueue.m_iCount = this.Count;
             raqClonedQueue.m_iQueueEnter = this.m_iQueueEnter;
             raqClonedQueue.m_iQueueExit = this.m_iQueueExit;
         }
 
         return raqClonedQueue;
-
     }
 
     private int RemapIndex(int iIndex)
@@ -174,34 +170,44 @@ public class RandomAccessQueue<T> : ICloneable
         }
 
         //remap index 
-        return (m_iQueueExit + iIndex) % m_lstStorage.Count;
+        return (m_iQueueExit + iIndex) % m_tStorage.Length;
     }
 
-    private void ExpandList(T itemToAdd)
+    public void ChangeCapacity(int iNewCapacity)
     {
-        //check if item can just be tacked onto the end
-        if (m_iQueueEnter >= m_lstStorage.Count - 1)
-        {
-            //just tack item onto the end 
-            m_lstStorage.Add(itemToAdd);
+        //create new arrays
+        T[] tNewStorage = new T[iNewCapacity];
 
-            if (m_lstStorage.Count > 1)
-            {
-                m_iQueueEnter++;
-            }
+        //check for empty resize
+        if (m_iCount == 0)
+        {
+            m_tStorage = tNewStorage;
+
+            m_iCount = 0;
+            m_iQueueExit = 0;
+            m_iQueueEnter = 0;
 
             return;
-
         }
 
-        //index the head and tail forwards 
-        m_iQueueEnter++;
+        int iItemsToCopy = Math.Min(iNewCapacity, m_iCount);
 
-        //add item before queue head 
-        m_lstStorage.Insert(m_iQueueEnter, itemToAdd);
+        //calc segments to copy
+        int iPartALength = Math.Min(m_iQueueExit + iItemsToCopy, m_tStorage.Length) - m_iQueueExit;
+        int iPartBLength = iItemsToCopy - iPartALength;
 
-        //index queue exit forwards
-        m_iQueueExit = (m_iQueueExit + 1) % m_lstStorage.Count;
+        //copy accross existing values 
+        Array.Copy(m_tStorage, m_iQueueExit, tNewStorage, 0, iPartALength);
+
+        //copy accross wrap around segment
+        if (iPartBLength > 0)
+        {
+            Array.Copy(m_tStorage, 0, tNewStorage, iPartALength, iPartBLength);
+        }
+
+        m_iCount = iItemsToCopy;
+        m_iQueueExit = 0;
+        m_iQueueEnter = iItemsToCopy - 1;
     }
 
 }

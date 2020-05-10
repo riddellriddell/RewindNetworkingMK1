@@ -1,6 +1,7 @@
 ﻿using Networking;
 using Sim;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -42,16 +43,20 @@ namespace GameManagers
 
         //the peer to peer network
         public NetworkConnection m_ncnNetworkConnection;
-
+               
         //the interface between the p2p network and the web API
         public NetworkGatewayManager m_ngmGatewayManager;
+
+        public TimeNetworkProcessor m_tnpTimeManager;
 
         public NetworkConnectionPropagatorProcessor m_ncpConnectionPropegator;
 
         public NetworkGlobalMessengerProcessor m_ngpGlobalMessagingProcessor;
 
-        //TODO: replace with bridge data structure for passing all data from networking to sim 
-        public GlobalSimMessageBuffer m_smbSimMessageBuffer;
+        public SimStateSyncNetworkProcessor m_sssStateSyncProcessor;
+
+        //data structure for passing all data from networking to sim 
+        public NetworkingDataBridge m_ndbDataBridge;
 
         public IPeerTransmitterFactory m_ptfTransmitterFactory;
 
@@ -65,7 +70,10 @@ namespace GameManagers
         //the timeout time for getting sim state from cluster
         protected float m_fGettingSimStateTimeOut = 20f;
         protected DateTime m_dtmGettingSimStateStart;
-        
+
+        //the amount of time ahead of the current network time to schedule a fetch for the game state 
+        protected TimeSpan m_fSimStateLeadTime = TimeSpan.FromSeconds(0.1f);
+
         public ActiveGameManager(WebInterface winWebInterface, IPeerTransmitterFactory ptfTransmitterFactory)
         {
             m_ptfTransmitterFactory = ptfTransmitterFactory;
@@ -134,7 +142,7 @@ namespace GameManagers
                     break;
                 case ActiveGameState.GameEnded:
 
-                     UpdateGameEndState();
+                    UpdateGameEndState();
 
                     break;
             }
@@ -189,7 +197,7 @@ namespace GameManagers
                 return;
             }
             else if (m_winWebInterface.ExternalGatewayCommunicationStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Failed &&
-               ( m_winWebInterface.ExternalGatewayCommunicationStatus.ShouldRestart() == false || m_winWebInterface.NoGatewayExistsOnServer))
+               (m_winWebInterface.ExternalGatewayCommunicationStatus.ShouldRestart() == false || m_winWebInterface.NoGatewayExistsOnServer))
             {
                 EnterSetUpNewSim();
                 return;
@@ -259,14 +267,48 @@ namespace GameManagers
             //update gateway management 
             HandleGateway();
 
-
             //check if sim state has been fetched from cluster
             bool bHasFetchedSimState = true;
 
-            if(m_ngpGlobalMessagingProcessor.m_staState != NetworkGlobalMessengerProcessor.State.Active)
+            if (m_ngpGlobalMessagingProcessor.m_staState != NetworkGlobalMessengerProcessor.State.Active)
             {
                 bHasFetchedSimState = false;
             }
+
+            //TODO: in the future start game once first full state is retrieved from server not once state sync time out has come to an end 
+            //check if sim state has been fetched 
+            if (m_sssStateSyncProcessor.m_staState != SimStateSyncNetworkProcessor.State.StateSynced)
+            {
+                bHasFetchedSimState = false;
+
+                //check if connected to global messaging system
+                if (m_ngpGlobalMessagingProcessor.m_staState == NetworkGlobalMessengerProcessor.State.Connected || m_ngpGlobalMessagingProcessor.m_staState == NetworkGlobalMessengerProcessor.State.Active)
+                {
+                    //check if already attempting to get sim state
+                    if (m_sssStateSyncProcessor.m_staState != SimStateSyncNetworkProcessor.State.GettingStateData)
+                    {
+                        //schedule new request for data
+
+
+                        //get current time 
+                        DateTime dtmCurrentTime = m_tnpTimeManager.NetworkTime;
+
+                        //get latency to worst connection 
+                        TimeSpan tspWorstLatency = m_tnpTimeManager.LargetsRTT;
+
+                        //calculate a time that the request will reach all peers before the peer has discarded the data 
+                        DateTime dtmSimStateRequestTime = dtmCurrentTime + tspWorstLatency + m_fSimStateLeadTime;
+
+                        //get list of trusted peers
+                        List<long> tupActivePeerList = m_ngpGlobalMessagingProcessor.m_chmChainManager.m_chlBestChainHead.m_gmsState.GetActivePeerIDs();
+
+                        //send request to peers
+                        m_sssStateSyncProcessor.RequestSimData(dtmSimStateRequestTime, tupActivePeerList);
+
+                    }
+                }
+            }
+                       
 
             if (bHasFetchedSimState)
             {
@@ -416,7 +458,7 @@ namespace GameManagers
             if (m_ncnNetworkConnection.m_bIsConnectedToSwarm == false || m_ngmGatewayManager.NeedsOpenGateway)
             {
                 //make sure getting messages from server is enabled
-                if(m_winWebInterface.IsGettingMessagesFromServer() == false)
+                if (m_winWebInterface.IsGettingMessagesFromServer() == false)
                 {
                     m_winWebInterface.StartGettingMessages();
                 }
@@ -461,7 +503,9 @@ namespace GameManagers
             m_ncnNetworkConnection = new NetworkConnection(m_winWebInterface.UserID, m_ptfTransmitterFactory);
 
             //add network processors
-            m_ncnNetworkConnection.AddPacketProcessor(new TimeNetworkProcessor());
+            m_tnpTimeManager = new TimeNetworkProcessor();
+            m_ncnNetworkConnection.AddPacketProcessor(m_tnpTimeManager);
+
             m_ncnNetworkConnection.AddPacketProcessor(new NetworkLargePacketTransferManager());
             m_ncnNetworkConnection.AddPacketProcessor(new NetworkLayoutProcessor());
 
@@ -471,10 +515,13 @@ namespace GameManagers
             m_ncpConnectionPropegator = new NetworkConnectionPropagatorProcessor();
             m_ncnNetworkConnection.AddPacketProcessor(m_ncpConnectionPropegator);
 
-            m_smbSimMessageBuffer = new GlobalSimMessageBuffer();
+            m_ndbDataBridge = new NetworkingDataBridge();
 
-            m_ngpGlobalMessagingProcessor = new NetworkGlobalMessengerProcessor(m_smbSimMessageBuffer);
+            m_ngpGlobalMessagingProcessor = new NetworkGlobalMessengerProcessor(m_ndbDataBridge);
             m_ncnNetworkConnection.AddPacketProcessor(m_ngpGlobalMessagingProcessor);
+
+            m_sssStateSyncProcessor = new SimStateSyncNetworkProcessor(m_ndbDataBridge);
+            m_ncnNetworkConnection.AddPacketProcessor(m_sssStateSyncProcessor);
 
         }
     }

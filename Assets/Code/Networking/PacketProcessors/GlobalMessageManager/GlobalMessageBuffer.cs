@@ -38,13 +38,25 @@ namespace Networking
         public int m_iDirtyNodeIndex;
 
         //function to add messages to buffer
-        public void AddMessageToBuffer(PeerMessageNode pmnMessage)
+        public void AddMessageToBuffer(PeerMessageNode pmnMessage, SortingValue svaBestLinkHeadEnd, NetworkingDataBridge ndbNetworkDataBridge)
         {
             //check if buffer already has item
             if (UnConfirmedMessageBuffer.ContainsKey(pmnMessage.m_svaMessageSortingValue) == false)
             {
 
                 UnConfirmedMessageBuffer.Add(pmnMessage.m_svaMessageSortingValue, pmnMessage);
+
+                //update the earliest change to the message buffer the sim has not processed
+                //check that this change is happening after the best message head (changes before the best link head will be handled when the best head changes)
+                if(svaBestLinkHeadEnd.CompareTo(pmnMessage.m_svaMessageSortingValue) < 0)
+                {
+                    //check if this message is the earliest change to the buffer
+                    if(ndbNetworkDataBridge.m_svaSimProcessedMessagesUpTo.CompareTo(pmnMessage.m_svaMessageSortingValue) > 0)
+                    {
+                        //store new earliest change so the sim knowes where to reprocess from 
+                        ndbNetworkDataBridge.m_svaSimProcessedMessagesUpTo = pmnMessage.m_svaMessageSortingValue;
+                    }
+                }
 
                 //re number message indexes in buffer
                 //TODO:: optimize this so it only happens when it needs to
@@ -75,7 +87,7 @@ namespace Networking
 
         //adds the effect of all the messages after the last message processed by gmsStartMessageState state 
         //and stores the result in LatestState
-        public void UpdateFinalMessageState(long lLocalPeerID, bool bActivePeer, GlobalMessagingState gmsStartMessageState,GlobalSimMessageBuffer smbSimMessageBuffer)
+        public void UpdateFinalMessageState(long lLocalPeerID, bool bActivePeer, GlobalMessagingState gmsStartMessageState,NetworkingDataBridge ndbNetworkingDataBridge)
         {
             LatestState.ResetToState(gmsStartMessageState);
 
@@ -87,7 +99,7 @@ namespace Networking
 
             for (int i = iStartIndex; i < UnConfirmedMessageBuffer.Count; i++)
             {
-                LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i], smbSimMessageBuffer);
+                LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i], ndbNetworkingDataBridge);
             }
         }
 

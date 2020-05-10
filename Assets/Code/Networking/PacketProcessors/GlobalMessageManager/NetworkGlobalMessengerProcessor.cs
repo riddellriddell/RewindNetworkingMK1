@@ -70,7 +70,7 @@ namespace Networking
         public GlobalMessageBuffer m_gmbMessageBuffer;
 
         //buffer for all the messages going to the game sim
-        public GlobalSimMessageBuffer m_smbSimMessageBuffer;
+        public NetworkingDataBridge m_ndbNetworkDataBridge;
 
         //factory for creating the message payload classes 
         public ClassWithIDFactory m_cifGlobalMessageFactory;
@@ -94,9 +94,9 @@ namespace Networking
 
         protected GlobalMessageKeyManager m_gkmKeyManager;
 
-        public NetworkGlobalMessengerProcessor(GlobalSimMessageBuffer smbSimMessageBuffer) : base()
+        public NetworkGlobalMessengerProcessor(NetworkingDataBridge ndbDataBridge) : base()
         {
-            m_smbSimMessageBuffer = smbSimMessageBuffer;
+            m_ndbNetworkDataBridge = ndbDataBridge;
             Initalize();
         }
 
@@ -254,7 +254,7 @@ namespace Networking
 
                 clpChainLinkPacket.m_chlLink.CalculateLocalValuesForRecievedLink(m_cifGlobalMessageFactory);
 
-                m_chmChainManager.AddChainLinkPreConnection(ParentNetworkConnection.m_lPeerID, clpChainLinkPacket.m_chlLink, m_gmbMessageBuffer);
+                m_chmChainManager.AddChainLinkPreConnection(ParentNetworkConnection.m_lPeerID, clpChainLinkPacket.m_chlLink, m_gmbMessageBuffer, m_ndbNetworkDataBridge);
 
                 m_bStartStateCandidatesDirty = true;
             }
@@ -272,12 +272,12 @@ namespace Networking
                     bIsActivePeer = true;
                 }
 
-                m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, bIsActivePeer, clpChainLinkPacket.m_chlLink, m_gkmKeyManager, m_gmbMessageBuffer, m_smbSimMessageBuffer, out bool bIsMessageBufferDirty);
+                m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, bIsActivePeer, clpChainLinkPacket.m_chlLink, m_gkmKeyManager, m_gmbMessageBuffer, m_ndbNetworkDataBridge, out bool bIsMessageBufferDirty);
 
                 if (bIsMessageBufferDirty)
                 {
                     //update the final unconfirmed message state 
-                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_smbSimMessageBuffer);
+                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
                 }
             }
         }
@@ -314,12 +314,12 @@ namespace Networking
                 SetTimeOfNextPeerChainLink(dtmNetworkTime);
 
                 //add link to local link tracker 
-                m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, true, chlNextLink, m_gkmKeyManager, m_gmbMessageBuffer, m_smbSimMessageBuffer, out bool bIsMessageBufferDirty);
+                m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, true, chlNextLink, m_gkmKeyManager, m_gmbMessageBuffer, m_ndbNetworkDataBridge, out bool bIsMessageBufferDirty);
 
                 if (bIsMessageBufferDirty)
                 {
                     //update the final unconfirmed message state 
-                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, true, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_smbSimMessageBuffer);
+                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, true, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
                 }
 
                 //send link to peers
@@ -375,10 +375,10 @@ namespace Networking
             ChainLink chlLink = CreateFirstChainLink(iLastChainLinkForPeer);
 
             //add link to chain manager
-            m_chmChainManager.AddFirstChainLink(ParentNetworkConnection.m_lPeerID, true, chlLink, m_smbSimMessageBuffer);
+            m_chmChainManager.AddFirstChainLink(ParentNetworkConnection.m_lPeerID, true, chlLink, m_ndbNetworkDataBridge);
 
             //update buffer final state
-            m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, true, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_smbSimMessageBuffer);
+            m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, true, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
 
             //update the time of the next chian link
             SetTimeOfNextPeerChainLink(dtmNetworkTime);
@@ -441,10 +441,10 @@ namespace Networking
             {
                 m_staState = State.Connected;
 
-                m_chmChainManager.SetChainStartState(ParentNetworkConnection.m_lPeerID, false, MaxPlayerCount, sscStartStateCandidate.m_gmsStateCandidate, sscStartStateCandidate.m_chlNextLink, m_smbSimMessageBuffer);
+                m_chmChainManager.SetChainStartState(ParentNetworkConnection.m_lPeerID, false, MaxPlayerCount, sscStartStateCandidate.m_gmsStateCandidate, sscStartStateCandidate.m_chlNextLink, m_ndbNetworkDataBridge);
 
                 //update message buffer final state
-                m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, false, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_smbSimMessageBuffer);
+                m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, false, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
             }
         }
 
@@ -746,8 +746,20 @@ namespace Networking
 
         public void ProcessMessage(PeerMessageNode pmnMessage)
         {
+            //get the last message in the chain system
+            SortingValue svaSortingValue;
+
+            if(m_chmChainManager.m_chlBestChainHead != null && m_chmChainManager.m_chlBestChainHead.m_gmsState != null)
+            {
+                svaSortingValue = m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue;
+            }
+            else
+            {
+                svaSortingValue = SortingValue.MinValue;
+            }                         
+
             //add to message buffer
-            m_gmbMessageBuffer.AddMessageToBuffer(pmnMessage);
+            m_gmbMessageBuffer.AddMessageToBuffer(pmnMessage, svaSortingValue, m_ndbNetworkDataBridge);
 
             //if connected or active
             if (m_staState == State.Connected || m_staState == State.Active)
@@ -768,16 +780,16 @@ namespace Networking
                     //check that chain head changed 
                     if (chlBestLink != m_chmChainManager.m_chlBestChainHead)
                     {
-                        m_chmChainManager.OnBestHeadChange(chlBestLink, ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_smbSimMessageBuffer, m_gmbMessageBuffer);
+                        m_chmChainManager.OnBestHeadChange(chlBestLink, ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_ndbNetworkDataBridge, m_gmbMessageBuffer);
 
                         //rebuild message state 
-                        m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_smbSimMessageBuffer);
+                        m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
                     }
-                }
+;                }
                 else
                 {
                     //rebuild message state 
-                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_smbSimMessageBuffer);
+                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
                 }
             }
         }

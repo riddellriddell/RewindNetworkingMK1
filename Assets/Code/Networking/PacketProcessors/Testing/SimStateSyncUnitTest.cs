@@ -33,7 +33,9 @@ namespace Networking
         {
             base.SetupPeerPacketProcessors(ncnPeerNetwork);
 
-            ncnPeerNetwork.AddPacketProcessor(new SimStateSyncNetworkProcessor());
+            NetworkingDataBridge ndbNetworkingDataBridge = new NetworkingDataBridge();
+
+            ncnPeerNetwork.AddPacketProcessor(new SimStateSyncNetworkProcessor(ndbNetworkingDataBridge));
         }
 
         //set peer sim state source data
@@ -127,7 +129,7 @@ namespace Networking
 
                         Debug.Log($"Setting sim data to data from{m_dtmSourceDataTime} for peer {tupRequestedSimStates[j].Item2}");
 
-                        ssnSimStateSync.SetSimDataForPeer(tupRequestedSimStates[j].Item2, bSetCorrectData ? m_bSourceDataA : m_bSourceDataB);
+                        ssnSimStateSync.SetSimDataForPeer(tupRequestedSimStates[j].Item2, tupRequestedSimStates[j].Item1, bSetCorrectData ? m_bSourceDataA : m_bSourceDataB);
                     }
 
                 }
@@ -151,7 +153,7 @@ namespace Networking
 
                             Debug.Log($"Setting sim data to data from{m_dtmSourceDataTime} for peer {tupRequestedSimStates[j].Item2}");
 
-                            ssnSimStateSync.SetSimDataForPeer(tupRequestedSimStates[j].Item2, m_bSourceDataA);
+                            ssnSimStateSync.SetSimDataForPeer(tupRequestedSimStates[j].Item2, tupRequestedSimStates[j].Item1, m_bSourceDataA);
                         }
                     }
                 }
