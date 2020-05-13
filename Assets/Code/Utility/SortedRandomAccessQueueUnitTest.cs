@@ -135,6 +135,103 @@ public class SortedRandomAccessQueueUnitTest : MonoBehaviour
             Debug.Log($" Key:{squSortedQueue1.GetKeyAtIndex(i)} Value:{squSortedQueue1.GetValueAtIndex(i)}");
         }
 
+
+
+        Debug.Log("Remove item from entrance of queue");
+
+        squSortedQueue1.Clear();
+
+        for (int i = 0; i < squSortedQueue1.Capacity; i++)
+        {
+            squSortedQueue1.TryInsertEnqueue(i , i , out int iMatchingIndex);
+        }
+
+        for (int i = 0; i < squSortedQueue1.Count; i++)
+        {
+            Debug.Log($" Key:{squSortedQueue1.GetKeyAtIndex(i)} Value:{squSortedQueue1.GetValueAtIndex(i)}");
+        }
+
+        Debug.Log($"Removing item at index{squSortedQueue1.Count -1}");
+
+        squSortedQueue1.Remove(squSortedQueue1.Count - 1);
+
+        for (int i = 0; i < squSortedQueue1.Count; i++)
+        {
+            Debug.Log($" Key:{squSortedQueue1.GetKeyAtIndex(i)} Value:{squSortedQueue1.GetValueAtIndex(i)}");
+        }
+
+
+        Debug.Log("Remove item from exot of queue");
+
+        squSortedQueue1.Clear();
+
+        for (int i = 0; i < squSortedQueue1.Capacity; i++)
+        {
+            squSortedQueue1.TryInsertEnqueue(i, i, out int iMatchingIndex);
+        }
+
+        for (int i = 0; i < squSortedQueue1.Count; i++)
+        {
+            Debug.Log($" Key:{squSortedQueue1.GetKeyAtIndex(i)} Value:{squSortedQueue1.GetValueAtIndex(i)}");
+        }
+
+        Debug.Log($"Removing item at index{0}");
+
+        squSortedQueue1.Remove(0);
+
+        for (int i = 0; i < squSortedQueue1.Count; i++)
+        {
+            Debug.Log($" Key:{squSortedQueue1.GetKeyAtIndex(i)} Value:{squSortedQueue1.GetValueAtIndex(i)}");
+        }
+
+
+        Debug.Log("Remove item from entrance middle of queue");
+
+        squSortedQueue1.Clear();
+
+        for (int i = 0; i < squSortedQueue1.Capacity; i++)
+        {
+            squSortedQueue1.TryInsertEnqueue(i, i, out int iMatchingIndex);
+        }
+
+        for (int i = 0; i < squSortedQueue1.Count; i++)
+        {
+            Debug.Log($" Key:{squSortedQueue1.GetKeyAtIndex(i)} Value:{squSortedQueue1.GetValueAtIndex(i)}");
+        }
+
+        Debug.Log($"Removing item at index{squSortedQueue1.Count - 3}");
+
+        squSortedQueue1.Remove(squSortedQueue1.Count - 3);
+
+        for (int i = 0; i < squSortedQueue1.Count; i++)
+        {
+            Debug.Log($" Key:{squSortedQueue1.GetKeyAtIndex(i)} Value:{squSortedQueue1.GetValueAtIndex(i)}");
+        }
+
+
+        Debug.Log("Remove item from exit middle of queue");
+
+        squSortedQueue1.Clear();
+
+        for (int i = 0; i < squSortedQueue1.Capacity; i++)
+        {
+            squSortedQueue1.TryInsertEnqueue(i, i, out int iMatchingIndex);
+        }
+
+        for (int i = 0; i < squSortedQueue1.Count; i++)
+        {
+            Debug.Log($" Key:{squSortedQueue1.GetKeyAtIndex(i)} Value:{squSortedQueue1.GetValueAtIndex(i)}");
+        }
+
+        Debug.Log($"Removing item at index{2}");
+
+        squSortedQueue1.Remove(2);
+
+        for (int i = 0; i < squSortedQueue1.Count; i++)
+        {
+            Debug.Log($" Key:{squSortedQueue1.GetKeyAtIndex(i)} Value:{squSortedQueue1.GetValueAtIndex(i)}");
+        }
+
         Debug.Log("Force capacity size growth");
 
         squSortedQueue1.Clear();
@@ -155,5 +252,8 @@ public class SortedRandomAccessQueueUnitTest : MonoBehaviour
         {
             Debug.Log($" Key:{squSortedQueue1.GetKeyAtIndex(i)} Value:{squSortedQueue1.GetValueAtIndex(i)}");
         }
+
+
+
     }
 }
