@@ -71,17 +71,26 @@ namespace Networking
         }
 
         //increments the sorting value by 1;
-        public void NextSortValue()
+        public SortingValue NextSortValue()
         {
-            //check for lower segment overflow
-            if(m_lSortValueB == ulong.MaxValue)
+            SortingValue svaOut = new SortingValue()
             {
-                m_lSortValueA++;
+                m_lSortValueA = m_lSortValueA,
+                m_lSortValueB = m_lSortValueB
+            };
+
+            //check for lower segment overflow
+            if (m_lSortValueB == ulong.MaxValue)
+            {
+                svaOut.m_lSortValueA++;
+                svaOut.m_lSortValueB = ulong.MinValue;
             }
             else
             {
-                m_lSortValueB++;
+                svaOut.m_lSortValueB++;
             }
+
+            return svaOut;
         }
 
         public object Clone()

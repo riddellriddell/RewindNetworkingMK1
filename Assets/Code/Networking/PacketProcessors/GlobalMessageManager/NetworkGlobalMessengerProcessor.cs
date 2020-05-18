@@ -312,6 +312,8 @@ namespace Networking
 
                 //update the next time this peer should create a link
                 SetTimeOfNextPeerChainLink(dtmNetworkTime);
+                   
+                //get lock on network data bridge values
 
                 //add link to local link tracker 
                 m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, true, chlNextLink, m_gkmKeyManager, m_gmbMessageBuffer, m_ndbNetworkDataBridge, out bool bIsMessageBufferDirty);
@@ -321,6 +323,8 @@ namespace Networking
                     //update the final unconfirmed message state 
                     m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, true, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
                 }
+
+                //unlock network data bridge values 
 
                 //send link to peers
                 SendChainLinkToPeers(chlNextLink);
@@ -376,6 +380,9 @@ namespace Networking
 
             //add link to chain manager
             m_chmChainManager.AddFirstChainLink(ParentNetworkConnection.m_lPeerID, true, chlLink, m_ndbNetworkDataBridge);
+
+            //reset th proessed up to point on the global message buffer
+            m_gmbMessageBuffer.m_svaStateProcessedUpTo = m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue.NextSortValue();
 
             //update buffer final state
             m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, true, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
@@ -442,6 +449,9 @@ namespace Networking
                 m_staState = State.Connected;
 
                 m_chmChainManager.SetChainStartState(ParentNetworkConnection.m_lPeerID, false, MaxPlayerCount, sscStartStateCandidate.m_gmsStateCandidate, sscStartStateCandidate.m_chlNextLink, m_ndbNetworkDataBridge);
+
+                //reset the last message processed value on the message buffer
+                m_gmbMessageBuffer.m_svaStateProcessedUpTo = m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue;
 
                 //update message buffer final state
                 m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, false, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
@@ -759,7 +769,7 @@ namespace Networking
             }                         
 
             //add to message buffer
-            m_gmbMessageBuffer.AddMessageToBuffer(pmnMessage, svaSortingValue, m_ndbNetworkDataBridge);
+            m_gmbMessageBuffer.AddMessageToBuffer(pmnMessage, svaSortingValue);
 
             //if connected or active
             if (m_staState == State.Connected || m_staState == State.Active)

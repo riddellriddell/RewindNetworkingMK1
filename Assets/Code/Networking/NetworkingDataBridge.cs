@@ -72,6 +72,9 @@ namespace Networking
         //indicates the sim has processed all the messages up to this message
         public SortingValue m_svaSimProcessedMessagesUpTo = SortingValue.MinValue;
 
+        //no messages this old or older are alowed in the message buffer
+        public SortingValue m_svaOldestMessageToStoreInBuffer;
+
         //returns an array of requests between the start time and the end time including times a the same time as the start and excluding items at the end time 
         public List<Tuple<DateTime, long>> GetRequestsForTimePeriod(DateTime dtmStartTimeInclusive, DateTime dtmEndTimeExclusive)
         {
@@ -154,14 +157,76 @@ namespace Networking
                 m_smpPayload = smpMessage
             };
 
-            m_squMessageQueue.EnterPurgeInsert(svaTime, mprMessage);
+            if( svaTime.CompareTo(m_svaOldestMessageToStoreInBuffer) < 0 )
+            {
+                m_squMessageQueue.Clear();
+                m_svaSimProcessedMessagesUpTo = m_svaOldestMessageToStoreInBuffer;
+            }
+            else
+            {
+                UpdateProcessedTimeOnNewMessageAdded(svaTime);
+                m_squMessageQueue.EnterPurgeInsert(svaTime, mprMessage);
+            }            
         }
 
-        public void QueuePlayerChangeMessage(SortingValue svaEventTimt, UserConnecionChange uccConnectionChange)
+        public void QueuePlayerChangeMessage(SortingValue svaTime, UserConnecionChange uccConnectionChange)
         {
-            m_squMessageQueue.EnterPurgeInsert(svaEventTimt, uccConnectionChange);
+            if (svaTime.CompareTo(m_svaOldestMessageToStoreInBuffer) < 0)
+            {
+                m_squMessageQueue.Clear();
+                m_svaSimProcessedMessagesUpTo = m_svaOldestMessageToStoreInBuffer;
+            }
+            else
+            {
+                UpdateProcessedTimeOnNewMessageAdded(svaTime);
+                m_squMessageQueue.EnterPurgeInsert(svaTime, uccConnectionChange);
+            }
         }
 
+        public void UpdateProcessedTimeOnNewMessageAdded(SortingValue svaNewMessageTime)
+        {
+            if(svaNewMessageTime.CompareTo(m_svaSimProcessedMessagesUpTo) < 0)
+            {
+                m_svaSimProcessedMessagesUpTo = svaNewMessageTime;
+            }
+        }
+
+        public void SetValidatedMesageBaseTime(SortingValue svaNewestConfimedMessageTime)
+        {
+            m_svaConfirmedMessageTime = svaNewestConfimedMessageTime;
+
+            UpdateMessageTimeOut();
+        }
+
+        public void SetOldestActiveSimTime(SortingValue svaOldestActiveSimTime)
+        {
+            m_svaOldestActiveSimTime = svaOldestActiveSimTime;
+
+            UpdateMessageTimeOut();
+
+        }
+
+        public void SetProcessedMessagesUpToTime(SortingValue svaProcessedMessagesUpTo)
+        {
+            m_svaSimProcessedMessagesUpTo = svaProcessedMessagesUpTo;
+
+            UpdateMessageTimeOut();
+        }
+        
+        public void UpdateMessageTimeOut()
+        {
+            SortingValue svaNewOldestMessageToStore = OldestValidMessageTime();
+
+            if (m_svaOldestMessageToStoreInBuffer.CompareTo(svaNewOldestMessageToStore) != 0)
+            {
+                m_svaOldestMessageToStoreInBuffer = svaNewOldestMessageToStore;
+
+                Clear(m_svaOldestMessageToStoreInBuffer);
+            }
+        }
+
+        //remove inputs from buffer that will never be used again
+        //TODO: maybe add some kind of archieving funcitonality 
         public void Clear(SortingValue svaClearUpTo)
         {
             m_squMessageQueue.ClearTo(svaClearUpTo);
@@ -179,13 +244,18 @@ namespace Networking
             m_bHasSimDataBeenProcessedBySim = false;
         }
 
+        public void GetIndexesBetweenTimes(DateTime dtmStartTime, DateTime dtmEndTime, out int iStartIndex, out int iEndIndex)
+        {
+            SortingValue svaStartValue = new SortingValue((ulong)dtmStartTime.Ticks, ulong.MaxValue);
+            SortingValue svaEndValue = new SortingValue((ulong)dtmEndTime.Ticks + 1, ulong.MinValue);
+
+            m_squMessageQueue.TryGetFirstIndexGreaterThan(svaStartValue, out iStartIndex);
+            m_squMessageQueue.TryGetFirstIndexLessThan(svaEndValue, out iEndIndex);
+        }
+
         public object[] GetMessagesFromData(DateTime dtmStartTime, DateTime dtmEndTime)
         {
-            SortingValue svaStartValue = new SortingValue((ulong)dtmStartTime.Ticks - 1, ulong.MaxValue);
-            SortingValue svaEndValue = new SortingValue((ulong)dtmEndTime.Ticks, ulong.MaxValue);
-
-            m_squMessageQueue.TryGetFirstIndexGreaterThan(svaStartValue, out int iStartIndex);
-            m_squMessageQueue.TryGetFirstIndexLessThan(svaEndValue, out int iEndIndex);
+            GetIndexesBetweenTimes(dtmStartTime, dtmEndTime, out int iStartIndex, out int iEndIndex);
 
             object[] objMessages = new object[(iEndIndex - iStartIndex) + 1];
 
@@ -197,18 +267,17 @@ namespace Networking
             return objMessages;
         }
 
-        public void UpdateProcessedMessageTime(DateTime dtmStartTimeInclusive, DateTime dtmEndTimeExclusive)
+        public void UpdateProcessedMessageTime(DateTime dtmStartTimeExclusive, DateTime dtmEndTimeInclusive)
         {
+            SortingValue svaFrom = new SortingValue((ulong)dtmStartTimeExclusive.Ticks, ulong.MaxValue);
+            SortingValue svaTo = new SortingValue((ulong)dtmEndTimeInclusive.Ticks + 1, ulong.MinValue);
 
-            SortingValue svaFrom = new SortingValue((ulong)dtmStartTimeInclusive.Ticks, ulong.MinValue);
-            SortingValue svaTo = new SortingValue((ulong)dtmEndTimeExclusive.Ticks - 1, ulong.MaxValue);
-
-            if(m_svaSimProcessedMessagesUpTo.CompareTo(svaFrom) < 0 )
+            if(m_svaSimProcessedMessagesUpTo.CompareTo(svaFrom) <= 0 )
             {
                 return;
             }
 
-            if(m_svaSimProcessedMessagesUpTo.CompareTo(svaTo) > 0)
+            if(m_svaSimProcessedMessagesUpTo.CompareTo(svaTo) >= 0)
             {
                 return;
             }
@@ -216,5 +285,41 @@ namespace Networking
             m_svaSimProcessedMessagesUpTo = svaTo;
         }
 
+        //calculate the oldest time messages are needed
+        public SortingValue OldestValidMessageTime()
+        {
+            //oldest time is a combination of what time the sim messages have been processed up to
+            // the time that messages have been validated up to 
+            // the time of ongoing sim state fetches 
+
+            SortingValue svaOldestValidTime = m_svaConfirmedMessageTime;
+
+            if (svaOldestValidTime.CompareTo(m_svaSimProcessedMessagesUpTo) > 0)
+            {
+                svaOldestValidTime = m_svaSimProcessedMessagesUpTo;
+            }
+
+            if (svaOldestValidTime.CompareTo(m_svaOldestActiveSimTime) < 1)
+            {
+                svaOldestValidTime = m_svaOldestActiveSimTime.NextSortValue();
+            }
+
+            //if the sim data sync has not succeded keep all messages from oldest time 
+            if (m_sssSimStartStateSyncStatus == SimStateSyncNetworkProcessor.State.GettingStateData || m_sssSimStartStateSyncStatus == SimStateSyncNetworkProcessor.State.SyncFailed )
+            {
+                svaOldestValidTime = m_svaOldestActiveSimTime.NextSortValue();
+            }
+
+            return svaOldestValidTime;
+        }
+
+        //find all the messages that are nolonger needed / out of date and remove them
+        public void RemoveOutdatedMessages(SortingValue svaOldesValidTime)
+        {
+            while(m_squMessageQueue.Count > 0 && m_squMessageQueue.PeakKeyDequeue().CompareTo(svaOldesValidTime) < 1)
+            {
+                m_squMessageQueue.Dequeue(out SortingValue svaKey, out Object oObject);
+            }
+        }
     }
 }

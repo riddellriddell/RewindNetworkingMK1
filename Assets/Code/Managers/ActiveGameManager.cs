@@ -34,12 +34,15 @@ namespace GameManagers
 
         //the state of the game
         public ActiveGameState State { get; private set; } = ActiveGameState.GettingGateway;
+               
+        //the sim manager that handles getting data from the data bridge and passing it to the sim to be processed 
+        public TestingSimManager m_tsmSimManager;
+
+        //data structure for passing all data from networking to sim 
+        public NetworkingDataBridge m_ndbDataBridge;
 
         //the web interface 
         public WebInterface m_winWebInterface = null;
-
-        //the game sim
-        public SimManager m_smgSimManager = null;
 
         //the peer to peer network
         public NetworkConnection m_ncnNetworkConnection;
@@ -55,8 +58,8 @@ namespace GameManagers
 
         public SimStateSyncNetworkProcessor m_sssStateSyncProcessor;
 
-        //data structure for passing all data from networking to sim 
-        public NetworkingDataBridge m_ndbDataBridge;
+        public DateTime m_dtmSimStateGetStart;
+
 
         public IPeerTransmitterFactory m_ptfTransmitterFactory;
 
@@ -257,6 +260,8 @@ namespace GameManagers
 
             State = ActiveGameState.GettingSimStateFromCluster;
             m_dtmGettingSimStateStart = DateTime.UtcNow;
+
+            m_tsmSimManager.InitalizeAsConnectingPeer();
         }
 
         protected void UpdateGettingSimStateFromCluster()
@@ -277,35 +282,14 @@ namespace GameManagers
 
             //TODO: in the future start game once first full state is retrieved from server not once state sync time out has come to an end 
             //check if sim state has been fetched 
-            if (m_sssStateSyncProcessor.m_staState != SimStateSyncNetworkProcessor.State.StateSynced)
+            if (m_sssStateSyncProcessor.m_bIsFullStateSynced == false)
             {
                 bHasFetchedSimState = false;
 
                 //check if connected to global messaging system
                 if (m_ngpGlobalMessagingProcessor.m_staState == NetworkGlobalMessengerProcessor.State.Connected || m_ngpGlobalMessagingProcessor.m_staState == NetworkGlobalMessengerProcessor.State.Active)
                 {
-                    //check if already attempting to get sim state
-                    if (m_sssStateSyncProcessor.m_staState != SimStateSyncNetworkProcessor.State.GettingStateData)
-                    {
-                        //schedule new request for data
-
-
-                        //get current time 
-                        DateTime dtmCurrentTime = m_tnpTimeManager.NetworkTime;
-
-                        //get latency to worst connection 
-                        TimeSpan tspWorstLatency = m_tnpTimeManager.LargetsRTT;
-
-                        //calculate a time that the request will reach all peers before the peer has discarded the data 
-                        DateTime dtmSimStateRequestTime = dtmCurrentTime + tspWorstLatency + m_fSimStateLeadTime;
-
-                        //get list of trusted peers
-                        List<long> tupActivePeerList = m_ngpGlobalMessagingProcessor.m_chmChainManager.m_chlBestChainHead.m_gmsState.GetActivePeerIDs();
-
-                        //send request to peers
-                        m_sssStateSyncProcessor.RequestSimData(dtmSimStateRequestTime, tupActivePeerList);
-
-                    }
+                    GetSimDataFromPeers();
                 }
             }
                        
@@ -341,6 +325,7 @@ namespace GameManagers
             //use passed in target sim settings to setup inital sim
 
             // sim manager setup sim
+            m_tsmSimManager.InitalizeAsFirstPeer();
 
         }
 
@@ -381,6 +366,25 @@ namespace GameManagers
 
             //check for error in sim
 
+            // ------------ Check For Failed Sim State Get ---
+
+            if(m_ndbDataBridge.m_sssSimStartStateSyncStatus == SimStateSyncNetworkProcessor.State.SyncFailed)
+            {
+                if((DateTime.UtcNow - m_dtmGettingSimStateStart).TotalSeconds > m_fGettingSimStateTimeOut)
+                {
+                    //getting sim state ultamatly failed, need to reset get process
+                    Reset();
+                    return;
+
+                }
+                else
+                {
+                    //try to get the sim state agin 
+                    GetSimDataFromPeers();
+
+                }
+            }
+
             //------------- update inputs --------------------
 
             //get inputs from sim and apply them to the network global message manager
@@ -390,6 +394,7 @@ namespace GameManagers
             //------------ Update Systems --------------------
 
             //update simulation
+            m_tsmSimManager.Update();
 
             //update networking 
             m_ncnNetworkConnection.UpdateConnectionsAndProcessors();
@@ -429,6 +434,31 @@ namespace GameManagers
         }
 
         #endregion
+
+        protected void GetSimDataFromPeers()
+        {
+            //check if already attempting to get sim state
+            if (m_sssStateSyncProcessor.m_staState != SimStateSyncNetworkProcessor.State.GettingStateData)
+            {
+                //schedule new request for data
+
+                //get current time 
+                DateTime dtmCurrentTime = m_tnpTimeManager.NetworkTime;
+
+                //get latency to worst connection 
+                TimeSpan tspWorstLatency = m_tnpTimeManager.LargetsRTT;
+
+                //calculate a time that the request will reach all peers before the peer has discarded the data 
+                DateTime dtmSimStateRequestTime = dtmCurrentTime + tspWorstLatency + m_fSimStateLeadTime;
+
+                //get list of trusted peers
+                List<long> tupActivePeerList = m_ngpGlobalMessagingProcessor.m_chmChainManager.m_chlBestChainHead.m_gmsState.GetActivePeerIDs();
+
+                //send request to peers
+                m_sssStateSyncProcessor.RequestSimData(dtmSimStateRequestTime, tupActivePeerList);
+
+            }
+        }
 
         /// <summary>
         /// gets messages from web api and passes them to the peer to peer networking layer
@@ -516,6 +546,8 @@ namespace GameManagers
             m_ncnNetworkConnection.AddPacketProcessor(m_ncpConnectionPropegator);
 
             m_ndbDataBridge = new NetworkingDataBridge();
+
+            m_tsmSimManager = new TestingSimManager(m_ndbDataBridge);
 
             m_ngpGlobalMessagingProcessor = new NetworkGlobalMessengerProcessor(m_ndbDataBridge);
             m_ncnNetworkConnection.AddPacketProcessor(m_ngpGlobalMessagingProcessor);

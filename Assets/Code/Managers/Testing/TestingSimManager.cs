@@ -55,22 +55,70 @@ public class TestingSimManager
     //how many inputs occured during the head state tick, this is used to check if new inputs have been createad and a new head state needs to be calculated 
     public int m_iNumberOfInputsInHeadSateCalculation;
 
-    //true if the background state has been updated for head base
-    public bool m_bNewDataForHeadBase;
+
+    public TestingSimManager(NetworkingDataBridge ndbNetworkingDataBridge)
+    {
+        m_ndbNetworkingDataBridge = ndbNetworkingDataBridge;
+    }
+
+    public void InitalizeAsFirstPeer()
+    {
+        m_iSimHeadTick = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.m_dtmNetworkTime) - 1;
+
+        m_iNumberOfInputsInHeadSateCalculation = 0;
+
+        DateTime dtmSimStartTime = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.m_dtmNetworkTime, m_iSimHeadTick);
+
+        SimState sstStartState = SetupInitalState();
+
+        m_sstSimStateBuffer = new ConstIndexRandomAccessQueue<SimState>(m_iSimHeadTick);
+
+        //queue first state
+        m_sstSimStateBuffer.Enqueue(sstStartState);
+
+        // setup sorted random access queue to sort threads processing the most recent data to the front of the queue ready to be dequeued
+        // and new threads processing old data to the start of the queue 
+        m_iActiveBodyProcessingTicks = new SortedRandomAccessQueueUsingLambda<uint, ThreadSaveDataLock>((uint iCompareFrom, uint iCompareTo) => iCompareFrom.CompareTo(iCompareTo) * -1);
+
+        // set processed up to time, no messages earlier or equal to this time will be processed
+        m_ndbNetworkingDataBridge.SetOldestActiveSimTime(new SortingValue((ulong)(dtmSimStartTime.Ticks), ulong.MaxValue));
+
+        //set processed messages time to the earliest possible time as no processing has been done since
+        m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo = m_ndbNetworkingDataBridge.m_svaOldestActiveSimTime.NextSortValue();
+
+    }
+
+    public void InitalizeAsConnectingPeer()
+    {
+        m_sstSimStateBuffer = new ConstIndexRandomAccessQueue<SimState>(0);
+
+        // setup sorted random access queue to sort threads processing the most recent data to the front of the queue ready to be dequeued
+        // and new threads processing old data to the start of the queue 
+        m_iActiveBodyProcessingTicks = new SortedRandomAccessQueueUsingLambda<uint, ThreadSaveDataLock>((uint iCompareFrom, uint iCompareTo) => iCompareFrom.CompareTo(iCompareTo) * -1);
+
+        // set processed up to time, no messages earlier or equal to this time will be processed
+        m_ndbNetworkingDataBridge.SetOldestActiveSimTime( new SortingValue(0, ulong.MaxValue));
+
+        //set processed messages time to the earliest possible time as no processing has been done since
+        m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo = m_ndbNetworkingDataBridge.m_svaOldestActiveSimTime.NextSortValue();
+
+        m_iSimHeadTick = 0;
+
+        m_iNumberOfInputsInHeadSateCalculation = 0;
+    }
 
     public void CheckForNewData()
     {
         //get lock on network in sim data values 
-        if(m_ndbNetworkingDataBridge.m_bHasSimDataBeenProcessedBySim)
+        if (m_ndbNetworkingDataBridge.m_bHasSimDataBeenProcessedBySim == false)
         {
             uint iSimDataTick = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.m_dtmSimStateSyncRequestTime);
-           
+
             //get the tick for the target item
             byte[] bSimData = m_ndbNetworkingDataBridge.m_bSimState;
 
+            ReadByteStream rbsSimData = new ReadByteStream(bSimData);
 
-            ReadByteStream  rbsSimData = new ReadByteStream(bSimData);
-            
             SimState sstState = new SimState();
 
             SimState.DecodeSimState(rbsSimData, ref sstState);
@@ -81,9 +129,9 @@ public class TestingSimManager
 
             //get start index of all threads working on data older than new data 
             //because list is sorted in reverse order the compare opperator has to be reversed 
-            if(m_iActiveBodyProcessingTicks.TryGetFirstIndexGreaterThan(iSimDataTick + 1, out int iOutdatedThreadStartIndex))
+            if (m_iActiveBodyProcessingTicks.TryGetFirstIndexGreaterThan(iSimDataTick + 1, out int iOutdatedThreadStartIndex))
             {
-                for(int i = iOutdatedThreadStartIndex; i > -1; i--)
+                for (int i = iOutdatedThreadStartIndex; i > -1; i--)
                 {
                     //get lock for thread interupt
                     ThreadSaveDataLock sdlSaveDataLock = m_iActiveBodyProcessingTicks.GetValueAtIndex(i);
@@ -97,12 +145,36 @@ public class TestingSimManager
             //get lock on sim state buffer
 
             //set sim state 
-            m_sstSimStateBuffer[iSimDataTick] = sstState;
+            if (m_sstSimStateBuffer.Count > 0 && iSimDataTick <= m_sstSimStateBuffer.HeadIndex && iSimDataTick >= m_sstSimStateBuffer.BaseIndex)
+            {
+                //if there is already a full sim buffer keep the existing data for a smooth update 
+                m_sstSimStateBuffer[iSimDataTick] = sstState;
+
+                if (m_iSimHeadTick == iSimDataTick)
+                {
+                    m_iNumberOfInputsInHeadSateCalculation = 0;
+                }
+            }
+            else
+            {
+                //if the existing data is out of data reset the state buffer to only have the target state 
+                m_sstSimStateBuffer.Clear();
+                m_sstSimStateBuffer.SetNewBaseIndex(iSimDataTick);
+                m_sstSimStateBuffer.Enqueue(sstState);
+                m_iSimHeadTick = iSimDataTick;
+                m_iNumberOfInputsInHeadSateCalculation = 0;
+            }
 
             DateTime dtmStartOfState = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.m_dtmNetworkTime, iSimDataTick);
 
-            //set the oldest time the sim can process messages up too
-            m_ndbNetworkingDataBridge.m_svaOldestActiveSimTime = new SortingValue((ulong)dtmStartOfState.Ticks - 1, ulong.MaxValue);
+            //sim messages older or equal to this have been processed / are not needed / there are not the resources to compute
+            m_ndbNetworkingDataBridge.SetOldestActiveSimTime(new SortingValue((ulong)dtmStartOfState.Ticks, ulong.MaxValue));
+
+            //all messages from this start time need to be reprocessed
+            m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo = m_ndbNetworkingDataBridge.m_svaOldestActiveSimTime.NextSortValue();
+
+            // inform network data buffer that sim data has been fetched 
+            m_ndbNetworkingDataBridge.m_bHasSimDataBeenProcessedBySim = true;
 
             //release lock on sim state buffer
             //release lock on thread buffer
@@ -154,17 +226,32 @@ public class TestingSimManager
         return startOfYear + TimeSpan.FromTicks(iTick * s_lSimTickLenght);
     }
 
+    public void Update()
+    {
+        CheckForNewData();
+
+        //check if a sim state has been setup on peer
+        if (m_sstSimStateBuffer.Count != 0)
+        {
+            CheckForNewDataRequests();
+
+            UpdateStateProcessors();
+
+            DeleteOutdatedStates();
+        }
+    }
+
     public void UpdateStateProcessors()
     {
         //check if a message has changed in the body of the sim buffer that needs updating
-        if(ShouldReprocessBody())
+        if (ShouldReprocessBody())
         {
             //get tick to reprocess from
-            DateTime dtmTimeOfLastProcessedInput = new DateTime((long)(m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo.m_lSortValueA - 1));
+            DateTime dtmTimeOfLastProcessedInput = new DateTime((long)m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo.m_lSortValueA);
 
-            uint iTickToProcessFrom = ConvertDateTimeToTick(dtmTimeOfLastProcessedInput) - 1;
+            uint iBaseTickToProcessFrom = ConvertDateTimeToTick(dtmTimeOfLastProcessedInput) - 1;
 
-            RunStateUpdate(iTickToProcessFrom);
+            RunStateUpdate(iBaseTickToProcessFrom);
         }
 
         //check if head should be recalculated
@@ -172,11 +259,23 @@ public class TestingSimManager
         {
             RunStateUpdate(m_iSimHeadTick - 1);
         }
-        else if(TimeForNewHeadTick())
+
+        if (TimeForNewHeadTick())
         {
             RunStateUpdate(m_iSimHeadTick);
         }
 
+    }
+
+    public SimState SetupInitalState()
+    {
+        SimState sstSimState = new SimState()
+        {
+            m_lSimValue1 = 1,
+            m_lSimValue2 = 1,
+        };
+
+        return sstSimState;
     }
 
     public void CalculateTickResults(in SimState sstBaseState, ref SimState sstNewState, ref object[] inputs)
@@ -193,17 +292,18 @@ public class TestingSimManager
 
     public bool NewInputsForHead()
     {
-        //check if new inputs have been created for head tick
-        //get the sorting value for the current tick
-        SortingValue svaSortingValue = new SortingValue((ulong)ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.m_dtmNetworkTime, m_iSimHeadTick -1).Ticks - 1, ulong.MaxValue);
+        //lock head mesage buffer
 
-        int iNumberOfMessagesInHeadTickTimeSpan = 0;
+        //get the indexes for the head message buffer
+        m_ndbNetworkingDataBridge.GetIndexesBetweenTimes(ConvertSimTickToDateTime(
+            m_ndbNetworkingDataBridge.m_dtmNetworkTime, m_iSimHeadTick - 1),
+            ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.m_dtmNetworkTime, m_iSimHeadTick),
+            out int iStartMessageIndex,
+            out int iEndMessageIndex);
 
-        if (m_ndbNetworkingDataBridge.m_squMessageQueue.TryGetFirstIndexGreaterThan(svaSortingValue, out int iIndex))
-        {
-            //caculate the number of messages that occure during the head tick
-            iNumberOfMessagesInHeadTickTimeSpan = m_ndbNetworkingDataBridge.m_squMessageQueue.Count - iIndex;
-        }
+        //unlock head message buffer
+
+        int iNumberOfMessagesInHeadTickTimeSpan = iEndMessageIndex - iStartMessageIndex;
 
         //check if there are new messages that have been added to the buffer and not processed by the head tick
         if (iNumberOfMessagesInHeadTickTimeSpan != m_iNumberOfInputsInHeadSateCalculation)
@@ -229,19 +329,19 @@ public class TestingSimManager
     //check if a new input needs to be processed 
     public bool ShouldReprocessBody()
     {
-        DateTime dtmTimeOfLastProcessedInput = new DateTime((long)(m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo.m_lSortValueA - 1));
+        DateTime dtmTimeOfLastProcessedInput = new DateTime((long)(m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo.m_lSortValueA));
 
-        //no need for a lock here 
+        //get lock on thread buffer
 
-        //check if an input falls within the body
-        if (m_iActiveBodyProcessingTicks.Count == 0 || dtmTimeOfLastProcessedInput <= ConvertSimTickToDateTime(dtmTimeOfLastProcessedInput, m_iActiveBodyProcessingTicks.PeakKeyDequeue()))
+        //check if an input falls before the thread processing the oldest inputs
+        if (m_iActiveBodyProcessingTicks.Count == 0 || dtmTimeOfLastProcessedInput < ConvertSimTickToDateTime(dtmTimeOfLastProcessedInput, m_iActiveBodyProcessingTicks.PeakKeyEnqueue() - 1))
         {
             return true;
         }
 
         return false;
     }
-    
+
     //updates all the states after base state upto current tick based off network time;
     public void RunStateUpdate(uint iBaseTick)
     {
@@ -262,7 +362,7 @@ public class TestingSimManager
         while (iBaseTick < ConvertDateTimeToTick(m_ndbNetworkingDataBridge.m_dtmNetworkTime))
         {
             //get lock on should save data
-            if(tsdSaveDataLock.m_bShouldThreadStayAlive == false)
+            if (tsdSaveDataLock.m_bShouldThreadStayAlive == false)
             {
                 break;
             }
@@ -276,11 +376,11 @@ public class TestingSimManager
             {
                 //thread index should not be delisted an error has occured
                 return;
-            }           
+            }
 
             uint iNextThreadTick = uint.MaxValue;
 
-            if (iThreadTickIndex - 1 > - 1)
+            if (iThreadTickIndex - 1 > -1)
             {
                 iNextThreadTick = m_iActiveBodyProcessingTicks.GetKeyAtIndex(iThreadTickIndex - 1);
             }
@@ -305,7 +405,7 @@ public class TestingSimManager
 
             //update the current tick index
             m_iActiveBodyProcessingTicks.SetKeyAtIndex(iThreadTickIndex, ref iNextTick);
-                       
+
             //release lock on thead tick tracker
 
             //create data for next state
@@ -329,7 +429,7 @@ public class TestingSimManager
             if (iNextTick == ConvertDateTimeToTick(m_ndbNetworkingDataBridge.m_dtmNetworkTime))
             {
                 //update number of messages in head tick
-                m_iNumberOfInputsInHeadSateCalculation = objMessages.Length;        
+                m_iNumberOfInputsInHeadSateCalculation = objMessages.Length;
             }
 
             //caclulate new sim state at tick
@@ -344,6 +444,13 @@ public class TestingSimManager
                 if (m_sstSimStateBuffer.HeadIndex < iNextTick)
                 {
                     m_sstSimStateBuffer.Enqueue(sstNextState);
+                }
+                else if(iNextTick < m_sstSimStateBuffer.BaseIndex)
+                {
+                    //TODO: check if this ever gets hit??
+                    //check if updating a tick for a state that is not valid anymore 
+                    tsdSaveDataLock.m_bShouldThreadStayAlive = false;
+                    continue;
                 }
                 else
                 {
@@ -372,15 +479,38 @@ public class TestingSimManager
         else
         {
             //get current index 
-            if (m_iActiveBodyProcessingTicks.TryGetIndexOf(iBaseTick, out int iThreadTickIndex) )
+            if (m_iActiveBodyProcessingTicks.TryGetIndexOf(iBaseTick, out int iThreadTickIndex))
             {
                 //remove thread 
                 m_iActiveBodyProcessingTicks.Remove(iThreadTickIndex);
-               
+
             }
         }
 
         //unlock thread queue
     }
+
+    public void DeleteOutdatedStates()
+    {
+        //get the validated time from network data bridge 
+        DateTime dtmValidatedUpTo = new DateTime((long)(m_ndbNetworkingDataBridge.m_svaConfirmedMessageTime.m_lSortValueA) -1);
+
+        uint iIndexOfOldestUnconfirmedState = ConvertDateTimeToTick(dtmValidatedUpTo);
+
+        //protect against errors on startup with initalised min values
+        if(iIndexOfOldestUnconfirmedState == 0)
+        {
+            return;
+        }
+
+        uint iOldestConfirmedState = iIndexOfOldestUnconfirmedState - 1;
+
+        // remove all states that are not going to change and are not going to be used again in a state update 
+        while (m_sstSimStateBuffer.Count > 1 && m_sstSimStateBuffer.BaseIndex < iOldestConfirmedState)
+        {
+            m_sstSimStateBuffer.Dequeue();
+        }
+    }
+
 }
 

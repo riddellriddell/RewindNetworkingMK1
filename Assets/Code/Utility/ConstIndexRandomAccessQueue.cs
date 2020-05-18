@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 
 //this class functions like a queue but the index for an item remains the same even when items are dequeued before it 
 public class ConstIndexRandomAccessQueue<T> : RandomAccessQueue<T>
@@ -24,6 +21,16 @@ public class ConstIndexRandomAccessQueue<T> : RandomAccessQueue<T>
             return m_iBaseIndex + (uint)m_iCount;
         }
 
+    }
+
+    public ConstIndexRandomAccessQueue(uint iStartIndex) : base()
+    {
+        m_iBaseIndex = iStartIndex;
+    }
+
+    public void SetNewBaseIndex(uint iNewBaseIndex)
+    {
+        m_iBaseIndex = iNewBaseIndex;
     }
 
     public new T this[int key]

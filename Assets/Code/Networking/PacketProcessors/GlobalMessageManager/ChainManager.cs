@@ -203,12 +203,6 @@ namespace Networking
         {
             GlobalMessagingState gsmMessageState = chlLinkChanges[chlLinkChanges.Count - 1].m_chlParentChainLink.m_gmsState.Clone() as GlobalMessagingState;
 
-            //set the time of most recent change to the message buffer 
-            if(ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo.CompareTo(gsmMessageState.m_svaLastMessageSortValue) > 0)
-            {
-                ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo = gsmMessageState.m_svaLastMessageSortValue;
-            }
-
             //loop through all the new chain links and apply the changes to the sim message buffer 
             for (int i = chlLinkChanges.Count -1; i  > -1; i--)
             {
@@ -675,7 +669,7 @@ namespace Networking
                     }
 
                     //add message to the buffer
-                    gmbBuffer.AddMessageToBuffer(chlChain.m_pmnMessages[i], svaChainHead, ndbNetworkingDataBridge);
+                    gmbBuffer.AddMessageToBuffer(chlChain.m_pmnMessages[i], svaChainHead);
 
                     bDirtyMessageBufferState = true;
                 }
@@ -711,16 +705,20 @@ namespace Networking
         {
             List<ChainLink> chlNewBranchLinks = new List<ChainLink>();
 
+            //reset the processed up to time in the message buffer
+            gmbGlobalMessageBuffer.m_svaStateProcessedUpTo = chlNewLink.m_gmsState.m_svaLastMessageSortValue.NextSortValue();
+
             //get list of all the new chain links in the new branch to the new chian link head
             GetChainLinksFromSharedBase(chlNewLink, m_chlBestChainHead, ref chlNewBranchLinks);
 
             //apply messages from new branch to sim messages 
             ApplyChangesToSimMessageBuffer(lLocalPeerID, bActivePeer, chlNewBranchLinks, ndbNetworkingDataBridge);
+            
 
             //set new best chain head
             m_chlBestChainHead = chlNewLink;
 
-            //remove old items from the chain 
+            //remove old links from the chain 
             UpdateBaseLink(lLocalPeerID, bActivePeer, gmbGlobalMessageBuffer, ndbNetworkingDataBridge);
         }
 
@@ -937,7 +935,7 @@ namespace Networking
             gmbMessageBuffer.RemoveItemsUpTo(m_gmsChainStartState.m_svaLastMessageSortValue);
 
             //update the comfirmed message time 
-            ndbNetworkDataBridge.m_svaConfirmedMessageTime =  m_chlChainBase.m_gmsState.m_svaLastMessageSortValue;
+            ndbNetworkDataBridge.SetValidatedMesageBaseTime( m_chlChainBase.m_gmsState.m_svaLastMessageSortValue);
 
             //recalculate if linked to base 
             foreach (ChainLink chlLink in ChainLinks.Values)

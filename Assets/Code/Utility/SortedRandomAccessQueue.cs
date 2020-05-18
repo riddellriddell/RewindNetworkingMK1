@@ -495,6 +495,26 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
         ClearFromIncluding(iIndex);
     }
 
+    public void ClearFromIncluding(in TKey keyKey)
+    {
+        if (TryGetFirstIndexGreaterThan(keyKey, out int iIndex, out bool bCollision, out int iCollisionIndex) == false)
+        {
+            //either the queue is empty or no items are larger than key
+            return;
+        }
+
+        if(bCollision)
+        {
+            ClearFromIncluding(iCollisionIndex);
+        }
+        else
+        {
+            ClearFromIncluding(iIndex);
+        }
+
+        
+    }
+
     public void ClearTo(in TKey keyKey)
     {
         if (TryGetFirstIndexLessThan(keyKey, out int iIndex) == false)
@@ -504,6 +524,24 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
         }
 
         ClearToIncluding(iIndex);
+    }
+
+    public void ClearToIncluding(in TKey keyKey)
+    {
+        if (TryGetFirstIndexLessThan(keyKey, out int iIndex, out bool bCollision, out int iCollisionIndex) == false)
+        {
+            //either the queue is empty or no items are larger than key
+            return;
+        }
+
+        if (bCollision)
+        {
+            ClearToIncluding(iCollisionIndex);
+        }
+        else
+        {
+            ClearToIncluding(iIndex);
+        }
     }
 
     public TKey PeakKeyDequeue()

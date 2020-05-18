@@ -11,34 +11,43 @@ namespace Networking
         //a sorted array of all the unconfirmed messages from all the peers
         public SortedList<SortingValue, PeerMessageNode> UnConfirmedMessageBuffer { get; } = new SortedList<SortingValue, PeerMessageNode>();
 
-        //tracks the most recent message recieved from a peer
-        public Dictionary<long, PeerMessageNode> LastMessageRecievedFromPeer { get; } = new Dictionary<long, PeerMessageNode>();
 
         //the messaging state once all the messages after the best chain head have been processed 
         public GlobalMessagingState LatestState { get; } = new GlobalMessagingState();
 
-        //the total number of messages that have ever been sent on this server up to the start of the 
-        //unconfirmed message buffer
-        public int m_iBufferStartIndex;
+        //this code is intended for future use in detecting peers missing messages and echoing them  to peer without having to use the chain link system
+        #region MessageEchoing
+        //
+        ////tracks the most recent message recieved from a peer
+        //public Dictionary<long, PeerMessageNode> LastMessageRecievedFromPeer { get; } = new Dictionary<long, PeerMessageNode>();
+        //
+        ////the total number of messages that have ever been sent on this server up to the start of the 
+        ////unconfirmed message buffer
+        //public int m_iBufferStartIndex;
+        //
+        ////a rolling hash of all the messages from the start of the message buffer
+        //public GlobalMessageNodeHash m_gnhHashAtBufferStart;
+        //
+        //
+        ////the total number of times the message chain has recieved a message behind recieve all head message
+        ////this is used to keep track of what messages to echo to peers
+        //public int m_iBufferBranchNumber;
+        //
+        ////the last index hashed up too
+        ////public int m_iHashHeadIndex;
+        //
+        ////the last index inputs were recieved for all users 
+        //public int m_iRecieveAllHeadIndex;
+        //
+        ////the index of the last unhashed input node
+        //public int m_iDirtyNodeIndex;
+        //
+        #endregion
 
-        //a rolling hash of all the messages from the start of the message buffer
-        public GlobalMessageNodeHash m_gnhHashAtBufferStart;
-
-        //the total number of times the message chain has recieved a message behind recieve all head message
-        //this is used to keep track of what messages to echo to peers
-        public int m_iBufferBranchNumber;
-
-        //the last index hashed up too
-        //public int m_iHashHeadIndex;
-
-        //the last index inputs were recieved for all users 
-        public int m_iRecieveAllHeadIndex;
-
-        //the index of the last unhashed input node
-        public int m_iDirtyNodeIndex;
+        public SortingValue m_svaStateProcessedUpTo = SortingValue.MinValue;
 
         //function to add messages to buffer
-        public void AddMessageToBuffer(PeerMessageNode pmnMessage, SortingValue svaBestLinkHeadEnd, NetworkingDataBridge ndbNetworkDataBridge)
+        public void AddMessageToBuffer(PeerMessageNode pmnMessage, SortingValue svaBestLinkHeadEnd)
         {
             //check if buffer already has item
             if (UnConfirmedMessageBuffer.ContainsKey(pmnMessage.m_svaMessageSortingValue) == false)
@@ -46,15 +55,15 @@ namespace Networking
 
                 UnConfirmedMessageBuffer.Add(pmnMessage.m_svaMessageSortingValue, pmnMessage);
 
-                //update the earliest change to the message buffer the sim has not processed
+                //update the earliest change to the message buffer that has not processed
                 //check that this change is happening after the best message head (changes before the best link head will be handled when the best head changes)
                 if(svaBestLinkHeadEnd.CompareTo(pmnMessage.m_svaMessageSortingValue) < 0)
                 {
                     //check if this message is the earliest change to the buffer
-                    if(ndbNetworkDataBridge.m_svaSimProcessedMessagesUpTo.CompareTo(pmnMessage.m_svaMessageSortingValue) > 0)
+                    if(m_svaStateProcessedUpTo.CompareTo(pmnMessage.m_svaMessageSortingValue) > 0)
                     {
                         //store new earliest change so the sim knowes where to reprocess from 
-                        ndbNetworkDataBridge.m_svaSimProcessedMessagesUpTo = pmnMessage.m_svaMessageSortingValue;
+                        m_svaStateProcessedUpTo = pmnMessage.m_svaMessageSortingValue;
                     }
                 }
 
@@ -62,26 +71,26 @@ namespace Networking
                 //TODO:: optimize this so it only happens when it needs to
                 //ReNumberMessageIndexes();
 
-                //check if latest peer messages are being tracked
-                if (LastMessageRecievedFromPeer.TryGetValue(pmnMessage.m_lPeerID, out PeerMessageNode pmnLastMessage))
-                {
-                    if (pmnLastMessage == null)
-                    {
-                        LastMessageRecievedFromPeer[pmnMessage.m_lPeerID] = pmnMessage;
-                    }
-                    else
-                    {
-                        //check if new message is more recent than previouse message
-                        if (LastMessageRecievedFromPeer[pmnMessage.m_lPeerID].m_svaMessageSortingValue.CompareTo(pmnMessage.m_svaMessageSortingValue) < 0)
-                        {
-                            LastMessageRecievedFromPeer[pmnMessage.m_lPeerID] = pmnMessage;
-                        }
-                    }
-                }
-                else
-                {
-                    LastMessageRecievedFromPeer[pmnMessage.m_lPeerID] = pmnMessage;
-                }
+                ////check if latest peer messages are being tracked
+                //if (LastMessageRecievedFromPeer.TryGetValue(pmnMessage.m_lPeerID, out PeerMessageNode pmnLastMessage))
+                //{
+                //    if (pmnLastMessage == null)
+                //    {
+                //        LastMessageRecievedFromPeer[pmnMessage.m_lPeerID] = pmnMessage;
+                //    }
+                //    else
+                //    {
+                //        //check if new message is more recent than previouse message
+                //        if (LastMessageRecievedFromPeer[pmnMessage.m_lPeerID].m_svaMessageSortingValue.CompareTo(pmnMessage.m_svaMessageSortingValue) < 0)
+                //        {
+                //            LastMessageRecievedFromPeer[pmnMessage.m_lPeerID] = pmnMessage;
+                //        }
+                //    }
+                //}
+                //else
+                //{
+                //    LastMessageRecievedFromPeer[pmnMessage.m_lPeerID] = pmnMessage;
+                //}
             }
         }
 
@@ -99,8 +108,21 @@ namespace Networking
 
             for (int i = iStartIndex; i < UnConfirmedMessageBuffer.Count; i++)
             {
-                LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i], ndbNetworkingDataBridge);
+                //check if message is new and should be added to network bridge message buffer
+                if(UnConfirmedMessageBuffer.Values[i].m_svaMessageSortingValue.CompareTo(m_svaStateProcessedUpTo) > -1)
+                {
+                    LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i], ndbNetworkingDataBridge);
+                }
+                else
+                {
+                    LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i], null);
+                }                
             }
+
+            if(UnConfirmedMessageBuffer.Count > 0)
+            {
+                m_svaStateProcessedUpTo = UnConfirmedMessageBuffer.Values[UnConfirmedMessageBuffer.Count - 1].m_svaMessageSortingValue;
+            }            
         }
 
         public void GetMessageStartAndEndIndexesBetweenStates(GlobalMessagingState gmsStartState, GlobalMessagingState gmsEndState, out int iStartIndex, out int iEndIndex)
