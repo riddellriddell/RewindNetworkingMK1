@@ -6,6 +6,32 @@ namespace Networking
 {
     public class TimeNetworkProcessor : ManagedNetworkPacketProcessor<TimeConnectionProcessor>
     {
+        public static DateTime StaticBaseTime
+        {
+            get
+            {
+                return DateTime.UtcNow;
+            }
+        }
+
+        public static DateTime CalculateNetworkTime(in TimeSpan tspCurrentOffset, ref DateTime dtmOldestTime)
+        {
+            //calcualte network time
+            DateTime dtmNetworkTime = StaticBaseTime - tspCurrentOffset;
+
+            //make sure never to run time backwards 
+            if (dtmNetworkTime < dtmOldestTime)
+            {
+                return dtmOldestTime;
+            }
+
+            dtmOldestTime = dtmNetworkTime;
+
+            return dtmNetworkTime;
+        }
+
+        private NetworkingDataBridge NetworkDataBridge { get; set; }
+
         //the time everything is based off
         public DateTime BaseTime
         {
@@ -16,7 +42,7 @@ namespace Networking
                 //
                 //return new DateTime(lTicks, DateTimeKind.Utc);
 
-                return DateTime.UtcNow;
+                return StaticBaseTime;
             }
         }
 
@@ -25,22 +51,7 @@ namespace Networking
         {
             get
             {
-                //TODO:Remove this testing code 
-                //return BaseTime;
-
-
-                //calcualte network time
-                DateTime dtmNetworkTime = BaseTime - m_tspCurrentTimeOffset;
-                
-                //make sure never to run time backwards 
-                if(dtmNetworkTime < m_dtmOldestTime)
-                {
-                    return m_dtmOldestTime;
-                }
-                
-                m_dtmOldestTime = dtmNetworkTime;
-                
-                return dtmNetworkTime;
+                return CalculateNetworkTime(m_tspCurrentTimeOffset, ref m_dtmOldestTime);
             }
 
         }
@@ -77,7 +88,7 @@ namespace Networking
         private TimeSpan m_tspUpdateRate = TimeSpan.FromSeconds(1);
         private TimeSpan m_tspMaxLatencyUsedInCalculations = TimeSpan.FromSeconds(2);
         private List<TimeSpan> m_dtoTempTimeOffsets = new List<TimeSpan>();
-
+        
 
         protected override TimeConnectionProcessor NewConnectionProcessor()
         {
@@ -172,6 +183,19 @@ namespace Networking
             {
                 m_tspCurrentTimeOffset = m_tspTargetTimeOffset;
             }
+
+            UpdateNetworkDataBridge();
+        }
+
+        private void UpdateNetworkDataBridge()
+        {
+            //get lock on network data bridge time values
+            if (NetworkDataBridge != null)
+            {
+                NetworkDataBridge.m_tspNetworkTimeOffset = m_tspCurrentTimeOffset;
+            }
+
+            //drop lock
         }
 
         protected override void AddDependentPacketsToPacketFactory(ClassWithIDFactory cifPacketFactory)
@@ -235,7 +259,7 @@ namespace Networking
         public override void Update()
         {
             //dont try and send packets if not connected
-            if(ParentConnection.Status != Connection.ConnectionStatus.Connected)
+            if (ParentConnection.Status != Connection.ConnectionStatus.Connected)
             {
                 return;
             }

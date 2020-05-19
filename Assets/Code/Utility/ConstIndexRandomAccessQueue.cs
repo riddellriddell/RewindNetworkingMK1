@@ -18,7 +18,7 @@ public class ConstIndexRandomAccessQueue<T> : RandomAccessQueue<T>
     {
         get
         {
-            return m_iBaseIndex + (uint)m_iCount;
+            return m_iBaseIndex + (uint)m_iCount -1;
         }
 
     }
@@ -97,7 +97,7 @@ public class ConstIndexRandomAccessQueue<T> : RandomAccessQueue<T>
     {
         if (iIndex < m_iBaseIndex || iIndex >= m_iBaseIndex + m_iCount)
         {
-            throw new IndexOutOfRangeException("Index " + iIndex + "is less than 0 or greater than " + (m_iCount - 1));
+            throw new IndexOutOfRangeException($"Index { iIndex } is less than base index {BaseIndex} or greater than head index {HeadIndex}");
         }
 
         //remap index 

@@ -205,6 +205,7 @@ public class RandomAccessQueue<T> : ICloneable
             Array.Copy(m_tStorage, 0, tNewStorage, iPartALength, iPartBLength);
         }
 
+        m_tStorage = tNewStorage;
         m_iCount = iItemsToCopy;
         m_iQueueExit = 0;
         m_iQueueEnter = iItemsToCopy - 1;

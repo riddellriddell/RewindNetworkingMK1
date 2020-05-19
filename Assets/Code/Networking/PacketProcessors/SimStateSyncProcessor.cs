@@ -107,6 +107,8 @@ namespace Networking
             //check if any new states have been added to the data bridge 
             if (m_ndbNetworkDataBridge.m_tupDataAtTimeForPeers.Count > 0)
             {
+                Debug.Log("SimStateSync:: Festching Data For Peers From Network Data Bridge");
+
                 //check if there are any active requests 
                 foreach (Tuple<DateTime, long, byte[]> tupDataAtTime in m_ndbNetworkDataBridge.m_tupDataAtTimeForPeers.Values)
                 {
@@ -674,7 +676,7 @@ namespace Networking
         }
 
         public void OnNewRequestForSimDataAtTime( DateTime dtmTimeOfRequest, long lNewRequestFromPeerID)
-        {
+        {         
             DateTime dtmTimeOutTime = dtmTimeOfRequest + SimStateSyncNetworkProcessor.StateRequestTimeOut;
 
             if (m_dtmTimeOfNextOutDataTimeOut > dtmTimeOutTime)
@@ -683,7 +685,9 @@ namespace Networking
             }
 
              m_bIsRequestedOutDataDirty = true;
-            
+
+            Debug.Log("SimStateSync:: adding new request for sim data to network data bridge");
+
             m_ndbNetworkDataBridge.m_tupNewRequestedDataAtTimeForPeers.Add(new Tuple<DateTime, long>(dtmTimeOfRequest, lNewRequestFromPeerID));
         }
     }
@@ -879,11 +883,11 @@ namespace Networking
         #region SendingState
         public void OnRequestStateForTime(DateTime dtmTime)
         {
+            Debug.Log("SimStateSyncProcessor:: Data Request recieved for time");
+
             m_ostOutState = OutState.Pending;
             m_dtmTimeOfOutSimState = dtmTime;
-
-
-
+                       
             //add to new list of requests 
             m_tParentPacketProcessor.OnNewRequestForSimDataAtTime(dtmTime, ParentConnection.m_lUserUniqueID);
 
@@ -891,6 +895,8 @@ namespace Networking
 
         public void OnSimDataChange(byte[] bSimDataAtPeerRequest)
         {
+            Debug.Log("SimStateSyncProcessor:: Data for request found sending hash map");
+
             //check if connection active
             if (ParentConnection.Status != Connection.ConnectionStatus.Connected)
             {

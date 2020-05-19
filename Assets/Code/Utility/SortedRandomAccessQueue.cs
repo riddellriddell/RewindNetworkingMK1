@@ -959,6 +959,8 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
             Array.Copy(m_valValues, 0, valNewValueArray, iPartALength, iPartBLength);
         }
 
+        m_keyKeys = keyNewKeyArray;
+        m_valValues = valNewValueArray;
         m_iCount = iItemsToCopy;
         m_iQueueExit = 0;
         m_iQueueEnter = iItemsToCopy - 1;
@@ -1762,12 +1764,12 @@ public class SortedRandomAccessQueue<T> where T : IComparable
     private void ChangeCapacity(int iNewCapacity)
     {
         //create new arrays
-        T[] keyNewKeyArray = new T[iNewCapacity];
+        T[] tNewArray = new T[iNewCapacity];
 
         //check for empty resize
         if (m_iCount == 0)
         {
-            m_tValues = keyNewKeyArray;
+            m_tValues = tNewArray;
 
             m_iCount = 0;
             m_iQueueExit = 0;
@@ -1783,14 +1785,15 @@ public class SortedRandomAccessQueue<T> where T : IComparable
         int iPartBLength = iItemsToCopy - iPartALength;
 
         //copy accross existing values 
-        Array.Copy(m_tValues, m_iQueueExit, keyNewKeyArray, 0, iPartALength);
+        Array.Copy(m_tValues, m_iQueueExit, tNewArray, 0, iPartALength);
 
         //copy accross wrap around segment
         if (iPartBLength > 0)
         {
-            Array.Copy(m_tValues, 0, keyNewKeyArray, iPartALength, iPartBLength);
+            Array.Copy(m_tValues, 0, tNewArray, iPartALength, iPartBLength);
         }
 
+        m_tValues = tNewArray;
         m_iCount = iItemsToCopy;
         m_iQueueExit = 0;
         m_iQueueEnter = iItemsToCopy - 1;
@@ -2723,6 +2726,8 @@ public class SortedRandomAccessQueueUsingLambda<TKey, TValue>
             Array.Copy(m_valValues, 0, valNewValueArray, iPartALength, iPartBLength);
         }
 
+        m_keyKeys = keyNewKeyArray;
+        m_valValues = valNewValueArray;
         m_iCount = iItemsToCopy;
         m_iQueueExit = 0;
         m_iQueueEnter = iItemsToCopy - 1;
@@ -3529,12 +3534,12 @@ public class SortedRandomAccessQueueUsingLambda<T>
     private void ChangeCapacity(int iNewCapacity)
     {
         //create new arrays
-        T[] keyNewKeyArray = new T[iNewCapacity];
+        T[] tNewArray = new T[iNewCapacity];
 
         //check for empty resize
         if (m_iCount == 0)
         {
-            m_tValues = keyNewKeyArray;
+            m_tValues = tNewArray;
 
             m_iCount = 0;
             m_iQueueExit = 0;
@@ -3550,14 +3555,15 @@ public class SortedRandomAccessQueueUsingLambda<T>
         int iPartBLength = iItemsToCopy - iPartALength;
 
         //copy accross existing values 
-        Array.Copy(m_tValues, m_iQueueExit, keyNewKeyArray, 0, iPartALength);
+        Array.Copy(m_tValues, m_iQueueExit, tNewArray, 0, iPartALength);
 
         //copy accross wrap around segment
         if (iPartBLength > 0)
         {
-            Array.Copy(m_tValues, 0, keyNewKeyArray, iPartALength, iPartBLength);
+            Array.Copy(m_tValues, 0, tNewArray, iPartALength, iPartBLength);
         }
 
+        m_tValues = tNewArray;
         m_iCount = iItemsToCopy;
         m_iQueueExit = 0;
         m_iQueueEnter = iItemsToCopy - 1;

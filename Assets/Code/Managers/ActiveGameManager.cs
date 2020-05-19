@@ -282,15 +282,20 @@ namespace GameManagers
 
             //TODO: in the future start game once first full state is retrieved from server not once state sync time out has come to an end 
             //check if sim state has been fetched 
-            if (m_sssStateSyncProcessor.m_bIsFullStateSynced == false)
+            if (m_sssStateSyncProcessor.m_bIsFullStateSynced == false && m_sssStateSyncProcessor.m_staState != SimStateSyncNetworkProcessor.State.GettingStateData )
             {
                 bHasFetchedSimState = false;
 
                 //check if connected to global messaging system
                 if (m_ngpGlobalMessagingProcessor.m_staState == NetworkGlobalMessengerProcessor.State.Connected || m_ngpGlobalMessagingProcessor.m_staState == NetworkGlobalMessengerProcessor.State.Active)
                 {
+                    Debug.Log("Fetching Sim State From peers");
                     GetSimDataFromPeers();
                 }
+            }
+            else
+            {
+                Debug.Log("Sim State Fetched From peer");
             }
                        
 

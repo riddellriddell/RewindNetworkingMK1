@@ -1,6 +1,7 @@
 ﻿using Networking;
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class TestingSimManager
 {
@@ -50,10 +51,10 @@ public class TestingSimManager
     public List<Tuple<DateTime, long>> m_tupNewDataRequests = new List<Tuple<DateTime, long>>();
 
     //the sim tick the latest state is based off
-    public uint m_iSimHeadTick;
+    public uint m_iSimHeadTick = 0;
 
     //how many inputs occured during the head state tick, this is used to check if new inputs have been createad and a new head state needs to be calculated 
-    public int m_iNumberOfInputsInHeadSateCalculation;
+    public int m_iNumberOfInputsInHeadSateCalculation = 0;
 
 
     public TestingSimManager(NetworkingDataBridge ndbNetworkingDataBridge)
@@ -63,11 +64,11 @@ public class TestingSimManager
 
     public void InitalizeAsFirstPeer()
     {
-        m_iSimHeadTick = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.m_dtmNetworkTime) - 1;
+        m_iSimHeadTick = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetNetworkTime()) - 1;
 
         m_iNumberOfInputsInHeadSateCalculation = 0;
 
-        DateTime dtmSimStartTime = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.m_dtmNetworkTime, m_iSimHeadTick);
+        DateTime dtmSimStartTime = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.GetNetworkTime(), m_iSimHeadTick);
 
         SimState sstStartState = SetupInitalState();
 
@@ -165,7 +166,7 @@ public class TestingSimManager
                 m_iNumberOfInputsInHeadSateCalculation = 0;
             }
 
-            DateTime dtmStartOfState = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.m_dtmNetworkTime, iSimDataTick);
+            DateTime dtmStartOfState = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.GetNetworkTime(), iSimDataTick);
 
             //sim messages older or equal to this have been processed / are not needed / there are not the resources to compute
             m_ndbNetworkingDataBridge.SetOldestActiveSimTime(new SortingValue((ulong)dtmStartOfState.Ticks, ulong.MaxValue));
@@ -211,17 +212,19 @@ public class TestingSimManager
     public uint ConvertDateTimeToTick(DateTime dateTime)
     {
         //get number of ticks since start of year 
-        DateTime startOfYear = new DateTime(dateTime.Year, 0, 0);
+        DateTime startOfYear = new DateTime(dateTime.Year, 1, 1);
 
         long lTickSinceStartOfYear = dateTime.Ticks - startOfYear.Ticks;
 
-        return (uint)((lTickSinceStartOfYear + s_lSimTickLenght - 1) / s_lSimTickLenght);
+        uint iSimTicksSinceStartOfYear = (uint)((lTickSinceStartOfYear + s_lSimTickLenght - 1) / s_lSimTickLenght);
+
+        return iSimTicksSinceStartOfYear;
     }
 
     public DateTime ConvertSimTickToDateTime(DateTime dtmCurrnetTime, uint iTick)
     {
         //get number of ticks since start of year 
-        DateTime startOfYear = new DateTime(dtmCurrnetTime.Year, 0, 0);
+        DateTime startOfYear = new DateTime(dtmCurrnetTime.Year, 1, 1);
 
         return startOfYear + TimeSpan.FromTicks(iTick * s_lSimTickLenght);
     }
@@ -281,12 +284,16 @@ public class TestingSimManager
     public void CalculateTickResults(in SimState sstBaseState, ref SimState sstNewState, ref object[] inputs)
     {
 
-        if (sstBaseState.m_lSimValue1 == 0)
-        {
-            sstNewState.m_lSimValue2 = sstBaseState.m_lSimValue2 + 1;
-        }
+        sstNewState.m_lSimValue1 = sstBaseState.m_lSimValue1 + 1;
 
-        sstNewState.m_lSimValue1 = (sstBaseState.m_lSimValue1 + 1) % sstBaseState.m_lSimValue2;
+        //if (sstNewState.m_lSimValue1 >= sstBaseState.m_lSimValue2)
+        //{
+        //    sstNewState.m_lSimValue2 = sstBaseState.m_lSimValue2 + 1;
+        //    sstNewState.m_lSimValue1 = 0;
+        //}
+
+        //sstNewState.m_lSimValue1 = sstBaseState.m_lSimValue1;
+        //sstNewState.m_lSimValue2 = sstBaseState.m_lSimValue2;
 
     }
 
@@ -296,14 +303,14 @@ public class TestingSimManager
 
         //get the indexes for the head message buffer
         m_ndbNetworkingDataBridge.GetIndexesBetweenTimes(ConvertSimTickToDateTime(
-            m_ndbNetworkingDataBridge.m_dtmNetworkTime, m_iSimHeadTick - 1),
-            ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.m_dtmNetworkTime, m_iSimHeadTick),
+            m_ndbNetworkingDataBridge.GetNetworkTime(), m_iSimHeadTick - 1),
+            ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.GetNetworkTime(), m_iSimHeadTick),
             out int iStartMessageIndex,
             out int iEndMessageIndex);
 
         //unlock head message buffer
 
-        int iNumberOfMessagesInHeadTickTimeSpan = iEndMessageIndex - iStartMessageIndex;
+        int iNumberOfMessagesInHeadTickTimeSpan = (iEndMessageIndex - iStartMessageIndex) + 1;
 
         //check if there are new messages that have been added to the buffer and not processed by the head tick
         if (iNumberOfMessagesInHeadTickTimeSpan != m_iNumberOfInputsInHeadSateCalculation)
@@ -316,7 +323,7 @@ public class TestingSimManager
 
     public bool TimeForNewHeadTick()
     {
-        uint iTickAtCurrentTime = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.m_dtmNetworkTime);
+        uint iTickAtCurrentTime = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetNetworkTime());
 
         if (iTickAtCurrentTime > m_iSimHeadTick)
         {
@@ -333,6 +340,12 @@ public class TestingSimManager
 
         //get lock on thread buffer
 
+        //check if input during or after head tick and should be handled by head tick update instead 
+        if(dtmTimeOfLastProcessedInput >= ConvertSimTickToDateTime(dtmTimeOfLastProcessedInput, m_iSimHeadTick))
+        {
+            return false;
+        }
+
         //check if an input falls before the thread processing the oldest inputs
         if (m_iActiveBodyProcessingTicks.Count == 0 || dtmTimeOfLastProcessedInput < ConvertSimTickToDateTime(dtmTimeOfLastProcessedInput, m_iActiveBodyProcessingTicks.PeakKeyEnqueue() - 1))
         {
@@ -345,6 +358,10 @@ public class TestingSimManager
     //updates all the states after base state upto current tick based off network time;
     public void RunStateUpdate(uint iBaseTick)
     {
+        //get the base state for testing only
+        //TODO: remove
+        SimState sstTestBaseState = m_sstSimStateBuffer[iBaseTick];
+
         //get lock on threading buffer 
 
         //try to get lock on start index
@@ -359,7 +376,7 @@ public class TestingSimManager
 
         //unlock thread tick array
 
-        while (iBaseTick < ConvertDateTimeToTick(m_ndbNetworkingDataBridge.m_dtmNetworkTime))
+        while (iBaseTick < ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetNetworkTime()))
         {
             //get lock on should save data
             if (tsdSaveDataLock.m_bShouldThreadStayAlive == false)
@@ -411,7 +428,7 @@ public class TestingSimManager
             //create data for next state
             SimState sstNextState = new SimState();
 
-            DateTime dtmCurrentTime = m_ndbNetworkingDataBridge.m_dtmNetworkTime;
+            DateTime dtmCurrentTime = m_ndbNetworkingDataBridge.GetNetworkTime();
 
             DateTime dtmFrom = ConvertSimTickToDateTime(dtmCurrentTime, iBaseTick);
 
@@ -426,7 +443,7 @@ public class TestingSimManager
             //unlock sim messages array
 
             //check if processing head state
-            if (iNextTick == ConvertDateTimeToTick(m_ndbNetworkingDataBridge.m_dtmNetworkTime))
+            if (iNextTick == ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetNetworkTime()))
             {
                 //update number of messages in head tick
                 m_iNumberOfInputsInHeadSateCalculation = objMessages.Length;
@@ -441,7 +458,7 @@ public class TestingSimManager
                 //get lock on state buffer
 
                 //store result
-                if (m_sstSimStateBuffer.HeadIndex < iNextTick)
+                if (m_sstSimStateBuffer.HeadIndex == iNextTick -1)
                 {
                     m_sstSimStateBuffer.Enqueue(sstNextState);
                 }
@@ -458,6 +475,27 @@ public class TestingSimManager
                 }
 
                 //release lock on state buffer
+
+                //get lock on data for peer sim sync
+
+                List<Tuple<DateTime, long>> tupPeerRequestsForTime = m_ndbNetworkingDataBridge.GetRequestsForTimePeriod(dtmFrom, dtmTo);
+
+                //todo clean this up to not produce as much garbage 
+                if (tupPeerRequestsForTime.Count > 0)
+                {
+                    Debug.Log("TestingSimManager:: sending sim data to network data bridge to be synced");
+
+                    WriteByteStream wbsSimData = new WriteByteStream(SimState.SizeOfSimState(sstNextState));
+
+                    SimState.EncodeSimState(wbsSimData, ref sstNextState);
+
+                    for (int i = 0; i < tupPeerRequestsForTime.Count; i++)
+                    {
+                        m_ndbNetworkingDataBridge.AddDataForPeer(tupPeerRequestsForTime[i].Item2, tupPeerRequestsForTime[i].Item1, wbsSimData.GetData());
+                    }
+                }
+
+                // release lock on peer sim sync
 
                 //set the most recently processed tick
                 m_iSimHeadTick = Math.Max(iNextTick, m_iSimHeadTick);
@@ -492,8 +530,16 @@ public class TestingSimManager
 
     public void DeleteOutdatedStates()
     {
+        //protect against errors on startup 
+        long lValidUpTo = (long)(m_ndbNetworkingDataBridge.m_svaConfirmedMessageTime.m_lSortValueA) - 1;
+
+        if(lValidUpTo < 0)
+        {
+            return;
+        }
+
         //get the validated time from network data bridge 
-        DateTime dtmValidatedUpTo = new DateTime((long)(m_ndbNetworkingDataBridge.m_svaConfirmedMessageTime.m_lSortValueA) -1);
+        DateTime dtmValidatedUpTo = new DateTime(lValidUpTo);
 
         uint iIndexOfOldestUnconfirmedState = ConvertDateTimeToTick(dtmValidatedUpTo);
 

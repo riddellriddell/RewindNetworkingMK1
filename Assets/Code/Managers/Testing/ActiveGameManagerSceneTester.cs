@@ -50,6 +50,16 @@ namespace GameManagers
         public long m_lPeerId;
     }
 
+    [Serializable]
+    public struct ActiveGameManagerSceneTesterSimState
+    {
+        [SerializeField]
+        public long m_lSimValue1;
+
+        [SerializeField]
+        public long m_lSimValue2;
+    }
+
     public class ActiveGameManagerSceneTester : MonoBehaviour
     {
         public bool m_bTestLocally = true;
@@ -68,8 +78,7 @@ namespace GameManagers
 
         [SerializeField]
         public long m_lPeerID;
-
-
+        
         [SerializeField]
         public NetworkGlobalMessengerProcessor.State m_staGlobalMessagingState;
 
@@ -90,6 +99,10 @@ namespace GameManagers
 
         [SerializeField]
         public List<ActiveGameManagerSceneTesterConnection> m_stcNetworkDebugData;
+
+        [SerializeField]
+        public ActiveGameManagerSceneTesterSimState m_sstSimState;
+
 
         // Start is called before the first frame update
         void Start()
@@ -209,6 +222,7 @@ namespace GameManagers
 
             NetworkGlobalMessengerProcessor gmpGlobalMessagingProcessor = m_agmActiveGameManager.m_ncnNetworkConnection.GetPacketProcessor<NetworkGlobalMessengerProcessor>();
             TimeNetworkProcessor tnpTimeProcessor = m_agmActiveGameManager.m_ncnNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
+            TestingSimManager tsmTestSimManager = m_agmActiveGameManager.m_tsmSimManager;
 
             m_staGlobalMessagingState = gmpGlobalMessagingProcessor.m_staState;
 
@@ -304,6 +318,14 @@ namespace GameManagers
                 }
 
                 m_stcNetworkDebugData.Add(stcConnection);
+            }
+
+            if(tsmTestSimManager.m_sstSimStateBuffer != null && tsmTestSimManager.m_sstSimStateBuffer.Count > 0)
+            {
+                TestingSimManager.SimState sstState = tsmTestSimManager.m_sstSimStateBuffer.PeakEnqueue();
+
+                m_sstSimState.m_lSimValue1 = sstState.m_lSimValue1;
+                m_sstSimState.m_lSimValue2 = sstState.m_lSimValue2;
             }
         }
 

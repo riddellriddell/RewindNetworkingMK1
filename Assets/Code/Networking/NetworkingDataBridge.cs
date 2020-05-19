@@ -60,8 +60,11 @@ namespace Networking
         //data for requests from peers
         public Dictionary<long,Tuple<DateTime, long, byte[]>> m_tupDataAtTimeForPeers = new Dictionary<long, Tuple<DateTime, long, byte[]>>();
        
-        //the shared time accross all peers  
-        public DateTime m_dtmNetworkTime = DateTime.UtcNow;
+        //timespan values used to shared time accross all peers  
+        public DateTime m_dtmNetworkOldestTime = DateTime.MinValue;
+
+        public TimeSpan m_tspNetworkTimeOffset = TimeSpan.Zero;
+
 
         //time that all messages have been confirmed up to 
         public SortingValue m_svaConfirmedMessageTime = SortingValue.MinValue;
@@ -76,7 +79,7 @@ namespace Networking
         public SortingValue m_svaOldestMessageToStoreInBuffer;
 
         //returns an array of requests between the start time and the end time including times a the same time as the start and excluding items at the end time 
-        public List<Tuple<DateTime, long>> GetRequestsForTimePeriod(DateTime dtmStartTimeInclusive, DateTime dtmEndTimeExclusive)
+        public List<Tuple<DateTime, long>> GetRequestsForTimePeriod(DateTime dtmStartTimeExclusive, DateTime dtmEndTimeInclusive)
         {
             List<Tuple<DateTime, long>> outArray = new List<Tuple<DateTime, long>>(0);
 
@@ -95,7 +98,7 @@ namespace Networking
             {
                 int iMid = (iSearchWindowMin + iSearchWindowMax) / 2;
 
-                if (m_tupActiveRequestedDataAtTimeForPeers[iMid].Item1 < dtmStartTimeInclusive)
+                if (m_tupActiveRequestedDataAtTimeForPeers[iMid].Item1 <= dtmStartTimeExclusive)
                 {
                     iSearchWindowMin = iMid + 1;
                 }
@@ -105,15 +108,9 @@ namespace Networking
                 }
             }
 
-            // all items in list are before start window
-            if (iSearchWindowMin == m_tupActiveRequestedDataAtTimeForPeers.Count)
-            {
-                return outArray;
-            }
-
             for (int i = iSearchWindowMin; i < m_tupActiveRequestedDataAtTimeForPeers.Count; i++)
             {
-                if (m_tupActiveRequestedDataAtTimeForPeers[i].Item1 < dtmEndTimeExclusive)
+                if (m_tupActiveRequestedDataAtTimeForPeers[i].Item1 <= dtmEndTimeInclusive)
                 {
                     outArray.Add(m_tupActiveRequestedDataAtTimeForPeers[i]);
                 }
@@ -125,7 +122,17 @@ namespace Networking
 
             return outArray;
         }
-             
+        
+        public DateTime GetNetworkTime()
+        {
+            //lock network time values
+
+            return TimeNetworkProcessor.CalculateNetworkTime(m_tspNetworkTimeOffset, ref m_dtmNetworkOldestTime);
+            
+            //unlock network time values
+
+        }
+        
         public bool GetNewRequestsForSimData(ref List<Tuple<DateTime,long>> tupNewItems)
         {
             //check if there are any new requests for data 
@@ -249,8 +256,14 @@ namespace Networking
             SortingValue svaStartValue = new SortingValue((ulong)dtmStartTime.Ticks, ulong.MaxValue);
             SortingValue svaEndValue = new SortingValue((ulong)dtmEndTime.Ticks + 1, ulong.MinValue);
 
-            m_squMessageQueue.TryGetFirstIndexGreaterThan(svaStartValue, out iStartIndex);
-            m_squMessageQueue.TryGetFirstIndexLessThan(svaEndValue, out iEndIndex);
+            bool bStartIndexFound = m_squMessageQueue.TryGetFirstIndexGreaterThan(svaStartValue, out iStartIndex);
+            bool bEndIndexFound = m_squMessageQueue.TryGetFirstIndexLessThan(svaEndValue, out iEndIndex);
+
+            if(bStartIndexFound == false || bEndIndexFound == false)
+            {
+                iStartIndex = 0;
+                iEndIndex = -1;
+            }
         }
 
         public object[] GetMessagesFromData(DateTime dtmStartTime, DateTime dtmEndTime)
