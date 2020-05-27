@@ -60,8 +60,14 @@ namespace GameManagers
 
         public DateTime m_dtmSimStateGetStart;
 
+        public LocalPeerInputManager m_lpiLocalPeerInputManager;
 
+        public LoclaPeerInputManagerTester m_pitLocalPeerInputTester;
+
+               
         public IPeerTransmitterFactory m_ptfTransmitterFactory;
+
+        public int m_iDefaultMaxGameSize = 6;
 
         //the amount of time to wait to get gateway before timing out and starting again
         protected float m_fGettingGatewayTimeout = 20f;
@@ -219,6 +225,9 @@ namespace GameManagers
             //get the gateway peer
             long lConnectionID = m_winWebInterface.ExternalGateway.Value.m_lGateOwnerUserID;
 
+            //setup the peer to peer network to match the settings of the taget network
+            m_ngpGlobalMessagingProcessor.Initalize(m_iDefaultMaxGameSize);
+
             //tell the connection propegator who to try to connect to
             m_ncpConnectionPropegator.StartRequest(lConnectionID);
         }
@@ -327,10 +336,13 @@ namespace GameManagers
 
             State = ActiveGameState.SetUpNewSim;
 
+            //setup the peer to peer network settings 
+            m_ngpGlobalMessagingProcessor.Initalize(m_iDefaultMaxGameSize);
+
             //use passed in target sim settings to setup inital sim
 
             // sim manager setup sim
-            m_tsmSimManager.InitalizeAsFirstPeer();
+            m_tsmSimManager.InitalizeAsFirstPeer(m_iDefaultMaxGameSize, m_ncnNetworkConnection.m_lPeerID);
 
         }
 
@@ -394,7 +406,11 @@ namespace GameManagers
 
             //get inputs from sim and apply them to the network global message manager
 
-            //get external inputs from global message manager and apply them to the sim
+            //run test code to generate random inputs
+            m_pitLocalPeerInputTester.Update();
+
+            //get inputs from local peer and apply them to networking 
+            m_lpiLocalPeerInputManager.Update();
 
             //------------ Update Systems --------------------
 
@@ -559,6 +575,9 @@ namespace GameManagers
 
             m_sssStateSyncProcessor = new SimStateSyncNetworkProcessor(m_ndbDataBridge);
             m_ncnNetworkConnection.AddPacketProcessor(m_sssStateSyncProcessor);
+
+            m_lpiLocalPeerInputManager = new LocalPeerInputManager(m_ndbDataBridge, m_ngpGlobalMessagingProcessor);
+            m_pitLocalPeerInputTester = new LoclaPeerInputManagerTester(m_lpiLocalPeerInputManager);
 
         }
     }

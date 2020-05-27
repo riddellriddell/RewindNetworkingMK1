@@ -35,8 +35,11 @@ namespace Networking
 
         }
 
-        //queue of all the messages 
-        public SortedRandomAccessQueue<SortingValue, object> m_squMessageQueue = new SortedRandomAccessQueue<SortingValue, object>();
+        //queue of all the outbound messages 
+        public List<GlobalMessageBase> m_gmbOutMessageBuffer = new List<GlobalMessageBase>();
+
+        //queue of all the inbound messages 
+        public SortedRandomAccessQueue<SortingValue, object> m_squInMessageQueue = new SortedRandomAccessQueue<SortingValue, object>();
                
         //the time of the synchronization sync 
         public DateTime m_dtmSimStateSyncRequestTime = DateTime.MaxValue ;
@@ -166,13 +169,13 @@ namespace Networking
 
             if( svaTime.CompareTo(m_svaOldestMessageToStoreInBuffer) < 0 )
             {
-                m_squMessageQueue.Clear();
+                m_squInMessageQueue.Clear();
                 m_svaSimProcessedMessagesUpTo = m_svaOldestMessageToStoreInBuffer;
             }
             else
             {
                 UpdateProcessedTimeOnNewMessageAdded(svaTime);
-                m_squMessageQueue.EnterPurgeInsert(svaTime, mprMessage);
+                m_squInMessageQueue.EnterPurgeInsert(svaTime, mprMessage);
             }            
         }
 
@@ -180,13 +183,13 @@ namespace Networking
         {
             if (svaTime.CompareTo(m_svaOldestMessageToStoreInBuffer) < 0)
             {
-                m_squMessageQueue.Clear();
+                m_squInMessageQueue.Clear();
                 m_svaSimProcessedMessagesUpTo = m_svaOldestMessageToStoreInBuffer;
             }
             else
             {
                 UpdateProcessedTimeOnNewMessageAdded(svaTime);
-                m_squMessageQueue.EnterPurgeInsert(svaTime, uccConnectionChange);
+                m_squInMessageQueue.EnterPurgeInsert(svaTime, uccConnectionChange);
             }
         }
 
@@ -236,7 +239,7 @@ namespace Networking
         //TODO: maybe add some kind of archieving funcitonality 
         public void Clear(SortingValue svaClearUpTo)
         {
-            m_squMessageQueue.ClearTo(svaClearUpTo);
+            m_squInMessageQueue.ClearTo(svaClearUpTo);
         }
 
         public void UpdateSimStateAtTime(DateTime dtmTime, byte[] bSimData)
@@ -256,8 +259,8 @@ namespace Networking
             SortingValue svaStartValue = new SortingValue((ulong)dtmStartTime.Ticks, ulong.MaxValue);
             SortingValue svaEndValue = new SortingValue((ulong)dtmEndTime.Ticks + 1, ulong.MinValue);
 
-            bool bStartIndexFound = m_squMessageQueue.TryGetFirstIndexGreaterThan(svaStartValue, out iStartIndex);
-            bool bEndIndexFound = m_squMessageQueue.TryGetFirstIndexLessThan(svaEndValue, out iEndIndex);
+            bool bStartIndexFound = m_squInMessageQueue.TryGetFirstIndexGreaterThan(svaStartValue, out iStartIndex);
+            bool bEndIndexFound = m_squInMessageQueue.TryGetFirstIndexLessThan(svaEndValue, out iEndIndex);
 
             if(bStartIndexFound == false || bEndIndexFound == false)
             {
@@ -272,9 +275,9 @@ namespace Networking
 
             object[] objMessages = new object[(iEndIndex - iStartIndex) + 1];
 
-            for (int i = iStartIndex; i <= iEndIndex; i++)
+            for (int i = 0; i < objMessages.Length; i++)
             {
-                objMessages[i] = m_squMessageQueue.GetValueAtIndex(iStartIndex + i);
+                objMessages[i] = m_squInMessageQueue.GetValueAtIndex(iStartIndex + i);
             }
 
             return objMessages;
@@ -329,9 +332,9 @@ namespace Networking
         //find all the messages that are nolonger needed / out of date and remove them
         public void RemoveOutdatedMessages(SortingValue svaOldesValidTime)
         {
-            while(m_squMessageQueue.Count > 0 && m_squMessageQueue.PeakKeyDequeue().CompareTo(svaOldesValidTime) < 1)
+            while(m_squInMessageQueue.Count > 0 && m_squInMessageQueue.PeakKeyDequeue().CompareTo(svaOldesValidTime) < 1)
             {
-                m_squMessageQueue.Dequeue(out SortingValue svaKey, out Object oObject);
+                m_squInMessageQueue.Dequeue(out SortingValue svaKey, out Object oObject);
             }
         }
     }

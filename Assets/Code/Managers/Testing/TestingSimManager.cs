@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using GameManagers;
 
 public class TestingSimManager
 {
@@ -9,27 +10,32 @@ public class TestingSimManager
     {
         public static bool EncodeSimState(WriteByteStream wbsByteStream, ref SimState Input)
         {
-            ByteStream.Serialize(wbsByteStream, ref Input.m_lSimValue1);
-            ByteStream.Serialize(wbsByteStream, ref Input.m_lSimValue2);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_iInputVal);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_iInputCount);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_lPeerAssignedToSlot);
 
             return true;
         }
 
         public static bool DecodeSimState(ReadByteStream rbsByteStream, ref SimState Ouput)
         {
-            ByteStream.Serialize(rbsByteStream, ref Ouput.m_lSimValue1);
-            ByteStream.Serialize(rbsByteStream, ref Ouput.m_lSimValue2);
+            ByteStream.Serialize(rbsByteStream, ref Ouput.m_iInputVal);
+            ByteStream.Serialize(rbsByteStream, ref Ouput.m_iInputCount);
+            ByteStream.Serialize(rbsByteStream, ref Ouput.m_lPeerAssignedToSlot);
 
             return true;
         }
 
         public static int SizeOfSimState(in SimState Input)
         {
-            return ByteStream.DataSize(Input.m_lSimValue1) + ByteStream.DataSize(Input.m_lSimValue2);
+            return ByteStream.DataSize(Input.m_iInputVal) + ByteStream.DataSize(Input.m_iInputCount) + ByteStream.DataSize(Input.m_lPeerAssignedToSlot);
         }
 
-        public long m_lSimValue1;
-        public long m_lSimValue2;
+        public int[] m_iInputVal;
+
+        public int[] m_iInputCount;
+
+        public long[] m_lPeerAssignedToSlot;
 
     }
 
@@ -38,7 +44,9 @@ public class TestingSimManager
         public bool m_bShouldThreadStayAlive = true;
     }
 
-    public static long s_lSimTickLenght = TimeSpan.TicksPerSecond / 20;
+    public static int s_TicksPerSecond = 20;
+
+    public static long s_lSimTickLenght = TimeSpan.TicksPerSecond / s_TicksPerSecond;
 
     public NetworkingDataBridge m_ndbNetworkingDataBridge;
 
@@ -55,14 +63,13 @@ public class TestingSimManager
 
     //how many inputs occured during the head state tick, this is used to check if new inputs have been createad and a new head state needs to be calculated 
     public int m_iNumberOfInputsInHeadSateCalculation = 0;
-
-
+    
     public TestingSimManager(NetworkingDataBridge ndbNetworkingDataBridge)
     {
         m_ndbNetworkingDataBridge = ndbNetworkingDataBridge;
     }
 
-    public void InitalizeAsFirstPeer()
+    public void InitalizeAsFirstPeer(int iMaxPeerCount, long lPeerID)
     {
         m_iSimHeadTick = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetNetworkTime()) - 1;
 
@@ -70,7 +77,7 @@ public class TestingSimManager
 
         DateTime dtmSimStartTime = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.GetNetworkTime(), m_iSimHeadTick);
 
-        SimState sstStartState = SetupInitalState();
+        SimState sstStartState = SetupInitalState(iMaxPeerCount, lPeerID);
 
         m_sstSimStateBuffer = new ConstIndexRandomAccessQueue<SimState>(m_iSimHeadTick);
 
@@ -270,31 +277,65 @@ public class TestingSimManager
 
     }
 
-    public SimState SetupInitalState()
+    public SimState SetupInitalState(int iMaxPeerCount, long lCreatingPeerID)
     {
         SimState sstSimState = new SimState()
         {
-            m_lSimValue1 = 1,
-            m_lSimValue2 = 1,
+            m_iInputVal = new int[iMaxPeerCount],
+            m_iInputCount = new int[iMaxPeerCount],
+            m_lPeerAssignedToSlot = new long[iMaxPeerCount],
         };
+
+        sstSimState.m_lPeerAssignedToSlot[0] = lCreatingPeerID;
 
         return sstSimState;
     }
 
     public void CalculateTickResults(in SimState sstBaseState, ref SimState sstNewState, ref object[] inputs)
     {
+        sstNewState.m_iInputVal = (int[])sstBaseState.m_iInputVal.Clone();
+        sstNewState.m_iInputCount = (int[])sstBaseState.m_iInputCount.Clone();
+        sstNewState.m_lPeerAssignedToSlot = (long[])sstBaseState.m_lPeerAssignedToSlot.Clone();
 
-        sstNewState.m_lSimValue1 = sstBaseState.m_lSimValue1 + 1;
 
-        //if (sstNewState.m_lSimValue1 >= sstBaseState.m_lSimValue2)
-        //{
-        //    sstNewState.m_lSimValue2 = sstBaseState.m_lSimValue2 + 1;
-        //    sstNewState.m_lSimValue1 = 0;
-        //}
+        for (int i = 0; i < inputs.Length; i++)
+        {
+            if(inputs[i] is NetworkingDataBridge.MessagePayloadWrapper)
+            {
+               // Debug.Log("Handling custom user input message");
 
-        //sstNewState.m_lSimValue1 = sstBaseState.m_lSimValue1;
-        //sstNewState.m_lSimValue2 = sstBaseState.m_lSimValue2;
+                NetworkingDataBridge.MessagePayloadWrapper mpwMessageWrapper = (NetworkingDataBridge.MessagePayloadWrapper)inputs[i];
 
+                LocalPeerInputManager.TestingUserInput peerInput = mpwMessageWrapper.m_smpPayload as LocalPeerInputManager.TestingUserInput;
+
+                sstNewState.m_iInputCount[mpwMessageWrapper.m_iChannelIndex] = sstBaseState.m_iInputCount[mpwMessageWrapper.m_iChannelIndex] + 1;
+
+                sstNewState.m_iInputVal[mpwMessageWrapper.m_iChannelIndex] = peerInput.m_iInput;
+
+                //sstNewState.m_lSimValue1 = (sstNewState.m_lSimValue1 + (peerInput.m_uipInputState.m_bPayload * peerInput.m_uipInputState.m_bPayload)) % long.MaxValue;
+
+            }
+            else if(inputs[i] is NetworkingDataBridge.UserConnecionChange)
+            {
+                Debug.Log("Handling user connection change message");
+            
+                NetworkingDataBridge.UserConnecionChange uccUserConnectionChange = (NetworkingDataBridge.UserConnecionChange)inputs[i];
+
+                //apply all the join messages
+                for(int j  = 0; j < uccUserConnectionChange.m_iJoinPeerChannelIndex.Length; j++)
+                {
+                    sstNewState.m_lPeerAssignedToSlot[uccUserConnectionChange.m_iJoinPeerChannelIndex[j]] = uccUserConnectionChange.m_lJoinPeerID[j];
+                }
+                    
+                //apply all the kick messages
+                for (int j = 0; j < uccUserConnectionChange.m_iKickPeerChannelIndex.Length; j++)
+                {
+                    sstNewState.m_iInputCount[uccUserConnectionChange.m_iKickPeerChannelIndex[j]] = 0;
+                    sstNewState.m_iInputVal[uccUserConnectionChange.m_iKickPeerChannelIndex[j]] = 0;
+                    sstNewState.m_lPeerAssignedToSlot[uccUserConnectionChange.m_iKickPeerChannelIndex[j]] = 0;
+                }
+            }
+        }
     }
 
     public bool NewInputsForHead()
@@ -358,10 +399,6 @@ public class TestingSimManager
     //updates all the states after base state upto current tick based off network time;
     public void RunStateUpdate(uint iBaseTick)
     {
-        //get the base state for testing only
-        //TODO: remove
-        SimState sstTestBaseState = m_sstSimStateBuffer[iBaseTick];
-
         //get lock on threading buffer 
 
         //try to get lock on start index
@@ -554,7 +591,11 @@ public class TestingSimManager
         // remove all states that are not going to change and are not going to be used again in a state update 
         while (m_sstSimStateBuffer.Count > 1 && m_sstSimStateBuffer.BaseIndex < iOldestConfirmedState)
         {
-            m_sstSimStateBuffer.Dequeue();
+            uint iDequeueTick = m_sstSimStateBuffer.BaseIndex;
+
+            SimState sstOldState = m_sstSimStateBuffer.Dequeue();
+
+            TestingSimDataSyncVerifier.VerifyData(iDequeueTick,ref sstOldState, 0);
         }
     }
 

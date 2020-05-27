@@ -253,7 +253,166 @@ public class SortedRandomAccessQueueUnitTest : MonoBehaviour
             Debug.Log($" Key:{squSortedQueue1.GetKeyAtIndex(i)} Value:{squSortedQueue1.GetValueAtIndex(i)}");
         }
 
+        CheckClearUpTo();
 
+        CheckClearUpToInclnuding();
+
+        CheckPurgeInsert();
+    }
+
+    public void FillQueueWithSeries(SortedRandomAccessQueue<int, int> m_srqSortedRandomAccessQueue, int iNumberOfItems, int iStartIndex)
+    {
+        for (int i = 0; i < iNumberOfItems; i++)
+        {
+            m_srqSortedRandomAccessQueue.TryInsertEnqueue(iStartIndex + i, iStartIndex + i, out int iIndexOfMatch);
+        }
 
     }
+
+    public void PrintOutQueueValues(SortedRandomAccessQueue<int, int> m_srqSortedRandomAccessQueue)
+    {
+        for (int i = 0; i < m_srqSortedRandomAccessQueue.Count; i++)
+        {
+            Debug.Log($" Key:{m_srqSortedRandomAccessQueue.GetKeyAtIndex(i)} Value:{m_srqSortedRandomAccessQueue.GetValueAtIndex(i)}");
+        }
+    }
+
+    public bool CheckClearUpTo()
+    {
+        Debug.Log($"Starting Remove Up TO Check");
+
+        SortedRandomAccessQueue<int, int> srqTestQueue = new SortedRandomAccessQueue<int, int>();
+
+        //fill with items
+        FillQueueWithSeries(srqTestQueue, 8, 1);
+
+        Debug.Log($"Starting Values");
+
+        //print queue
+        PrintOutQueueValues(srqTestQueue);
+
+        Debug.Log($"Clearing to 4");
+
+        srqTestQueue.ClearTo(4);
+
+        //print queue
+        PrintOutQueueValues(srqTestQueue);
+
+        Debug.Log($"Causing A value wrap around ");
+
+        //fill with items
+        FillQueueWithSeries(srqTestQueue, 4, 9);
+
+        //print queue
+        PrintOutQueueValues(srqTestQueue);
+
+
+        Debug.Log($"Removing items upt ot 10 from accross the queue internal wrap around");
+
+        //removing items past queue value wrap around 
+        srqTestQueue.ClearTo(10);
+
+        //print queue
+        PrintOutQueueValues(srqTestQueue);
+
+        //trying again with remove upto including 
+
+
+        return true;
+    }
+
+    public bool CheckClearUpToInclnuding()
+    {
+        Debug.Log($"Starting clear Up To Including Check");
+
+        SortedRandomAccessQueue<int, int> srqTestQueue = new SortedRandomAccessQueue<int, int>();
+
+        //fill with items
+        FillQueueWithSeries(srqTestQueue, 8, 1);
+
+        Debug.Log($"Starting Values");
+
+        //print queue
+        PrintOutQueueValues(srqTestQueue);
+
+        Debug.Log($"Clearing to 4");
+
+        srqTestQueue.ClearToIncluding(4);
+
+        //print queue
+        PrintOutQueueValues(srqTestQueue);
+
+        Debug.Log($"Causing A value wrap around ");
+
+        //fill with items
+        FillQueueWithSeries(srqTestQueue, 4, 9);
+
+        //print queue
+        PrintOutQueueValues(srqTestQueue);
+
+
+        Debug.Log($"Removing items upt ot 10 from accross the queue internal wrap around");
+
+        //removing items past queue value wrap around 
+        srqTestQueue.ClearToIncluding(10);
+
+        //print queue
+        PrintOutQueueValues(srqTestQueue);
+
+        //trying again with remove upto including 
+
+
+        return true;
+    }
+
+    public bool CheckPurgeInsert()
+    {
+        Debug.Log($"Starting Purge entry Insert Check");
+
+        SortedRandomAccessQueue<int, int> srqTestQueue = new SortedRandomAccessQueue<int, int>();
+
+        //fill with items
+        FillQueueWithSeries(srqTestQueue, 8, 1);
+
+        Debug.Log($"Starting Values");
+
+        //print queue
+        PrintOutQueueValues(srqTestQueue);
+
+        Debug.Log($"purge inserting at 4");
+
+        srqTestQueue.EnterPurgeInsert(4, 4);
+
+        //print queue
+        PrintOutQueueValues(srqTestQueue);
+
+        Debug.Log($"Causing A value wrap around ");
+
+        //fill with items
+        FillQueueWithSeries(srqTestQueue, 4, 9);
+
+        //print queue
+        PrintOutQueueValues(srqTestQueue);
+
+
+        Debug.Log($"inserting item at 10 forcing the purge to wrap around");
+
+        //removing items past queue value wrap around 
+        srqTestQueue.EnterPurgeInsert(10,10);
+
+        //print queue
+        PrintOutQueueValues(srqTestQueue);
+
+        //repeting the same purge insert
+        Debug.Log($"Repeting the same purge insert");
+               
+        //removing items past queue value wrap around 
+        srqTestQueue.EnterPurgeInsert(10, 10);
+
+        //print queue
+        PrintOutQueueValues(srqTestQueue);
+
+        return true;
+    }
+
 }

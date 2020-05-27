@@ -54,10 +54,13 @@ namespace GameManagers
     public struct ActiveGameManagerSceneTesterSimState
     {
         [SerializeField]
-        public long m_lSimValue1;
+        public int[] m_iInputVal;
 
         [SerializeField]
-        public long m_lSimValue2;
+        public int[] m_iInputCount;
+        
+        [SerializeField]
+        public long[] m_lPeerAssignedToSlot;
     }
 
     public class ActiveGameManagerSceneTester : MonoBehaviour
@@ -324,8 +327,9 @@ namespace GameManagers
             {
                 TestingSimManager.SimState sstState = tsmTestSimManager.m_sstSimStateBuffer.PeakEnqueue();
 
-                m_sstSimState.m_lSimValue1 = sstState.m_lSimValue1;
-                m_sstSimState.m_lSimValue2 = sstState.m_lSimValue2;
+                m_sstSimState.m_iInputVal = sstState.m_iInputVal;
+                m_sstSimState.m_iInputCount = sstState.m_iInputCount;
+                m_sstSimState.m_lPeerAssignedToSlot = sstState.m_lPeerAssignedToSlot;
             }
         }
 

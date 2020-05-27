@@ -180,7 +180,7 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
         }
 
         //check if new value is past end list 
-        if (Compare(m_keyKeys[0], Key) > 0)
+        if (Compare(m_keyKeys[m_iQueueExit], Key) > 0)
         {
             //return index for no value less than key
             iIndex = int.MinValue;
@@ -348,6 +348,8 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
             m_valValues[0] = itemToQueue;
 
             m_iCount++;
+
+            return;
         }
 
         //caclc index of insert 
@@ -412,7 +414,7 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
     }
 
     //removes all items after an index excluding index
-    public void ClearFrom(int iIndex)
+    public void ClearFromIndex(int iIndex)
     {
         for (int i = iIndex + 1; i < m_iCount; i++)
         {
@@ -422,14 +424,20 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
             m_valValues[iAddressToClear] = default(TValue);
         }
 
-        m_iQueueEnter = RemapIndex(iIndex);
+        m_iQueueExit = RemapIndex(iIndex);
         m_iCount = iIndex + 1;
-
     }
 
     //remove all items including index
-    public void ClearFromIncluding(int iIndex)
+    public void ClearFromIndexIncluding(int iIndex)
     {
+        if(iIndex == 0)
+        {
+            Clear();
+
+            return;
+        }
+
         for (int i = iIndex; i < m_iCount; i++)
         {
             int iAddressToClear = UnsafeRemapIndex(i);
@@ -438,12 +446,12 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
             m_valValues[iAddressToClear] = default(TValue);
         }
 
-        m_iQueueEnter = RemapIndex(iIndex);
+        m_iQueueExit = RemapIndex(iIndex -1);
         m_iCount = iIndex;
     }
 
     //removes all items before an index
-    public void ClearTo(int iIndex)
+    public void ClearToIndex(int iIndex)
     {
         //clean up items being removed 
         for (int i = iIndex - 1; i > -1; i--)
@@ -459,9 +467,9 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
     }
 
     //remove all items before including index
-    public void ClearToIncluding(int iIndex)
+    public void ClearToIndexIncluding(int iIndex)
     {
-        if (iIndex >= m_iCount)
+        if (iIndex >= m_iCount -1)
         {
             Clear();
 
@@ -492,7 +500,7 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
             return;
         }
 
-        ClearFromIncluding(iIndex);
+        ClearFromIndexIncluding(iIndex);
     }
 
     public void ClearFromIncluding(in TKey keyKey)
@@ -505,11 +513,11 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
 
         if(bCollision)
         {
-            ClearFromIncluding(iCollisionIndex);
+            ClearFromIndexIncluding(iCollisionIndex);
         }
         else
         {
-            ClearFromIncluding(iIndex);
+            ClearFromIndexIncluding(iIndex);
         }
 
         
@@ -523,7 +531,7 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
             return;
         }
 
-        ClearToIncluding(iIndex);
+        ClearToIndexIncluding(iIndex);
     }
 
     public void ClearToIncluding(in TKey keyKey)
@@ -536,11 +544,11 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
 
         if (bCollision)
         {
-            ClearToIncluding(iCollisionIndex);
+            ClearToIndexIncluding(iCollisionIndex);
         }
         else
         {
-            ClearToIncluding(iIndex);
+            ClearToIndexIncluding(iIndex);
         }
     }
 
@@ -1281,6 +1289,8 @@ public class SortedRandomAccessQueue<T> where T : IComparable
             m_tValues[0] = tVal;
 
             m_iCount++;
+
+            return;
         }
 
         //caclc index of insert 
@@ -1340,7 +1350,7 @@ public class SortedRandomAccessQueue<T> where T : IComparable
     }
 
     //removes all items after an index excluding index
-    public void ClearFrom(int iIndex)
+    public void ClearFromIndex(int iIndex)
     {
         for (int i = iIndex + 1; i < m_iCount; i++)
         {
@@ -1349,14 +1359,21 @@ public class SortedRandomAccessQueue<T> where T : IComparable
             m_tValues[iAddressToClear] = default(T);
         }
 
-        m_iQueueEnter = RemapIndex(iIndex);
+        m_iQueueExit = RemapIndex(iIndex);
         m_iCount = iIndex + 1;
 
     }
 
     //remove all items including index
-    public void ClearFromIncluding(int iIndex)
+    public void ClearFromIndexIncluding(int iIndex)
     {
+        if(iIndex == 0)
+        {
+            Clear();
+
+            return;
+        }
+
         for (int i = iIndex; i < m_iCount; i++)
         {
             int iAddressToClear = UnsafeRemapIndex(i);
@@ -1364,12 +1381,12 @@ public class SortedRandomAccessQueue<T> where T : IComparable
             m_tValues[iAddressToClear] = default(T);
         }
 
-        m_iQueueEnter = RemapIndex(iIndex);
+        m_iQueueExit = RemapIndex(iIndex -1);
         m_iCount = iIndex;
     }
 
     //removes all items before an index
-    public void ClearTo(int iIndex)
+    public void ClearToIndex(int iIndex)
     {
         //clean up items being removed 
         for (int i = iIndex - 1; i > -1; i--)
@@ -1384,9 +1401,9 @@ public class SortedRandomAccessQueue<T> where T : IComparable
     }
 
     //remove all items before including index
-    public void ClearToIncluding(int iIndex)
+    public void ClearToIndexIncluding(int iIndex)
     {
-        if (iIndex >= m_iCount)
+        if (iIndex >= m_iCount -1)
         {
             Clear();
 
@@ -1416,7 +1433,7 @@ public class SortedRandomAccessQueue<T> where T : IComparable
             return;
         }
 
-        ClearFromIncluding(iIndex);
+        ClearFromIndexIncluding(iIndex);
     }
 
     public void ClearTo(in T tVal)
@@ -1427,7 +1444,7 @@ public class SortedRandomAccessQueue<T> where T : IComparable
             return;
         }
 
-        ClearToIncluding(iIndex);
+        ClearToIndexIncluding(iIndex);
     }
 
     public T PeakDequeue()
@@ -1985,7 +2002,7 @@ public class SortedRandomAccessQueueUsingLambda<TKey, TValue>
         }
 
         //check if new value is past end list 
-        if (Compare(m_keyKeys[0], Key) > 0)
+        if (Compare(m_keyKeys[m_iQueueExit], Key) > 0)
         {
             //return index for no value less than key
             iIndex = int.MinValue;
@@ -2153,6 +2170,8 @@ public class SortedRandomAccessQueueUsingLambda<TKey, TValue>
             m_valValues[0] = itemToQueue;
 
             m_iCount++;
+
+            return;
         }
 
         //caclc index of insert 
@@ -2217,7 +2236,7 @@ public class SortedRandomAccessQueueUsingLambda<TKey, TValue>
     }
 
     //removes all items after an index excluding index
-    public void ClearFrom(int iIndex)
+    public void ClearFromIndex(int iIndex)
     {
         for (int i = iIndex + 1; i < m_iCount; i++)
         {
@@ -2227,14 +2246,21 @@ public class SortedRandomAccessQueueUsingLambda<TKey, TValue>
             m_valValues[iAddressToClear] = default(TValue);
         }
 
-        m_iQueueEnter = RemapIndex(iIndex);
+        m_iQueueExit = RemapIndex(iIndex);
         m_iCount = iIndex + 1;
 
     }
 
     //remove all items including index
-    public void ClearFromIncluding(int iIndex)
+    public void ClearFromIndexIncluding(int iIndex)
     {
+        if (iIndex == 0)
+        {
+            Clear();
+
+            return;
+        }
+
         for (int i = iIndex; i < m_iCount; i++)
         {
             int iAddressToClear = UnsafeRemapIndex(i);
@@ -2243,12 +2269,12 @@ public class SortedRandomAccessQueueUsingLambda<TKey, TValue>
             m_valValues[iAddressToClear] = default(TValue);
         }
 
-        m_iQueueEnter = RemapIndex(iIndex);
+        m_iQueueExit = RemapIndex(iIndex -1);
         m_iCount = iIndex;
     }
 
     //removes all items before an index
-    public void ClearTo(int iIndex)
+    public void ClearToIndex(int iIndex)
     {
         //clean up items being removed 
         for (int i = iIndex - 1; i > -1; i--)
@@ -2264,9 +2290,9 @@ public class SortedRandomAccessQueueUsingLambda<TKey, TValue>
     }
 
     //remove all items before including index
-    public void ClearToIncluding(int iIndex)
+    public void ClearToIndexIncluding(int iIndex)
     {
-        if (iIndex >= m_iCount)
+        if (iIndex >= m_iCount -1)
         {
             Clear();
 
@@ -2297,7 +2323,7 @@ public class SortedRandomAccessQueueUsingLambda<TKey, TValue>
             return;
         }
 
-        ClearFromIncluding(iIndex);
+        ClearFromIndexIncluding(iIndex);
     }
 
     public void ClearTo(in TKey keyKey)
@@ -2308,7 +2334,7 @@ public class SortedRandomAccessQueueUsingLambda<TKey, TValue>
             return;
         }
 
-        ClearToIncluding(iIndex);
+        ClearToIndexIncluding(iIndex);
     }
 
     public TKey PeakKeyDequeue()
@@ -3051,6 +3077,8 @@ public class SortedRandomAccessQueueUsingLambda<T>
             m_tValues[0] = tVal;
 
             m_iCount++;
+
+            return;
         }
 
         //caclc index of insert 
@@ -3110,7 +3138,7 @@ public class SortedRandomAccessQueueUsingLambda<T>
     }
 
     //removes all items after an index excluding index
-    public void ClearFrom(int iIndex)
+    public void ClearFromIndex(int iIndex)
     {
         for (int i = iIndex + 1; i < m_iCount; i++)
         {
@@ -3119,14 +3147,21 @@ public class SortedRandomAccessQueueUsingLambda<T>
             m_tValues[iAddressToClear] = default(T);
         }
 
-        m_iQueueEnter = RemapIndex(iIndex);
+        m_iQueueExit = RemapIndex(iIndex);
         m_iCount = iIndex + 1;
 
     }
 
     //remove all items including index
-    public void ClearFromIncluding(int iIndex)
+    public void ClearFromIndexIncluding(int iIndex)
     {
+        if (iIndex == 0)
+        {
+            Clear();
+
+            return;
+        }
+
         for (int i = iIndex; i < m_iCount; i++)
         {
             int iAddressToClear = UnsafeRemapIndex(i);
@@ -3134,12 +3169,12 @@ public class SortedRandomAccessQueueUsingLambda<T>
             m_tValues[iAddressToClear] = default(T);
         }
 
-        m_iQueueEnter = RemapIndex(iIndex);
+        m_iQueueExit = RemapIndex(iIndex -1);
         m_iCount = iIndex;
     }
 
     //removes all items before an index
-    public void ClearTo(int iIndex)
+    public void ClearToIndex(int iIndex)
     {
         //clean up items being removed 
         for (int i = iIndex - 1; i > -1; i--)
@@ -3154,7 +3189,7 @@ public class SortedRandomAccessQueueUsingLambda<T>
     }
 
     //remove all items before including index
-    public void ClearToIncluding(int iIndex)
+    public void ClearToIndexIncluding(int iIndex)
     {
         if (iIndex >= m_iCount)
         {
@@ -3186,7 +3221,7 @@ public class SortedRandomAccessQueueUsingLambda<T>
             return;
         }
 
-        ClearFromIncluding(iIndex);
+        ClearFromIndexIncluding(iIndex);
     }
 
     public void ClearTo(in T tVal)
@@ -3197,7 +3232,7 @@ public class SortedRandomAccessQueueUsingLambda<T>
             return;
         }
 
-        ClearToIncluding(iIndex);
+        ClearToIndexIncluding(iIndex);
     }
 
     public T PeakDequeue()

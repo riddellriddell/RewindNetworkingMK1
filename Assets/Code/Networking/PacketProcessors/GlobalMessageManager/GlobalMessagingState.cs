@@ -579,7 +579,8 @@ namespace Networking
         //adds a messaget to the sim message buffer that a peer or peers have joined or left the global messaging system 
         protected void AddPeerChangeMessageToSimBuffer(SortingValue svaChangeTime, in List<int> iPeersToKick, in List<int> iPeersToAdd, NetworkingDataBridge ndbNetworkingDataBridge)
         {
-            if(iPeersToKick.Count == 0 || iPeersToAdd.Count == 0)
+            //check that there is a change in the game layout
+            if(iPeersToKick.Count == 0 && iPeersToAdd.Count == 0)
             {
                 return;
             }

@@ -169,7 +169,7 @@ namespace Networking
             ConnectionList.Add(conNewConnection.m_lUserUniqueID, conNewConnection);
 
             //set connection values 
-            conNewConnection.m_iMaxBytesToSend = 500;
+            conNewConnection.m_iMaxBytesToSend = 5000;
 
             conNewConnection.m_tspConnectionTimeOutTime = TimeSpan.FromSeconds(4);
 

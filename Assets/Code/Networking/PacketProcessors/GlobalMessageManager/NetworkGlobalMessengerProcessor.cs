@@ -58,7 +58,7 @@ namespace Networking
         public static TimeSpan OldConnectionFilterPadding { get; } = TimeSpan.FromSeconds(1);
 
         //fixed max player count but in future will be dynamic? 
-        public static int MaxPlayerCount { get; } = 6;
+        public static int MaxPlayerCount { get; private set; } = 6;
 
         //the state of the global message system
         public State m_staState = State.WaitingForConnection;
@@ -97,19 +97,28 @@ namespace Networking
         public NetworkGlobalMessengerProcessor(NetworkingDataBridge ndbDataBridge) : base()
         {
             m_ndbNetworkDataBridge = ndbDataBridge;
-            Initalize();
-        }
-
-        public void Initalize()
-        {
-            //setup the chain manager for the max player count 
-            m_chmChainManager = new ChainManager(MaxPlayerCount);
+            
             m_gmbMessageBuffer = new GlobalMessageBuffer();
 
             m_cifGlobalMessageFactory = new ClassWithIDFactory();
 
             //add all the different types of messages
             VoteMessage.TypeID = m_cifGlobalMessageFactory.AddType<VoteMessage>(VoteMessage.TypeID);
+        }
+
+        public void Initalize(int iMaxPlayerCount)
+        {
+            MaxPlayerCount = iMaxPlayerCount;
+
+            //setup the chain manager for the max player count 
+            m_chmChainManager = new ChainManager(MaxPlayerCount);
+
+        }
+
+        //register a new message type to the global message payload factory
+        public int RegisterCustomMessageType<T>(int iCurrentTypeID)
+        {
+            return m_cifGlobalMessageFactory.AddType<T>(iCurrentTypeID);
         }
 
         public override void OnAddToNetwork(NetworkConnection ncnNetwork)
@@ -179,6 +188,9 @@ namespace Networking
 
                     //vote to kick disconnected peers 
                     UpdateKickingPeersFromSystem();
+
+                    //handle messages from local peer and sim
+                    HandleOutMessagesFromNetworkDataBuffer();
 
                     //add new links to chain 
                     MakeNewChainLinkIfTimeTo();
@@ -705,6 +717,19 @@ namespace Networking
 
             //create message node and send to all peers
             CreateMessageNode(vmsVoteMessage);
+        }
+
+        public void HandleOutMessagesFromNetworkDataBuffer()
+        {
+            //get lock on out message buffer 
+            for(int i = 0; i < m_ndbNetworkDataBridge.m_gmbOutMessageBuffer.Count; i++)
+            {
+                CreateMessageNode(m_ndbNetworkDataBridge.m_gmbOutMessageBuffer[i]);
+            }
+
+            m_ndbNetworkDataBridge.m_gmbOutMessageBuffer.Clear();
+
+            //release lock on out message buffer 
         }
 
         public void CreateMessageNode(GlobalMessageBase gmbMessageToSend)
