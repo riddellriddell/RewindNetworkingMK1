@@ -1,8 +1,8 @@
 fileFormatVersion: 2
-guid: 2eb0c66b09a37474fb7938f17afe632d
+guid: 1cdc6432734af4a4cbb95d410652a22a
 DefaultImporter:
   externalObjects: {}
-  userData: '{"OutputPath": "Assets/Code/CoreGameSim/InterpolationErrorCorrectionSettings.cs",
+  userData: '{"OutputPath": "Assets/Code/CoreGameSim/InterpolatorManager/InterpolatedFrameDataGen.cs",
     "OutputType": 1, "Trigger": 0, "TriggerDelay": 500, "WatchedAssets": []}'
   assetBundleName: 
   assetBundleVariant: 

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using UnityEngine;
+using Utility;
 
 namespace Networking
 {
@@ -52,7 +53,7 @@ namespace Networking
             {
                 //get signature from server
                 ByteStream.Serialize(rbsByteStream, ref m_bServerSignature);
-                               
+
                 //get public key
                 ByteStream.Serialize(rbsByteStream, ref m_rprPublickey.Exponent);
 
@@ -86,7 +87,7 @@ namespace Networking
 
             //cant encode server sig (only createable by server)
             public void Encode(WriteByteStream wbsByteStream,RSAParameters rprServerKeyInfo)
-            {                
+            {
                 //serialize signature from server
                 ByteStream.Serialize(wbsByteStream, ref m_bServerSignature);
 

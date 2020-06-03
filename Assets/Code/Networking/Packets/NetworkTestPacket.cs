@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Utility;
 
 namespace Networking
 {
@@ -28,36 +29,36 @@ namespace Networking
         {
             get
             {
-                return ByteStream.DataSize(this);
+                return NetworkingByteStream.DataSize(this);
             }
         }
 
         public override void DecodePacket(ReadByteStream rbsByteStream)
         {
-            ByteStream.Serialize(rbsByteStream, this);
+            NetworkingByteStream.Serialize(rbsByteStream, this);
         }
 
         public override void EncodePacket(WriteByteStream wbsByteStream)
         {
-            ByteStream.Serialize(wbsByteStream, this);
+            NetworkingByteStream.Serialize(wbsByteStream, this);
         }
     }
 
-    public partial class ByteStream
+    public partial class NetworkingByteStream
     {
-        public static void Serialize(ReadByteStream ByteStream, NetTestSendPacket Input)
+        public static void Serialize(ReadByteStream rbsByteStream, NetTestSendPacket Input)
         {
-            Serialize(ByteStream,ref Input.m_bEcho);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_bEcho);
         }
 
-        public static void Serialize(WriteByteStream ByteStream, NetTestSendPacket Input)
+        public static void Serialize(WriteByteStream wbsByteStream, NetTestSendPacket Input)
         {
-            Serialize(ByteStream, ref Input.m_bEcho);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_bEcho);
         }
 
         public static int DataSize(NetTestSendPacket Input)
         {
-            return DataSize(Input.m_bEcho);
+            return ByteStream.DataSize(Input.m_bEcho);
         }
     }
 
@@ -84,41 +85,41 @@ namespace Networking
         {
             get
             {
-                return ByteStream.DataSize(this);
+                return NetworkingByteStream.DataSize(this);
             }
         }
 
         public override void DecodePacket(ReadByteStream rbsByteStream)
         {
             //decode tick offset
-            ByteStream.Serialize(rbsByteStream, this);
+            NetworkingByteStream.Serialize(rbsByteStream, this);
         }
 
         public override void EncodePacket(WriteByteStream wbsByteStream)
         {
             //encode tick offset
-            ByteStream.Serialize(wbsByteStream, this);
+            NetworkingByteStream.Serialize(wbsByteStream, this);
         }
     }
 
-    public partial class ByteStream
+    public partial class NetworkingByteStream
     {
-        public static void Serialize(ReadByteStream ByteStream, NetTestReplyPacket Input)
+        public static void Serialize(ReadByteStream rbsByteStream, NetTestReplyPacket Input)
         {
-            Serialize(ByteStream, ref Input.m_lLocalBaseTimeTicks);
-            Serialize(ByteStream, ref Input.m_bEcho);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_lLocalBaseTimeTicks);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_bEcho);
         }
 
-        public static void Serialize(WriteByteStream ByteStream, NetTestReplyPacket Input)
+        public static void Serialize(WriteByteStream wbsByteStream, NetTestReplyPacket Input)
         {
-            Serialize(ByteStream, ref Input.m_lLocalBaseTimeTicks);
-            Serialize(ByteStream, ref Input.m_bEcho);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_lLocalBaseTimeTicks);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_bEcho);
         }
 
         public static int DataSize(NetTestReplyPacket Input)
         {
-            int iSize = DataSize(Input.m_lLocalBaseTimeTicks);
-            iSize += DataSize(Input.m_bEcho);
+            int iSize = ByteStream.DataSize(Input.m_lLocalBaseTimeTicks);
+            iSize += ByteStream.DataSize(Input.m_bEcho);
             return iSize;
         }
     }

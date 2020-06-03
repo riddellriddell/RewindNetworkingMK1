@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Utility;
 
 namespace Networking
 {
@@ -167,18 +168,18 @@ namespace Networking
         {
             get
             {
-                return ByteStream.DataSize(m_sscStartStateCandidate);
+                return NetworkingByteStream.DataSize(m_sscStartStateCandidate);
             }
         }
 
         public override void DecodePacket(ReadByteStream rbsByteStream)
         {
-            ByteStream.Serialize(rbsByteStream, ref m_sscStartStateCandidate);
+            NetworkingByteStream.Serialize(rbsByteStream, ref m_sscStartStateCandidate);
         }
 
         public override void EncodePacket(WriteByteStream wbsByteStream)
         {
-            ByteStream.Serialize(wbsByteStream, ref m_sscStartStateCandidate);
+            NetworkingByteStream.Serialize(wbsByteStream, ref m_sscStartStateCandidate);
         }
     }
 }

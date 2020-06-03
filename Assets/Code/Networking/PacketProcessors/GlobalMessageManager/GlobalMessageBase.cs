@@ -1,4 +1,5 @@
 ﻿using System;
+using Utility;
 
 namespace Networking
 {
@@ -40,24 +41,24 @@ namespace Networking
         {
             VoteMessage vmsMessage = this;
 
-            ByteStream.Serialize(rbsByteStream, ref vmsMessage);
+            NetworkingByteStream.Serialize(rbsByteStream, ref vmsMessage);
         }
 
         public override void Serialize(WriteByteStream wbsByteStream)
         {
             VoteMessage vmsMessage = this;
 
-            ByteStream.Serialize(wbsByteStream, ref vmsMessage);
+            NetworkingByteStream.Serialize(wbsByteStream, ref vmsMessage);
         }
 
         public override int DataSize()
         {
-            return ByteStream.DataSize(this);
+            return NetworkingByteStream.DataSize(this);
         }
     }
 
     //serialization for vote message 
-    public partial class ByteStream
+    public partial class NetworkingByteStream
     {
         public static int DataSize(VoteMessage Input)
         {
@@ -67,7 +68,7 @@ namespace Networking
 
             for (int i = 0; i < Input.m_tupActionPerPeer.Length; i++)
             {
-                iSize += ByteStream.DataSize(Input.m_tupActionPerPeer[i]);
+                iSize += NetworkingByteStream.DataSize(Input.m_tupActionPerPeer[i]);
             }
 
             return iSize;
@@ -92,7 +93,7 @@ namespace Networking
             {
                 Tuple<byte, long> tupVote = Input.m_tupActionPerPeer[i];
 
-                ByteStream.Serialize(wbsStream, ref tupVote);
+                NetworkingByteStream.Serialize(wbsStream, ref tupVote);
             }
         }
 
@@ -111,7 +112,7 @@ namespace Networking
             {
                 Tuple<byte, long> tupVote = null;
 
-                ByteStream.Serialize(rbsStream, ref tupVote);
+                NetworkingByteStream.Serialize(rbsStream, ref tupVote);
 
                 Input.m_tupActionPerPeer[i] = tupVote;
             }

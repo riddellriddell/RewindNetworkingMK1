@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Utility;
 
 namespace Networking
 {
@@ -94,13 +95,13 @@ namespace Networking
     }
 
     //serializer for network data layout
-    public partial class ByteStream
+    public partial class NetworkingByteStream
     {
         public static void Serialize(ReadByteStream rbsByteStream, ref NetworkLayout Input)
         {
             Int32 iSize = 0;
 
-            Serialize(rbsByteStream, ref iSize);
+            ByteStream.Serialize(rbsByteStream, ref iSize);
 
             Input.m_conConnectionDetails = new List<NetworkLayout.ConnectionState>(iSize);
 
@@ -117,7 +118,7 @@ namespace Networking
         {
             Int32 iSize = Input.m_conConnectionDetails.Count;
 
-            Serialize(wbsByteStream, ref iSize);
+            ByteStream.Serialize(wbsByteStream, ref iSize);
 
             for (int i = 0; i < iSize; i++)
             {
@@ -128,19 +129,19 @@ namespace Networking
 
         public static void Serialize(ReadByteStream rbsByteStream, ref NetworkLayout.ConnectionState Input)
         {
-            Serialize(rbsByteStream, ref Input.m_lConnectionID);
-            Serialize(rbsByteStream, ref Input.m_dtmTimeOfConnection);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_lConnectionID);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_dtmTimeOfConnection);
         }
 
         public static void Serialize(WriteByteStream wbsByteStream, ref NetworkLayout.ConnectionState Input)
         {
-            Serialize(wbsByteStream, ref Input.m_lConnectionID);
-            Serialize(wbsByteStream, ref Input.m_dtmTimeOfConnection);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_lConnectionID);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_dtmTimeOfConnection);
         }
 
         public static int DataSize(ref NetworkLayout Input)
         {
-            int iSize = DataSize(Input.m_conConnectionDetails.Count);
+            int iSize = ByteStream.DataSize(Input.m_conConnectionDetails.Count);
 
             for (int i = 0; i < Input.m_conConnectionDetails.Count; i++)
             {
@@ -152,9 +153,9 @@ namespace Networking
 
         public static int DataSize(NetworkLayout.ConnectionState Input)
         {
-            int iSize = DataSize(Input.m_lConnectionID);
+            int iSize = ByteStream.DataSize(Input.m_lConnectionID);
 
-            iSize += DataSize(Input.m_dtmTimeOfConnection);
+            iSize += ByteStream.DataSize(Input.m_dtmTimeOfConnection);
 
             return iSize;
         }

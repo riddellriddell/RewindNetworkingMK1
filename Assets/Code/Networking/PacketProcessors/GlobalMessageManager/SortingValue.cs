@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Utility;
 
 namespace Networking
 {
@@ -139,24 +140,24 @@ namespace Networking
 
     }
 
-    public partial class ByteStream
+    public partial class NetworkingByteStream
     {
         //read and write a byte
         public static void Serialize(ReadByteStream rbsStream, ref SortingValue Output)
         {
-            Serialize(rbsStream,ref Output.m_lSortValueA);
-            Serialize(rbsStream, ref Output.m_lSortValueB);
+            ByteStream.Serialize(rbsStream,ref Output.m_lSortValueA);
+            ByteStream.Serialize(rbsStream, ref Output.m_lSortValueB);
         }
 
         public static void Serialize(WriteByteStream wbsByteStream, ref SortingValue Input)
         {
-            Serialize(wbsByteStream, ref Input.m_lSortValueA);
-            Serialize(wbsByteStream, ref Input.m_lSortValueB);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_lSortValueA);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_lSortValueB);
         }
 
         public static int DataSize(SortingValue Input)
         {
-            return DataSize(Input.m_lSortValueA) + DataSize(Input.m_lSortValueB);
+            return ByteStream.DataSize(Input.m_lSortValueA) + ByteStream.DataSize(Input.m_lSortValueB);
         }
     }
 }

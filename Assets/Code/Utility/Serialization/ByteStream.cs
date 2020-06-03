@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Networking
+namespace Utility
 {
     public partial class ByteStream
     {
@@ -57,6 +57,11 @@ namespace Networking
             }
 
             return true;
+        }
+
+        public bool HasBytesRemaining(int iBytes)
+        {
+            return BytesRemaining >= iBytes;
         }
 
     }

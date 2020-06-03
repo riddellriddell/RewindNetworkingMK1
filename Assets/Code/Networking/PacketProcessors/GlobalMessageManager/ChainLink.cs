@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using Utility;
 
 namespace Networking
 {
@@ -645,7 +646,7 @@ namespace Networking
     //    #endregion
     //}
 
-    public partial class ByteStream
+    public partial class NetworkingByteStream
     {
         public static int DataSize(List<IPeerMessageNode> pmnMessages)
         {
@@ -656,7 +657,7 @@ namespace Networking
 
             for (int i = 0; i < pmnMessages.Count; i++)
             {
-                iSize += ByteStream.DataSize(pmnMessages[i]);
+                iSize += NetworkingByteStream.DataSize(pmnMessages[i]);
             }
 
             return iSize;
@@ -672,7 +673,7 @@ namespace Networking
                 iCount = Input.Count;
             }
 
-            Serialize(wbsStream, ref iCount);
+            ByteStream.Serialize(wbsStream, ref iCount);
 
             //serialize each item
             for (int i = 0; i < iCount; i++)
@@ -685,11 +686,10 @@ namespace Networking
 
         public static void Serialize(ReadByteStream rbsStream, ref List<IPeerMessageNode> Input)
         {
-
             //get the number of items
             int iCount = 0;
 
-            Serialize(rbsStream, ref iCount);
+            ByteStream.Serialize(rbsStream, ref iCount);
 
             if (Input == null)
             {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using Utility;
 
 namespace Networking
 {
@@ -32,46 +33,46 @@ namespace Networking
         {
             get
             {
-                return ByteStream.DataSize(this);
+                return NetworkingByteStream.DataSize(this);
             }
         }
 
         public override void DecodePacket(ReadByteStream rbsByteStream)
         {
-            ByteStream.Serialize(rbsByteStream, this);
+            NetworkingByteStream.Serialize(rbsByteStream, this);
         }
 
         public override void EncodePacket(WriteByteStream wbsByteStream)
         {
-            ByteStream.Serialize(wbsByteStream, this);
+            NetworkingByteStream.Serialize(wbsByteStream, this);
         }
     }
 
     //used to serialize and deserialize packet
-    public partial class ByteStream
+    public partial class NetworkingByteStream
     {
         public static void Serialize(ReadByteStream rbsByteStream, ConnectionNegotiationBasePacket Input)
         {
-            Serialize(rbsByteStream, ref Input.m_lFrom);
-            Serialize(rbsByteStream, ref Input.m_lTo);
-            Serialize(rbsByteStream, ref Input.m_iIndex);
-            Serialize(rbsByteStream, ref Input.m_dtmNegotiationStart);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_lFrom);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_lTo);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_iIndex);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_dtmNegotiationStart);
         }
 
         public static void Serialize(WriteByteStream rbsByteStream, ConnectionNegotiationBasePacket Input)
         {
-            Serialize(rbsByteStream, ref Input.m_lFrom);
-            Serialize(rbsByteStream, ref Input.m_lTo);
-            Serialize(rbsByteStream, ref Input.m_iIndex);
-            Serialize(rbsByteStream, ref Input.m_dtmNegotiationStart);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_lFrom);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_lTo);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_iIndex);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_dtmNegotiationStart);
         }
 
         public static int DataSize(ConnectionNegotiationBasePacket Input)
         {
-            int iSize = DataSize(Input.m_lFrom);
-            iSize += DataSize(Input.m_lTo);
-            iSize += DataSize(Input.m_iIndex);
-            iSize += DataSize(Input.m_dtmNegotiationStart);
+            int iSize = ByteStream.DataSize(Input.m_lFrom);
+            iSize += ByteStream.DataSize(Input.m_lTo);
+            iSize += ByteStream.DataSize(Input.m_iIndex);
+            iSize += ByteStream.DataSize(Input.m_dtmNegotiationStart);
             return iSize;
         }
     }
@@ -102,40 +103,40 @@ namespace Networking
         {
             get
             {
-                return ByteStream.DataSize(this);
+                return NetworkingByteStream.DataSize(this);
             }
         }
 
         public override void DecodePacket(ReadByteStream rbsByteStream)
         {
-            ByteStream.Serialize(rbsByteStream, this);
+            NetworkingByteStream.Serialize(rbsByteStream, this);
         }
 
         public override void EncodePacket(WriteByteStream wbsByteStream)
         {
-            ByteStream.Serialize(wbsByteStream, this);
+            NetworkingByteStream.Serialize(wbsByteStream, this);
         }
     }
 
     //used to serialize and deserialize packet
-    public partial class ByteStream
+    public partial class NetworkingByteStream
     {
         public static void Serialize(ReadByteStream rbsByteStream, ConnectionNegotiationMessagePacket Input)
         {
             Serialize(rbsByteStream, (ConnectionNegotiationBasePacket)Input);
-            Serialize(rbsByteStream, ref Input.m_strConnectionNegotiationMessage);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_strConnectionNegotiationMessage);
         }
 
         public static void Serialize(WriteByteStream rbsByteStream, ConnectionNegotiationMessagePacket Input)
         {
             Serialize(rbsByteStream, (ConnectionNegotiationBasePacket)Input);
-            Serialize(rbsByteStream, ref Input.m_strConnectionNegotiationMessage);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_strConnectionNegotiationMessage);
         }
 
         public static int DataSize(ConnectionNegotiationMessagePacket Input)
         {
             int iSize = DataSize((ConnectionNegotiationBasePacket)Input);
-            iSize += DataSize(Input.m_strConnectionNegotiationMessage);
+            iSize += ByteStream.DataSize(Input.m_strConnectionNegotiationMessage);
 
             return iSize;
         }

@@ -3,8 +3,10 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using GameManagers;
+using Sim;
+using Utility;
 
-public class TestingSimManager
+public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFrameData : IFrameData, new()
 {
     public struct SimState
     {
@@ -48,9 +50,18 @@ public class TestingSimManager
 
     public static long s_lSimTickLenght = TimeSpan.TicksPerSecond / s_TicksPerSecond;
 
+    public TConstData m_cdaConstantData;
+
+    public TSettingsData m_sdaSettingsData;
+
+    //manages the processes that calculate new sim states 
+    public SimProcessManager<TFrameData, TConstData, TSettingsData> m_spmSimProcessManager;
+
+    public FrameDataObjectPool<TFrameData> m_fopFrameDataObjectPool = new FrameDataObjectPool<TFrameData>();
+
     public NetworkingDataBridge m_ndbNetworkingDataBridge;
 
-    public ConstIndexRandomAccessQueue<SimState> m_sstSimStateBuffer;
+    public ConstIndexRandomAccessQueue<TFrameData> m_fdaSimStateBuffer;
 
     //for each of the "threads" processing the body states what index are they currently up too
     //the object is a thread locking object that if set to null will indicate the thread should kill itself
@@ -64,9 +75,12 @@ public class TestingSimManager
     //how many inputs occured during the head state tick, this is used to check if new inputs have been createad and a new head state needs to be calculated 
     public int m_iNumberOfInputsInHeadSateCalculation = 0;
     
-    public TestingSimManager(NetworkingDataBridge ndbNetworkingDataBridge)
+    public TestingSimManager(TConstData cdaSimConstantData, TSettingsData sdaSimSettingsData, NetworkingDataBridge ndbNetworkingDataBridge,SimProcessManager<TFrameData, TConstData, TSettingsData> spmSimProcessManager)
     {
+        m_cdaConstantData = cdaSimConstantData;
+        m_sdaSettingsData = sdaSimSettingsData;
         m_ndbNetworkingDataBridge = ndbNetworkingDataBridge;
+        m_spmSimProcessManager = spmSimProcessManager;
     }
 
     public void InitalizeAsFirstPeer(int iMaxPeerCount, long lPeerID)
@@ -77,12 +91,17 @@ public class TestingSimManager
 
         DateTime dtmSimStartTime = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.GetNetworkTime(), m_iSimHeadTick);
 
-        SimState sstStartState = SetupInitalState(iMaxPeerCount, lPeerID);
 
-        m_sstSimStateBuffer = new ConstIndexRandomAccessQueue<SimState>(m_iSimHeadTick);
+
+        TFrameData fdaStartState = m_fopFrameDataObjectPool.GetFrameData();
+
+        //setup the inital state
+        SetupInitalSimState(m_iSimHeadTick, m_sdaSettingsData,lPeerID,ref fdaStartState);
+
+        m_fdaSimStateBuffer = new ConstIndexRandomAccessQueue<TFrameData>(m_iSimHeadTick);
 
         //queue first state
-        m_sstSimStateBuffer.Enqueue(sstStartState);
+        m_fdaSimStateBuffer.Enqueue(fdaStartState);
 
         // setup sorted random access queue to sort threads processing the most recent data to the front of the queue ready to be dequeued
         // and new threads processing old data to the start of the queue 
@@ -98,7 +117,7 @@ public class TestingSimManager
 
     public void InitalizeAsConnectingPeer()
     {
-        m_sstSimStateBuffer = new ConstIndexRandomAccessQueue<SimState>(0);
+        m_fdaSimStateBuffer = new ConstIndexRandomAccessQueue<TFrameData>(0);
 
         // setup sorted random access queue to sort threads processing the most recent data to the front of the queue ready to be dequeued
         // and new threads processing old data to the start of the queue 
@@ -127,9 +146,9 @@ public class TestingSimManager
 
             ReadByteStream rbsSimData = new ReadByteStream(bSimData);
 
-            SimState sstState = new SimState();
+            TFrameData fdaState = m_fopFrameDataObjectPool.GetFrameData();
 
-            SimState.DecodeSimState(rbsSimData, ref sstState);
+            fdaState.Decode(rbsSimData);
 
             //kll all threads processing data before new sim state 
 
@@ -153,10 +172,14 @@ public class TestingSimManager
             //get lock on sim state buffer
 
             //set sim state 
-            if (m_sstSimStateBuffer.Count > 0 && iSimDataTick <= m_sstSimStateBuffer.HeadIndex && iSimDataTick >= m_sstSimStateBuffer.BaseIndex)
+            if (m_fdaSimStateBuffer.Count > 0 && iSimDataTick <= m_fdaSimStateBuffer.HeadIndex && iSimDataTick >= m_fdaSimStateBuffer.BaseIndex)
             {
                 //if there is already a full sim buffer keep the existing data for a smooth update 
-                m_sstSimStateBuffer[iSimDataTick] = sstState;
+
+                //return the old state to the pool 
+                m_fopFrameDataObjectPool.ReturnFrameData(m_fdaSimStateBuffer[iSimDataTick]);
+
+                m_fdaSimStateBuffer[iSimDataTick] = fdaState;
 
                 if (m_iSimHeadTick == iSimDataTick)
                 {
@@ -166,9 +189,9 @@ public class TestingSimManager
             else
             {
                 //if the existing data is out of data reset the state buffer to only have the target state 
-                m_sstSimStateBuffer.Clear();
-                m_sstSimStateBuffer.SetNewBaseIndex(iSimDataTick);
-                m_sstSimStateBuffer.Enqueue(sstState);
+                m_fdaSimStateBuffer.Clear();
+                m_fdaSimStateBuffer.SetNewBaseIndex(iSimDataTick);
+                m_fdaSimStateBuffer.Enqueue(fdaState);
                 m_iSimHeadTick = iSimDataTick;
                 m_iNumberOfInputsInHeadSateCalculation = 0;
             }
@@ -202,13 +225,13 @@ public class TestingSimManager
                 uint iSimTick = ConvertDateTimeToTick(m_tupNewDataRequests[i].Item1);
 
                 //check if exists in sim state buffer
-                if (m_sstSimStateBuffer.IsValidIndex(iSimTick))
+                if (m_fdaSimStateBuffer.IsValidIndex(iSimTick))
                 {
-                    SimState sstState = m_sstSimStateBuffer[iSimTick];
+                    TFrameData fdaState = m_fdaSimStateBuffer[iSimTick];
 
-                    WriteByteStream wbsSimData = new WriteByteStream(SimState.SizeOfSimState(sstState));
+                    WriteByteStream wbsSimData = new WriteByteStream(fdaState.GetSize());
 
-                    SimState.EncodeSimState(wbsSimData, ref sstState);
+                    fdaState.Encode(wbsSimData);
 
                     m_ndbNetworkingDataBridge.AddDataForPeer(m_tupNewDataRequests[i].Item2, m_tupNewDataRequests[i].Item1, wbsSimData.GetData());
                 }
@@ -241,7 +264,7 @@ public class TestingSimManager
         CheckForNewData();
 
         //check if a sim state has been setup on peer
-        if (m_sstSimStateBuffer.Count != 0)
+        if (m_fdaSimStateBuffer.Count != 0)
         {
             CheckForNewDataRequests();
 
@@ -277,7 +300,12 @@ public class TestingSimManager
 
     }
 
-    public SimState SetupInitalState(int iMaxPeerCount, long lCreatingPeerID)
+    public void SetupInitalSimState(uint iStartTick, in TSettingsData sdaSettingsData, in long lInitalPeer, ref TFrameData fdaInitalFrameData)
+    {
+        m_spmSimProcessManager.SetupInitalFrameData(iStartTick, sdaSettingsData, lInitalPeer, ref fdaInitalFrameData);
+    }
+
+    public SimState SetupInitalStateDepricated(uint iTick, int iMaxPeerCount, long lCreatingPeerID)
     {
         SimState sstSimState = new SimState()
         {
@@ -291,7 +319,12 @@ public class TestingSimManager
         return sstSimState;
     }
 
-    public void CalculateTickResults(in SimState sstBaseState, ref SimState sstNewState, ref object[] inputs)
+    public void CalculateTickResult(uint iTick, in TSettingsData sdaSettingsData, TConstData cdaConstantData, in TFrameData sstBaseState, ref object[] inputs, ref TFrameData sstNewState)
+    {
+        m_spmSimProcessManager.ProcessFrameData(iTick, sdaSettingsData, cdaConstantData, sstBaseState, inputs, ref sstNewState);
+    }
+
+    public void CalculateTickResultsDepreciated(in SimState sstBaseState, ref SimState sstNewState, ref object[] inputs)
     {
         sstNewState.m_iInputVal = (int[])sstBaseState.m_iInputVal.Clone();
         sstNewState.m_iInputCount = (int[])sstBaseState.m_iInputCount.Clone();
@@ -336,6 +369,23 @@ public class TestingSimManager
                 }
             }
         }
+    }
+    
+
+    public int GetMaxPlayerCount()
+    {
+        //get lock on game state array
+
+        return m_fdaSimStateBuffer.PeakEnqueue().MaxPlayerCount;
+
+        //release lock
+    }
+
+    //TODO: Find a way to get this data to the interpolator without coppying the entire game state
+    // maybe do read only lock on game state or only clone the needed frame data segment 
+    public void GetDataInterpolationPairCopy(DateTime dtmTargetTime, ref TFrameData fdaFromFrameData, ref TFrameData fdaToFrameData)
+    {
+
     }
 
     public bool NewInputsForHead()
@@ -450,7 +500,7 @@ public class TestingSimManager
             //get lock on state buffer
 
             //get the base state
-            SimState sstBaseState = m_sstSimStateBuffer[iBaseTick];
+            TFrameData fdaBaseState = m_fdaSimStateBuffer[iBaseTick];
 
             //release lock on state buffer
 
@@ -463,7 +513,7 @@ public class TestingSimManager
             //release lock on thead tick tracker
 
             //create data for next state
-            SimState sstNextState = new SimState();
+            TFrameData fdaNextState = m_fopFrameDataObjectPool.GetFrameData();
 
             DateTime dtmCurrentTime = m_ndbNetworkingDataBridge.GetNetworkTime();
 
@@ -487,7 +537,7 @@ public class TestingSimManager
             }
 
             //caclulate new sim state at tick
-            CalculateTickResults(sstBaseState, ref sstNextState, ref objMessages);
+            CalculateTickResult(iNextTick, m_sdaSettingsData, m_cdaConstantData, fdaBaseState, ref objMessages, ref fdaNextState);
 
             //get lock on thread save data value 
             if (tsdSaveDataLock.m_bShouldThreadStayAlive)
@@ -495,11 +545,11 @@ public class TestingSimManager
                 //get lock on state buffer
 
                 //store result
-                if (m_sstSimStateBuffer.HeadIndex == iNextTick -1)
+                if (m_fdaSimStateBuffer.HeadIndex == iNextTick -1)
                 {
-                    m_sstSimStateBuffer.Enqueue(sstNextState);
+                    m_fdaSimStateBuffer.Enqueue(fdaNextState);
                 }
-                else if(iNextTick < m_sstSimStateBuffer.BaseIndex)
+                else if(iNextTick < m_fdaSimStateBuffer.BaseIndex)
                 {
                     //TODO: check if this ever gets hit??
                     //check if updating a tick for a state that is not valid anymore 
@@ -508,7 +558,7 @@ public class TestingSimManager
                 }
                 else
                 {
-                    m_sstSimStateBuffer[iNextTick] = sstNextState;
+                    m_fdaSimStateBuffer[iNextTick] = fdaNextState;
                 }
 
                 //release lock on state buffer
@@ -522,9 +572,9 @@ public class TestingSimManager
                 {
                     Debug.Log("TestingSimManager:: sending sim data to network data bridge to be synced");
 
-                    WriteByteStream wbsSimData = new WriteByteStream(SimState.SizeOfSimState(sstNextState));
+                    WriteByteStream wbsSimData = new WriteByteStream( fdaNextState.GetSize());
 
-                    SimState.EncodeSimState(wbsSimData, ref sstNextState);
+                    fdaNextState.Encode(wbsSimData);
 
                     for (int i = 0; i < tupPeerRequestsForTime.Count; i++)
                     {
@@ -589,13 +639,13 @@ public class TestingSimManager
         uint iOldestConfirmedState = iIndexOfOldestUnconfirmedState - 1;
 
         // remove all states that are not going to change and are not going to be used again in a state update 
-        while (m_sstSimStateBuffer.Count > 1 && m_sstSimStateBuffer.BaseIndex < iOldestConfirmedState)
+        while (m_fdaSimStateBuffer.Count > 1 && m_fdaSimStateBuffer.BaseIndex < iOldestConfirmedState)
         {
-            uint iDequeueTick = m_sstSimStateBuffer.BaseIndex;
+            uint iDequeueTick = m_fdaSimStateBuffer.BaseIndex;
 
-            SimState sstOldState = m_sstSimStateBuffer.Dequeue();
+            TFrameData fdaOldState = m_fdaSimStateBuffer.Dequeue();
 
-            TestingSimDataSyncVerifier.VerifyData(iDequeueTick,ref sstOldState, 0);
+            TestingSimDataSyncVerifier<TFrameData>.VerifyData(iDequeueTick,ref fdaOldState, 0,s_TicksPerSecond * 2);
         }
     }
 

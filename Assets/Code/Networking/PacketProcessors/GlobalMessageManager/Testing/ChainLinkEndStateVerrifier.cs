@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using UnityEngine;
+using Utility;
 
 namespace Networking
 {
@@ -37,10 +38,10 @@ namespace Networking
             long lChainLinkHash = 0;
 
             //create byte stream big enough for state to write to
-            WriteByteStream wbsStream = new WriteByteStream(ByteStream.DataSize(chlLink.m_gmsState));
+            WriteByteStream wbsStream = new WriteByteStream(NetworkingByteStream.DataSize(chlLink.m_gmsState));
 
             //serialize state
-            ByteStream.Serialize(wbsStream, ref chlLink.m_gmsState);
+            NetworkingByteStream.Serialize(wbsStream, ref chlLink.m_gmsState);
 
             //generate hash
             //compute hash

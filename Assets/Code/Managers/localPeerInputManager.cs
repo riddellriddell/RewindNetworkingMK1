@@ -2,6 +2,7 @@
 using Sim;
 using UnityEngine;
 using System;
+using Utility;
 
 //this class tracks inputs from the local peer
 namespace GameManagers

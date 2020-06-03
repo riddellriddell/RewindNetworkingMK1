@@ -34,15 +34,21 @@ namespace GameManagers
 
         //the state of the game
         public ActiveGameState State { get; private set; } = ActiveGameState.GettingGateway;
-               
+
+        public SimProcessManager<FrameData, ConstData, SettingsData> m_spmSimProcessManager;
+
         //the sim manager that handles getting data from the data bridge and passing it to the sim to be processed 
-        public TestingSimManager m_tsmSimManager;
+        public TestingSimManager<FrameData, ConstData,SettingsData> m_tsmSimManager;
 
         //data structure for passing all data from networking to sim 
         public NetworkingDataBridge m_ndbDataBridge;
 
         //the web interface 
         public WebInterface m_winWebInterface = null;
+
+        public SettingsData m_sdaSimSettingsData;
+
+        public ConstData m_cdaConstData;
 
         //the peer to peer network
         public NetworkConnection m_ncnNetworkConnection;
@@ -83,10 +89,12 @@ namespace GameManagers
         //the amount of time ahead of the current network time to schedule a fetch for the game state 
         protected TimeSpan m_fSimStateLeadTime = TimeSpan.FromSeconds(0.1f);
 
-        public ActiveGameManager(WebInterface winWebInterface, IPeerTransmitterFactory ptfTransmitterFactory)
+        public ActiveGameManager(SettingsData sdaSimSettingsData, ConstData cdaConstantSimData, WebInterface winWebInterface, IPeerTransmitterFactory ptfTransmitterFactory)
         {
             m_ptfTransmitterFactory = ptfTransmitterFactory;
             m_winWebInterface = winWebInterface;
+            m_sdaSimSettingsData = sdaSimSettingsData;
+            m_cdaConstData = cdaConstantSimData;
 
             //start the connection process
             EnterGettingGateway();
@@ -568,7 +576,11 @@ namespace GameManagers
 
             m_ndbDataBridge = new NetworkingDataBridge();
 
-            m_tsmSimManager = new TestingSimManager(m_ndbDataBridge);
+            m_spmSimProcessManager = new SimProcessManager<FrameData, ConstData, SettingsData>();
+
+            //m_spmSimProcessManager.AddSimSetupProcess();
+
+            m_tsmSimManager = new TestingSimManager<FrameData,ConstData,SettingsData>(m_cdaConstData, m_sdaSimSettingsData, m_ndbDataBridge, m_spmSimProcessManager);
 
             m_ngpGlobalMessagingProcessor = new NetworkGlobalMessengerProcessor(m_ndbDataBridge);
             m_ncnNetworkConnection.AddPacketProcessor(m_ngpGlobalMessagingProcessor);
@@ -578,6 +590,7 @@ namespace GameManagers
 
             m_lpiLocalPeerInputManager = new LocalPeerInputManager(m_ndbDataBridge, m_ngpGlobalMessagingProcessor);
             m_pitLocalPeerInputTester = new LoclaPeerInputManagerTester(m_lpiLocalPeerInputManager);
+
 
         }
     }

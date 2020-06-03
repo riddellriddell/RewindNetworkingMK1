@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Utility;
 
 namespace Networking
 {
@@ -287,39 +288,39 @@ namespace Networking
         }
     }
 
-    public partial class ByteStream
+    public partial class NetworkingByteStream
     {
         //read and write one vote
         public static void Serialize(ReadByteStream rbsByteStream, ref GlobalMessageChannelState.ChannelVote Output)
         {
             byte bVoteType = 0;
 
-            Serialize(rbsByteStream, ref bVoteType);
+            ByteStream.Serialize(rbsByteStream, ref bVoteType);
 
             Output.m_vtpVoteType = (GlobalMessageChannelState.ChannelVote.VoteType)bVoteType;
 
-            Serialize(rbsByteStream, ref Output.m_dtmVoteTime);
+            ByteStream.Serialize(rbsByteStream, ref Output.m_dtmVoteTime);
 
-            Serialize(rbsByteStream, ref Output.m_lPeerID);
+            ByteStream.Serialize(rbsByteStream, ref Output.m_lPeerID);
         }
 
         public static void Serialize(WriteByteStream wbsByteStream, ref GlobalMessageChannelState.ChannelVote Input)
         {
             byte bVoteType = (byte)Input.m_vtpVoteType;
 
-            Serialize(wbsByteStream, ref bVoteType);
+            ByteStream.Serialize(wbsByteStream, ref bVoteType);
 
-            Serialize(wbsByteStream, ref Input.m_dtmVoteTime);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_dtmVoteTime);
 
-            Serialize(wbsByteStream, ref Input.m_lPeerID);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_lPeerID);
         }
 
         public static int DataSize(GlobalMessageChannelState.ChannelVote Input)
         {
             int iSize = 0;
-            iSize += DataSize(Input.m_dtmVoteTime);
-            iSize += DataSize(Input.m_lPeerID);
-            iSize += DataSize((byte)Input.m_vtpVoteType);
+            iSize += ByteStream.DataSize(Input.m_dtmVoteTime);
+            iSize += ByteStream.DataSize(Input.m_lPeerID);
+            iSize += ByteStream.DataSize((byte)Input.m_vtpVoteType);
             return iSize;
         }
 
@@ -329,7 +330,7 @@ namespace Networking
             //player count
             int iPlayerCount = 0;
 
-            Serialize(rbsByteStream, ref iPlayerCount);
+            ByteStream.Serialize(rbsByteStream, ref iPlayerCount);
 
             if(Output == null)
             {
@@ -349,24 +350,24 @@ namespace Networking
             }
 
             //assigned peer
-            Serialize(rbsByteStream, ref Output.m_lChannelPeer);
-            
+            ByteStream.Serialize(rbsByteStream, ref Output.m_lChannelPeer);
+
             //time of last vote start
-            Serialize(rbsByteStream, ref Output.m_dtmVoteTime);
+            ByteStream.Serialize(rbsByteStream, ref Output.m_dtmVoteTime);
 
             //state
             byte bState = 0;
-            Serialize(rbsByteStream, ref bState);
+            ByteStream.Serialize(rbsByteStream, ref bState);
             Output.m_staState = (GlobalMessageChannelState.State)bState;
 
             //hash of last node processed
-            Serialize(rbsByteStream, ref Output.m_lHashOfLastNodeProcessed);
+            ByteStream.Serialize(rbsByteStream, ref Output.m_lHashOfLastNodeProcessed);
 
             //last message index processed 
-            Serialize(rbsByteStream, ref Output.m_iLastMessageIndexProcessed);
+            ByteStream.Serialize(rbsByteStream, ref Output.m_iLastMessageIndexProcessed);
 
             //best chain link hash 
-            Serialize(rbsByteStream, ref Output.m_lChainLinkHeadHash);
+            ByteStream.Serialize(rbsByteStream, ref Output.m_lChainLinkHeadHash);
             
             //the sorting value of the last valid message processed 
             Serialize(rbsByteStream, ref Output.m_msvLastSortValue);
@@ -377,7 +378,7 @@ namespace Networking
             //player count
             int iPlayerCount = Input.m_chvVotes.Count;
 
-            Serialize(wbsByteStream, ref iPlayerCount);
+            ByteStream.Serialize(wbsByteStream, ref iPlayerCount);
 
             //votes
             for (int i = 0; i < iPlayerCount; i++)
@@ -388,23 +389,23 @@ namespace Networking
             }
 
             //assigned peer
-            Serialize(wbsByteStream, ref Input.m_lChannelPeer);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_lChannelPeer);
 
             //time of last vote
-            Serialize(wbsByteStream, ref Input.m_dtmVoteTime);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_dtmVoteTime);
 
             //state
             byte bState = (byte)Input.m_staState;
-            Serialize(wbsByteStream, ref bState);
+            ByteStream.Serialize(wbsByteStream, ref bState);
 
             //hash of last node processed 
-            Serialize(wbsByteStream, ref Input.m_lHashOfLastNodeProcessed);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_lHashOfLastNodeProcessed);
 
             //last message index processed 
-            Serialize(wbsByteStream, ref Input.m_iLastMessageIndexProcessed);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_iLastMessageIndexProcessed);
 
             //best chain link hash
-            Serialize(wbsByteStream, ref Input.m_lChainLinkHeadHash);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_lChainLinkHeadHash);
 
             //the sorting value of the last valid message processed 
             Serialize(wbsByteStream, ref Input.m_msvLastSortValue);
@@ -413,20 +414,20 @@ namespace Networking
         public static int DataSize(GlobalMessageChannelState Input)
         {
             int iSize = 0;
-            iSize += DataSize(Input.m_chvVotes.Count);
+            iSize += ByteStream.DataSize(Input.m_chvVotes.Count);
 
             for(int i = 0; i < Input.m_chvVotes.Count; i++)
             {
                 iSize += DataSize(Input.m_chvVotes[i]);
             }
 
-            iSize += DataSize(Input.m_lChainLinkHeadHash);
-            iSize += DataSize(Input.m_dtmVoteTime);
-            iSize += DataSize(Input.m_iLastMessageIndexProcessed);
-            iSize += DataSize(Input.m_lChannelPeer);
-            iSize += DataSize(Input.m_lHashOfLastNodeProcessed);
+            iSize += ByteStream.DataSize(Input.m_lChainLinkHeadHash);
+            iSize += ByteStream.DataSize(Input.m_dtmVoteTime);
+            iSize += ByteStream.DataSize(Input.m_iLastMessageIndexProcessed);
+            iSize += ByteStream.DataSize(Input.m_lChannelPeer);
+            iSize += ByteStream.DataSize(Input.m_lHashOfLastNodeProcessed);
             iSize += DataSize(Input.m_msvLastSortValue);
-            iSize += DataSize((byte)Input.m_staState);
+            iSize += ByteStream.DataSize((byte)Input.m_staState);
 
             return iSize;
         }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Utility;
 
 namespace Networking
 {
@@ -640,7 +641,7 @@ namespace Networking
 
     }
 
-    public partial class ByteStream
+    public partial class NetworkingByteStream
     {
         public static void Serialize(ReadByteStream rbsByteStream, ref GlobalMessagingState Output)
         {
@@ -651,7 +652,7 @@ namespace Networking
             }
 
             int iPlayerCount = 0;
-            Serialize(rbsByteStream, ref iPlayerCount);
+            ByteStream.Serialize(rbsByteStream, ref iPlayerCount);
 
             Output.m_gmcMessageChannels = new List<GlobalMessageChannelState>(iPlayerCount);
 
@@ -670,7 +671,7 @@ namespace Networking
         public static void Serialize(WriteByteStream wbsByteStream, ref GlobalMessagingState Input)
         {
             int iPlayerCount = Input.m_gmcMessageChannels.Count;
-            Serialize(wbsByteStream, ref iPlayerCount);
+            ByteStream.Serialize(wbsByteStream, ref iPlayerCount);
 
             for (int i = 0; i < iPlayerCount; i++)
             {
@@ -685,7 +686,7 @@ namespace Networking
         public static int DataSize(GlobalMessagingState Input)
         {
             int iSize = 0;
-            iSize += DataSize(Input.m_gmcMessageChannels.Count);
+            iSize += ByteStream.DataSize(Input.m_gmcMessageChannels.Count);
             
             for(int i = 0; i < Input.m_gmcMessageChannels.Count; i++)
             {

@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Utility;
 
 namespace Networking
 {
@@ -34,7 +35,7 @@ namespace Networking
         {
             get
             {
-                return ByteStream.DataSize(this);
+                return NetworkingByteStream.DataSize(this);
             }
         }
 
@@ -46,12 +47,12 @@ namespace Networking
 
         public override void DecodePacket(ReadByteStream rbsByteStream)
         {
-            ByteStream.Serialize(rbsByteStream, this);
+            NetworkingByteStream.Serialize(rbsByteStream, this);
         }
 
         public override void EncodePacket(WriteByteStream wbsByteStream)
         {
-            ByteStream.Serialize(wbsByteStream, this);
+            NetworkingByteStream.Serialize(wbsByteStream, this);
         }
 
         public override string ToString()
@@ -60,24 +61,24 @@ namespace Networking
         }
     }
 
-    public partial class ByteStream
+    public partial class NetworkingByteStream
     {
         public static void Serialize(ReadByteStream rbsByteStream, LargePacket Input)
         {
-            Serialize(rbsByteStream, ref Input.m_bIsLastPacketInSequence);
-            Serialize(rbsByteStream, ref Input.m_bPacketSegment);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_bIsLastPacketInSequence);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_bPacketSegment);
         }
 
         public static void Serialize(WriteByteStream wbsByteStream, LargePacket Input)
         {
-            Serialize(wbsByteStream, ref Input.m_bIsLastPacketInSequence);
-            Serialize(wbsByteStream, ref Input.m_bPacketSegment);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_bIsLastPacketInSequence);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_bPacketSegment);
         }
 
         public static int DataSize(LargePacket Input)
         {
-            int iSize = DataSize(Input.m_bIsLastPacketInSequence);
-            iSize += DataSize(Input.m_bPacketSegment);
+            int iSize = ByteStream.DataSize(Input.m_bIsLastPacketInSequence);
+            iSize += ByteStream.DataSize(Input.m_bPacketSegment);
 
             return iSize;
         }

@@ -1,188 +1,283 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using FixedPointy;
-using System.Security.Cryptography;
+﻿using FixedPointy;
+using System;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Security.Cryptography;
+using Utility;
 
 namespace Sim
 {
-    public class FrameData
+    public class FrameData : IFrameData
     {
-        public enum State : byte
-        {
-            Standing,
-            Moving,
-            FastAttack,
-            SlowAttack,
-            Blocking,
-            Stunned,
-            Dead
-        }
+        #region PeerAssignment
 
-        [FlagsAttribute]
-        public enum Direction : byte
-        {
-            None = 0,
-            Up = 1,
-            Down = 2,
-            Left = 4,
-            Right = 8
-        }
-               
-        public int PlayerCount
+        public int MaxPlayerCount
         {
             get
             {
-                return m_sPlayerHealths.Count;
+                return m_lPeersAssignedToSlot.Length;
             }
         }
 
-        //the frame this data represents 
-        public int m_iTickNumber;
-
-        //list of all the player healths
-        [FrameDataInterpilationTypeAttribute(typeof(int))]
-        public List<short> m_sPlayerHealths;
-
-        //list of all the player positions 
-        [FrameDataInterpilationTypeAttribute(typeof(Vector2))]
-        public List<FixVec2> m_v2iPosition;
-
-        //list of all the player directions 
-        [FrameDataInterpilationTypeAttribute(typeof(byte), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
-        public List<byte> m_bFaceDirection;
-
-        //list of all the player states
-        [FrameDataInterpilationTypeAttribute(typeof(byte), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
-        public List<byte> m_bPlayerState;
-
-        //list of all action cooldowns
         [FrameDataInterpilationTypeAttribute(typeof(float), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
-        public List<short> m_sStateEventTick;
+        public long[] m_lPeersAssignedToSlot;       
 
-        //list of all the player scores 
+        #endregion
+
+        #region Input
         [FrameDataInterpilationTypeAttribute(typeof(int), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
-        public List<byte> m_bScore;
+        public byte[] m_bInput;
 
-        public FrameData(int iPlayerNumber)
+        #endregion
+
+        #region Health
+
+        //list of all the ship Healths 
+        [FrameDataInterpilationTypeAttribute(typeof(byte))]
+        public byte[] m_bShipHealth;
+
+        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        public Fix[] m_fixShipHealDelayTimeOut;
+
+        [FrameDataInterpilationTypeAttribute(typeof(byte), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
+        public byte[] m_bShipLastDamagedBy;
+
+        #endregion
+
+        #region ShipMovement 
+        //list of all the player positions 
+        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        public Fix[] m_fixShipPosX;
+
+        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        public Fix[] m_fixShipPosY;
+
+        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        public Fix[] m_fixShipVelocityX;
+
+        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        public Fix[] m_fixShipVelocityY;
+
+        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        public Fix[] m_fixShipBaseAngle;
+
+        #endregion
+
+
+
+        public FrameData()
         {
-            m_iTickNumber = 0;
-
-            //initalise all list lengths 
-            m_sPlayerHealths = new List<short>(iPlayerNumber);
-            m_v2iPosition = new List<FixVec2>(iPlayerNumber);
-            m_bFaceDirection = new List<byte>(iPlayerNumber);
-            m_bPlayerState = new List<byte>(iPlayerNumber);
-            m_sStateEventTick = new List<short>(iPlayerNumber);
-            m_bScore = new List<byte>(iPlayerNumber);
-
-            //initalise values 
-            ResetData(iPlayerNumber);
 
         }
 
-        public FrameData(FrameData source)
+        public bool ResetToState(IFrameData fdaFrameDataToResetTo)
         {
-            m_iTickNumber = source.m_iTickNumber;
+            FrameData fdaTargetData = fdaFrameDataToResetTo as FrameData;
 
-            //coppy values from source 
-            m_sPlayerHealths = new List<short>(source.m_sPlayerHealths);
-            m_v2iPosition = new List<FixVec2>(source.m_v2iPosition);
-            m_bFaceDirection = new List<byte>(source.m_bFaceDirection);
-            m_bPlayerState = new List<byte>(source.m_bPlayerState);
-            m_sStateEventTick = new List<short>(source.m_sStateEventTick);
-            m_bScore = new List<byte>(source.m_bScore);
-        }
+            #region PeerAssignment
 
-        public void ResetData(int iPlayerNumber = 0)
-        {
-            m_iTickNumber = 0;
-
-            if (iPlayerNumber == 0)
+            if (m_lPeersAssignedToSlot == null || m_lPeersAssignedToSlot.Length != fdaTargetData.m_lPeersAssignedToSlot.Length)
             {
-                iPlayerNumber = m_sPlayerHealths.Count;
+                m_lPeersAssignedToSlot = fdaTargetData.m_lPeersAssignedToSlot.Clone() as long[];
+            }
+            else
+            {
+                Array.Copy(fdaTargetData.m_lPeersAssignedToSlot, m_lPeersAssignedToSlot, fdaTargetData.m_lPeersAssignedToSlot.Length);
             }
 
-            //clear existing values
-            m_sPlayerHealths.Clear();
-            m_v2iPosition.Clear();
-            m_bFaceDirection.Clear();
-            m_bPlayerState.Clear();
-            m_sStateEventTick.Clear();
-            m_bScore.Clear();
+            #endregion
 
-            //initalise values 
-            for (int i = 0; i < iPlayerNumber; i++)
+            #region ShipHealth
+
+            if (m_bShipHealth == null || m_bShipHealth.Length != fdaTargetData.m_bShipHealth.Length)
             {
-                m_sPlayerHealths.Add(0);
-                m_v2iPosition.Add(FixVec2.Zero);
-                m_bFaceDirection.Add(0);
-                m_bPlayerState.Add(0);
-                m_sStateEventTick.Add(0);
-                m_bScore.Add(0);
+                m_bShipHealth = fdaTargetData.m_bShipHealth.Clone() as byte[];
+                m_fixShipHealDelayTimeOut = fdaTargetData.m_fixShipHealDelayTimeOut.Clone() as Fix[];
+                m_bShipLastDamagedBy = fdaTargetData.m_bShipLastDamagedBy.Clone() as byte[];
             }
+            else
+            {
+                Array.Copy(fdaTargetData.m_bShipHealth, m_bShipHealth, fdaTargetData.m_bShipHealth.Length);
+                Array.Copy(fdaTargetData.m_fixShipHealDelayTimeOut, m_fixShipHealDelayTimeOut, fdaTargetData.m_fixShipHealDelayTimeOut.Length);
+                Array.Copy(fdaTargetData.m_bShipLastDamagedBy, m_bShipLastDamagedBy, fdaTargetData.m_bShipLastDamagedBy.Length);
+            }
+
+            #endregion
+
+            #region ShipMovement 
+
+            if (m_fixShipPosX == null || m_fixShipPosX.Length != fdaTargetData.m_fixShipPosX.Length)
+            {
+                m_fixShipPosX = fdaTargetData.m_fixShipPosX.Clone() as Fix[];
+                m_fixShipPosY = fdaTargetData.m_fixShipPosY.Clone() as Fix[];
+                m_fixShipVelocityX = fdaTargetData.m_fixShipVelocityX.Clone() as Fix[];
+                m_fixShipVelocityY = fdaTargetData.m_fixShipVelocityY.Clone() as Fix[];
+                m_fixShipBaseAngle = fdaTargetData.m_fixShipBaseAngle.Clone() as Fix[];
+            }
+            else
+            {
+                Array.Copy(fdaTargetData.m_fixShipPosX, m_fixShipPosX, fdaTargetData.m_fixShipPosX.Length);
+                Array.Copy(fdaTargetData.m_fixShipPosY, m_fixShipPosY, fdaTargetData.m_fixShipPosY.Length);
+                Array.Copy(fdaTargetData.m_fixShipVelocityX, m_fixShipVelocityX, fdaTargetData.m_fixShipVelocityX.Length);
+                Array.Copy(fdaTargetData.m_fixShipVelocityY, m_fixShipVelocityY, fdaTargetData.m_fixShipVelocityY.Length);
+                Array.Copy(fdaTargetData.m_fixShipBaseAngle, m_fixShipBaseAngle, fdaTargetData.m_fixShipBaseAngle.Length);
+            }
+
+            #endregion
+
+
+            return true;
         }
 
+        public bool Encode(WriteByteStream wbsByteStream)
+        {
+            bool bWasASuccess = true;
+            
+            #region PeerAssignment
+
+            bWasASuccess &= ByteStream.Serialize(wbsByteStream, ref m_lPeersAssignedToSlot);
+            
+            #endregion
+
+            #region Input
+
+            bWasASuccess &= ByteStream.Serialize(wbsByteStream, ref m_bInput, m_lPeersAssignedToSlot.Length);
+
+            #endregion
+
+            #region Health
+
+            //list of all the ship Healths 
+            bWasASuccess &= ByteStream.Serialize(wbsByteStream, ref m_bShipHealth, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixShipHealDelayTimeOut, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= ByteStream.Serialize(wbsByteStream, ref m_bShipLastDamagedBy, m_lPeersAssignedToSlot.Length);
+
+            #endregion
+
+            #region ShipMovement 
+
+            bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixShipPosX, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixShipPosY, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixShipVelocityX, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixShipVelocityY, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixShipBaseAngle, m_lPeersAssignedToSlot.Length);
+
+            #endregion
+
+            return bWasASuccess;
+        }
+
+        public bool Decode(ReadByteStream rbsReadByteStream)
+        {
+
+            bool bWasASuccess = true;
+
+            #region PeerAssignment
+
+            bWasASuccess &= ByteStream.Serialize(rbsReadByteStream, ref m_lPeersAssignedToSlot);
+
+            #endregion
+
+            #region Input
+
+            bWasASuccess &= ByteStream.Serialize(rbsReadByteStream, ref m_bInput, m_lPeersAssignedToSlot.Length);
+
+            #endregion
+
+            #region Health
+
+            //list of all the ship Healths 
+            bWasASuccess &= ByteStream.Serialize(rbsReadByteStream, ref m_bShipHealth, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= FixSerialization.Serialize(rbsReadByteStream, ref m_fixShipHealDelayTimeOut, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= ByteStream.Serialize(rbsReadByteStream, ref m_bShipLastDamagedBy, m_lPeersAssignedToSlot.Length);
+
+            #endregion
+
+            #region ShipMovement 
+
+            bWasASuccess &= FixSerialization.Serialize(rbsReadByteStream, ref m_fixShipPosX, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= FixSerialization.Serialize(rbsReadByteStream, ref m_fixShipPosY, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= FixSerialization.Serialize(rbsReadByteStream, ref m_fixShipVelocityX, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= FixSerialization.Serialize(rbsReadByteStream, ref m_fixShipVelocityY, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= FixSerialization.Serialize(rbsReadByteStream, ref m_fixShipBaseAngle, m_lPeersAssignedToSlot.Length);
+
+            #endregion
+
+            return bWasASuccess;
+        }
+
+        public int GetSize()
+        {
+            int iSize = 0;
+
+            #region PeerAssignment
+
+            iSize += ByteStream.DataSize( m_lPeersAssignedToSlot);
+
+            #endregion
+
+            #region Input
+
+            iSize += ByteStream.DataSize(m_bInput, m_lPeersAssignedToSlot.Length);
+
+            #endregion
+
+            #region Health
+
+            //list of all the ship Healths 
+            iSize += ByteStream.DataSize(m_bShipHealth, m_lPeersAssignedToSlot.Length);
+
+            iSize += FixSerialization.DataSize(m_fixShipHealDelayTimeOut, m_lPeersAssignedToSlot.Length);
+
+            iSize += ByteStream.DataSize(m_bShipLastDamagedBy, m_lPeersAssignedToSlot.Length);
+
+            #endregion
+
+            #region ShipMovement 
+
+            iSize += FixSerialization.DataSize(m_fixShipPosX, m_lPeersAssignedToSlot.Length);
+
+            iSize += FixSerialization.DataSize(m_fixShipPosY, m_lPeersAssignedToSlot.Length);
+
+            iSize += FixSerialization.DataSize(m_fixShipVelocityX, m_lPeersAssignedToSlot.Length);
+
+            iSize += FixSerialization.DataSize(m_fixShipVelocityY, m_lPeersAssignedToSlot.Length);
+
+            iSize += FixSerialization.DataSize(m_fixShipBaseAngle, m_lPeersAssignedToSlot.Length);
+
+            #endregion
+
+            return iSize;
+        }
+               
         //generate a hash of all the values 
-        public void GetHashCode(byte[] bOutput)
+        public void GetHash(byte[] bOutput)
         {
-            //size of memory stream needed 
-            int iMemoryStreamSize = sizeof(int);
-            iMemoryStreamSize += sizeof(short) * m_sPlayerHealths.Count;
-            iMemoryStreamSize += (sizeof(int) * 2) * m_v2iPosition.Count;
-            iMemoryStreamSize += m_bFaceDirection.Count;
-            iMemoryStreamSize += m_bPlayerState.Count;
-            iMemoryStreamSize += sizeof(short) * m_sStateEventTick.Count;
-            iMemoryStreamSize += m_bScore.Count;
+            WriteByteStream wbsWriteStream = new WriteByteStream(GetSize());
 
-            MemoryStream mstMemoryStream = new MemoryStream(iMemoryStreamSize);
-            BinaryFormatter bfmBinaryFormatter = new BinaryFormatter();
-
-
-            bfmBinaryFormatter.Serialize(mstMemoryStream, m_iTickNumber);
-
-            for (int i = 0; i < m_sPlayerHealths.Count; i++)
-            {
-                bfmBinaryFormatter.Serialize(mstMemoryStream, m_sPlayerHealths[i]);
-            }
-
-            for (int i = 0; i < m_v2iPosition.Count; i++)
-            {
-                bfmBinaryFormatter.Serialize(mstMemoryStream, m_v2iPosition[i].X.Raw);
-                bfmBinaryFormatter.Serialize(mstMemoryStream, m_v2iPosition[i].Y.Raw);
-            }
-
-            for (int i = 0; i < m_bFaceDirection.Count; i++)
-            {
-                bfmBinaryFormatter.Serialize(mstMemoryStream, m_bFaceDirection[i]);
-            }
-
-            for (int i = 0; i < m_bPlayerState.Count; i++)
-            {
-                bfmBinaryFormatter.Serialize(mstMemoryStream, m_bPlayerState[i]);
-            }
-
-            for (int i = 0; i < m_sStateEventTick.Count; i++)
-            {
-                bfmBinaryFormatter.Serialize(mstMemoryStream, m_sStateEventTick[i]);
-            }
-
-            for (int i = 0; i < m_bScore.Count; i++)
-            {
-                bfmBinaryFormatter.Serialize(mstMemoryStream, m_bScore[i]);
-            }
+            Encode(wbsWriteStream);
 
             MD5 md5 = MD5.Create();
 
-            byte[] bHash = md5.ComputeHash(mstMemoryStream.ToArray());
+            byte[] bHash = md5.ComputeHash(wbsWriteStream.GetData());
 
             for (int i = 0; i < bOutput.Length; i++)
             {
                 bOutput[i] = bHash[i % bHash.Length];
             }
         }
+
     }
 }

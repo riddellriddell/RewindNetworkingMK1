@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Utility;
 
 namespace Networking
 {
@@ -28,36 +29,36 @@ namespace Networking
         {
             get
             {
-                return ByteStream.DataSize(this);
+                return NetworkingByteStream.DataSize(this);
             }
         }
 
         public override void DecodePacket(ReadByteStream pkwPacketWrapper)
         {
-            ByteStream.Serialize(pkwPacketWrapper, this);
+            NetworkingByteStream.Serialize(pkwPacketWrapper, this);
         }
 
         public override void EncodePacket(WriteByteStream pkwPacketWrapper)
         {
-            ByteStream.Serialize(pkwPacketWrapper, this);
+            NetworkingByteStream.Serialize(pkwPacketWrapper, this);
         }
     }
 
-    public partial class ByteStream
+    public partial class NetworkingByteStream
     {
         public static void Serialize(ReadByteStream rbsByteStream, NetworkLayoutPacket Input)
         {
-            ByteStream.Serialize(rbsByteStream, ref Input.m_nlaNetworkLayout);
+            NetworkingByteStream.Serialize(rbsByteStream, ref Input.m_nlaNetworkLayout);
         }
 
         public static void Serialize(WriteByteStream wbsByteStream, NetworkLayoutPacket Input)
         {
-            ByteStream.Serialize(wbsByteStream, ref Input.m_nlaNetworkLayout);
+            NetworkingByteStream.Serialize(wbsByteStream, ref Input.m_nlaNetworkLayout);
         }
 
         public static int DataSize(NetworkLayoutPacket Input)
         {
-            return ByteStream.DataSize(ref Input.m_nlaNetworkLayout);
+            return NetworkingByteStream.DataSize(ref Input.m_nlaNetworkLayout);
         }
     }
 }

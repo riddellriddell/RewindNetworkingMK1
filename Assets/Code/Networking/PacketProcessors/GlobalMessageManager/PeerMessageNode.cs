@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using UnityEngine;
+using Utility;
 
 namespace Networking
 {
@@ -325,7 +326,7 @@ namespace Networking
         Tuple<byte,long>[] ActionPerPeer { get;}
     }
 
-    public partial class ByteStream
+    public partial class NetworkingByteStream
     {
         public static int DataSize(IPeerMessageNode pmnMessage)
         {

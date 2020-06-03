@@ -18,7 +18,7 @@ using UnityEngine;
 //Generated Code do not edit!!!!
 namespace Sim
 {
-	public partial class FrameDataInterpolator
+	public class FrameDataInterpolator : FrameDataInterpolatorBase<InterpolationErrorCorrectionSettings, FrameData>
 	{	
 
 		public InterpolatedFrameDataGen CalculateErrorOffsets(InterpolatedFrameDataGen ifdOldFrameData, InterpolatedFrameDataGen ifdNewFrameData)
@@ -63,11 +63,17 @@ namespace Sim
 	        {			
 	
 				//check if it is an array 
-				if( typeof(IEnumerable ).IsAssignableFrom(fldField.FieldType) )
+				if( typeof(IEnumerable).IsAssignableFrom(fldField.FieldType) )
 				{
+					string strNumberValue = "Count";
+
+					if(fldField.FieldType.IsArray)
+                    {
+						strNumberValue = "Length";
+                    }
 														//check which type of interpolation should be used 
 #>
-			for(int i = 0 ; i < ifdOldFrameData.<#=fldField.Name#>.Count; i++)
+			for(int i = 0 ; i < ifdOldFrameData.<#=fldField.Name + "." + strNumberValue #>; i++)
 			{
 				ifdOldFrameData.<#= fldField.Name #>ErrorOffset[i] += (<#=typErrorType.ToString()#>) (ifdNewFrameData.<#=fldField.Name#>[i] - ifdOldFrameData.<#=fldField.Name#>[i]);
 			}
@@ -116,18 +122,25 @@ namespace Sim
 				//check if it is an array 
 				if( typeof(IEnumerable ).IsAssignableFrom(fldField.FieldType) )
 				{
+					string strNumberValue = "Count";
+
+					if(fldField.FieldType.IsArray)
+                    {
+						strNumberValue = "Length";
+                    }
+
 														//check which type of interpolation should be used 
 #>
-			for(int i = 0 ; i < ifdFrameData.<#=fldField.Name#>.Count; i++)
+			for(int i = 0 ; i < ifdFrameData.<#=fldField.Name + "." + strNumberValue #>; i++)
 			{
-				ifdFrameData.<#= fldField.Name #>ErrorAdjusted[i] = ifdFrameData.<#= fldField.Name #>[i] -  (<#=fiaAttribute.m_tType.ToString()#>) (ifdFrameData.<#= fldField.Name #>ErrorOffset[i]);
+				ifdFrameData.<#= fldField.Name #>ErrorAdjusted[i] = (<#=fiaAttribute.m_tType.ToString()#>)(ifdFrameData.<#= fldField.Name #>[i] - ifdFrameData.<#= fldField.Name #>ErrorOffset[i]);
 			}
 
 <#				}
 				else
                 {	
 #>									
-			ifdFrameData.<#= fldField.Name #>ErrorAdjusted = ifdFrameData.<#= fldField.Name #> -  (<#=fiaAttribute.m_tType.ToString()#>) (ifdFrameData.<#= fldField.Name #>ErrorOffset );
+			ifdFrameData.<#= fldField.Name #>ErrorAdjusted = (<#=fiaAttribute.m_tType.ToString()#>)(ifdFrameData.<#= fldField.Name #> - ifdFrameData.<#= fldField.Name #>ErrorOffset );
 
 <#								
 				}	
@@ -176,9 +189,16 @@ namespace Sim
 				//check if it is an array 
 				if( typeof(IEnumerable ).IsAssignableFrom(fldField.FieldType) )
 				{
+					string strNumberValue = "Count";
+
+					if(fldField.FieldType.IsArray)
+                    {
+						strNumberValue = "Length";
+                    }
+
 														//check which type of interpolation should be used 
 #>
-			for(int i = 0 ; i < ifdFrameData.<#=fldField.Name#>.Count; i++)
+			for(int i = 0 ; i < ifdFrameData.<#=fldField.Name + "." + strNumberValue#>; i++)
 			{
 				ifdFrameData.<#= fldField.Name #>ErrorOffset[i] *= CalculateErrorScalingAmount(<#= (strMagnnitude == null) ? "0" :  "ifdFrameData." + fldField.Name + "ErrorOffset[i]" + strMagnnitude #>,fDeltaTime,ecsErrorCorrectionSetting.<#= fldField.Name#>ErrorCorrectionSetting );
 			}
@@ -192,126 +212,76 @@ namespace Sim
 <#								
 				}	
 	        }
-	    }	
-	}
+	    }
+    }	
 #>
 			return ifdFrameData;
 		}
 
-		public InterpolatedFrameDataGen CreateInterpolatedFrameData(GameSimulation gsmSim, float fBaseTime, List<float> fTargetInterpTimeOffsetForPlayer = null,InterpolatedFrameDataGen ifdOutput = null)
+		public void CreateInterpolatedFrameData(in FrameData fdaFromFrame,in FrameData fdaToFrame,float fInterpolation, ref InterpolatedFrameDataGen ifdInterpolatedFrameData)
         {
-            //check input data
-            if(ifdOutput == null || ifdOutput.PlayerCount != gsmSim.m_frmDenseFrameQueue[gsmSim.m_iDenseQueueHead].PlayerCount)
-            {
-                ifdOutput = new InterpolatedFrameDataGen(gsmSim.m_frmDenseFrameQueue[gsmSim.m_iDenseQueueHead].PlayerCount);
-            }
-
-			//interpolate all the non list frame data (time remaining, and other world level variables 
-
-			//get the last tick for target time 
-			int iInterpTick = GetLastTick(gsmSim,fBaseTime);
-
-			//get the interpolation frame variables 
-			FrameData[] fdaInterpFramePair = GetInterpolationPair(gsmSim,iInterpTick);
-
-			//get the interpolation percent
-			float fInterp = GetInterplationBetweenTicks(gsmSim,fBaseTime);
-
-
-			//loop throuhg all the interpolation variables
+			//loop throuhg all the non time offset interpolation variables
+			//that are not in arrays 
 <#	
-		foreach(FieldInfo fldField in fldFieldInfo)
+	foreach(FieldInfo fldField in fldFieldInfo)
+	{
+		//try and get atttributes of target
+		FrameDataInterpilationTypeAttribute fiaAttribute = fldField.GetCustomAttribute<FrameDataInterpilationTypeAttribute>();
+	
+		//check if this is to be interpolated / tracked
+		if(fiaAttribute != null)
 	    {
-			//try and get atttributes of target
-			FrameDataInterpilationTypeAttribute fiaAttribute = fldField.GetCustomAttribute<FrameDataInterpilationTypeAttribute>();
 	
-			//check if this is to be interpolated / tracked
-			if(fiaAttribute != null)
-	        {
-	
-				//check if it is an array 
-				if( !typeof(IEnumerable ).IsAssignableFrom(fldField.FieldType) )
-	            {
-					//check which type of interpolation should be used 
-					switch(fiaAttribute.m_itpInterpolation)
-                    {
-						case FrameDataInterpilationTypeAttribute.InterpolationType.None:#>			
-			ifdOutput.<#=fldField.Name#> = (<#=fiaAttribute.m_tType.ToString()#>) fdaInterpFramePair[0].<#=fldField.Name#>;
-
-<#						
-							break;
-						case FrameDataInterpilationTypeAttribute.InterpolationType.Linear:#>
-			ifdOutput.<#=fldField.Name#> = (<#=fiaAttribute.m_tType.ToString()#>)( ((<#=fiaAttribute.m_tType.ToString()#>)(fdaInterpFramePair[0].<#=fldField.Name#>) * (1 - fInterp)) +  ((<#=fiaAttribute.m_tType.ToString()#>)(fdaInterpFramePair[1].<#=fldField.Name#>) * fInterp));
-						
-<#						
-							break;
-                    }	
-	            }
-	        }
-	
-	    }
-#>
-
-			//loop through all the players 
-			for(int i = 0; i < ifdOutput.PlayerCount; i++)
+			//check if it is an array 
+			if( !typeof(IEnumerable ).IsAssignableFrom(fldField.FieldType) )
 			{
-				//get offset from base time 
-				float fOffsetTime = fBaseTime;
-
-				//check to see if there is an offset array 
-				if(fTargetInterpTimeOffsetForPlayer != null && fTargetInterpTimeOffsetForPlayer.Count > i)
+				//check which type of interpolation should be used 
+				switch(fiaAttribute.m_itpInterpolation)
 				{
-					fOffsetTime += fTargetInterpTimeOffsetForPlayer[i];
-				}
+					case FrameDataInterpilationTypeAttribute.InterpolationType.None:#>			
+			ifdInterpolatedFrameData.<#=fldField.Name#> = (<#=fiaAttribute.m_tType.ToString()#>) fdaToFrame.<#=fldField.Name#>;
 
-				//get frame index 
-				int iTargetIndex = GetLastTick(gsmSim,fOffsetTime);
+<#						
+						break;
+						
+					case FrameDataInterpilationTypeAttribute.InterpolationType.Linear:#>
+			ifdInterpolatedFrameData.<#=fldField.Name#> = (<#=fiaAttribute.m_tType.ToString()#>)( ((<#=fiaAttribute.m_tType.ToString()#>)(fdaFromFrame.<#=fldField.Name#>) * (1 - fInterpolation)) +  ((<#=fiaAttribute.m_tType.ToString()#>)(fdaToFrame.<#=fldField.Name#>) * fInterpolation));
+						
+<#						
+						break;
+				}	
+	            
+			}
+			else
+            {#>
+			for(int i = 0 ; i < ifdInterpolatedFrameData.<#=fldField.Name#>.<#= fldField.FieldType.IsArray? "Length" : "Count" #> ; i++)
+			{
+<#
+				//interpolate non player related array values 
+				//check which type of interpolation should be used 
+				switch(fiaAttribute.m_itpInterpolation)
+						{
+					case FrameDataInterpilationTypeAttribute.InterpolationType.None:#>
 
-				if(iTargetIndex != iInterpTick)
-				{
-					iInterpTick = iTargetIndex;
+					ifdInterpolatedFrameData.<#=fldField.Name#>[i] = (<#=fiaAttribute.m_tType.ToString()#>) fdaToFrame.<#=fldField.Name#>[i];
 
-					//get the interpolation frame variables 
-					fdaInterpFramePair = GetInterpolationPair(gsmSim,iInterpTick);
-				}
-
-				//Interpolate all the per player variables
-<#	
-		foreach(FieldInfo fldField in fldFieldInfo)
-	    {
-			//try and get atttributes of target
-			FrameDataInterpilationTypeAttribute fiaAttribute = fldField.GetCustomAttribute<FrameDataInterpilationTypeAttribute>();
-	
-			//check if this is to be interpolated / tracked
-			if(fiaAttribute != null)
-	        {
-	
-				//check if it is an array 
-				if(typeof(IEnumerable ).IsAssignableFrom(fldField.FieldType) )
-	            {
-					//check which type of interpolation should be used 
-					switch(fiaAttribute.m_itpInterpolation)
-                    {
-						case FrameDataInterpilationTypeAttribute.InterpolationType.None:#>			
-				ifdOutput.<#=fldField.Name#>[i] = (<#=fiaAttribute.m_tType.ToString()#>) fdaInterpFramePair[0].<#=fldField.Name#>[i];
-
-<#			
+<#						
 							break;
 						case FrameDataInterpilationTypeAttribute.InterpolationType.Linear:#>
-				ifdOutput.<#=fldField.Name#>[i] = (<#=fiaAttribute.m_tType.ToString()#>)( ((<#=fiaAttribute.m_tType.ToString()#>)(fdaInterpFramePair[0].<#=fldField.Name#>[i]) * (1 - fInterp)) +  ((<#=fiaAttribute.m_tType.ToString()#>)(fdaInterpFramePair[1].<#=fldField.Name#>[i]) * fInterp));
-						
-<# 
-							break;
-                    }	
-	            }
-	        }
-	
-	    }
-#>
 
+					ifdInterpolatedFrameData.<#=fldField.Name#>[i] = (<#=fiaAttribute.m_tType.ToString()#>)( ((<#=fiaAttribute.m_tType.ToString()#>)(fdaFromFrame.<#=fldField.Name#>[i]) * (1 - fInterpolation)) +  ((<#=fiaAttribute.m_tType.ToString()#>)(fdaToFrame.<#=fldField.Name#>[i]) * fInterpolation));
+						
+<#						
+							break;
+                    }#>
 			}
-		
-            return ifdOutput;
+<#	
+
+            }
+		}
+	
+	}
+#>
         }
 	}
 }

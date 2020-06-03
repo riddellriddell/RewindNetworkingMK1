@@ -1,19 +1,21 @@
 ﻿using Networking;
+using Sim;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using UnityEngine;
+using Utility;
 
-public class TestingSimDataSyncVerifier : BaseDataSyncVerifier<uint,int,TestingSimManager.SimState>
+public class TestingSimDataSyncVerifier<TFrameData> : BaseDataSyncVerifier<uint,int,TFrameData> where TFrameData : IFrameData
 {
-   public static void VerifyData(uint iTick,ref TestingSimManager.SimState sstData, int iID)
+   public static void VerifyData(uint iTick,ref TFrameData fdaData, int iID,int iTrackingWindowSize)
    {
-        int iSize = TestingSimManager.SimState.SizeOfSimState(sstData);
+        int iSize =  fdaData.GetSize();
 
         WriteByteStream wbsNetworking = new WriteByteStream(iSize);
 
-        TestingSimManager.SimState.EncodeSimState(wbsNetworking, ref sstData);
+        fdaData.Encode(wbsNetworking);
 
         long lHash = 0;
 
@@ -22,8 +24,8 @@ public class TestingSimDataSyncVerifier : BaseDataSyncVerifier<uint,int,TestingS
             lHash = BitConverter.ToInt64(md5.ComputeHash(wbsNetworking.GetData()), 0);
         }
 
-        RegisterData(lHash, sstData, iTick, iID);
+        RegisterData(lHash, fdaData, iTick, iID);
 
-        CleanUpOldEntries(iTick - (uint)(TestingSimManager.s_TicksPerSecond * 2));
+        CleanUpOldEntries(iTick - (uint)(iTrackingWindowSize));
    }
 }

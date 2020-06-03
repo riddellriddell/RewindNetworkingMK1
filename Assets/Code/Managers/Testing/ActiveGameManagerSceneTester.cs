@@ -1,4 +1,5 @@
 ﻿using Networking;
+using Sim;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -78,6 +79,11 @@ namespace GameManagers
         public ActiveGameManager m_agmActiveGameManager;
 
         public bool m_bAlive = true;
+
+        public ConstData m_cdaConstSimData;
+
+        [SerializeField]
+        public SettingsDataInterface m_sdiSettingsDataInderface;
 
         [SerializeField]
         public long m_lPeerID;
@@ -199,7 +205,7 @@ namespace GameManagers
 
             m_agmActiveGameManager?.OnCleanup();
 
-            m_agmActiveGameManager = new ActiveGameManager(m_wbiWebInterface, m_ptfTransmitterFactory);
+            m_agmActiveGameManager = new ActiveGameManager(m_sdiSettingsDataInderface.ConvertToSettingsData(),new ConstData(), m_wbiWebInterface, m_ptfTransmitterFactory);
 
             while(m_bAlive)
             {              
@@ -225,7 +231,7 @@ namespace GameManagers
 
             NetworkGlobalMessengerProcessor gmpGlobalMessagingProcessor = m_agmActiveGameManager.m_ncnNetworkConnection.GetPacketProcessor<NetworkGlobalMessengerProcessor>();
             TimeNetworkProcessor tnpTimeProcessor = m_agmActiveGameManager.m_ncnNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
-            TestingSimManager tsmTestSimManager = m_agmActiveGameManager.m_tsmSimManager;
+            TestingSimManager<FrameData,ConstData,SettingsData> tsmTestSimManager = m_agmActiveGameManager.m_tsmSimManager;
 
             m_staGlobalMessagingState = gmpGlobalMessagingProcessor.m_staState;
 
@@ -323,13 +329,13 @@ namespace GameManagers
                 m_stcNetworkDebugData.Add(stcConnection);
             }
 
-            if(tsmTestSimManager.m_sstSimStateBuffer != null && tsmTestSimManager.m_sstSimStateBuffer.Count > 0)
+            if(tsmTestSimManager.m_fdaSimStateBuffer != null && tsmTestSimManager.m_fdaSimStateBuffer.Count > 0)
             {
-                TestingSimManager.SimState sstState = tsmTestSimManager.m_sstSimStateBuffer.PeakEnqueue();
-
-                m_sstSimState.m_iInputVal = sstState.m_iInputVal;
-                m_sstSimState.m_iInputCount = sstState.m_iInputCount;
-                m_sstSimState.m_lPeerAssignedToSlot = sstState.m_lPeerAssignedToSlot;
+                //TestingSimManager.SimState sstState = tsmTestSimManager.m_sstSimStateBuffer.PeakEnqueue();
+                //
+                //m_sstSimState.m_iInputVal = sstState.m_iInputVal;
+                //m_sstSimState.m_iInputCount = sstState.m_iInputCount;
+                //m_sstSimState.m_lPeerAssignedToSlot = sstState.m_lPeerAssignedToSlot;
             }
         }
 

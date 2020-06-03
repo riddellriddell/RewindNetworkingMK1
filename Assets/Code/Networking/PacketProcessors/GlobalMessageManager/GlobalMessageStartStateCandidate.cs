@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using UnityEngine;
-
+using Utility;
 
 namespace Networking
 {
@@ -13,7 +13,7 @@ namespace Networking
         public static long GenerateHash(GlobalMessagingState gsmState,long lChainLinkHash)
         {
             //get size of all data
-            int iSize = ByteStream.DataSize(gsmState);
+            int iSize = NetworkingByteStream.DataSize(gsmState);
             iSize += ByteStream.DataSize(lChainLinkHash);
 
             //craete buffer
@@ -21,7 +21,7 @@ namespace Networking
 
 
             //serialize data 
-            ByteStream.Serialize(wbsByteStream, ref gsmState);
+            NetworkingByteStream.Serialize(wbsByteStream, ref gsmState);
             ByteStream.Serialize(wbsByteStream, ref lChainLinkHash);
 
             //compute hash
@@ -75,12 +75,12 @@ namespace Networking
         }
     }
 
-    public partial class ByteStream
+    public partial class NetworkingByteStream
     {
         public static int DataSize(GlobalMessageStartStateCandidate Input)
         {
             //get size of all data
-            int iSize = ByteStream.DataSize(Input.m_gmsStateCandidate);
+            int iSize = NetworkingByteStream.DataSize(Input.m_gmsStateCandidate);
             iSize += ByteStream.DataSize(Input.m_lNextLinkHash);
 
             return iSize;
@@ -94,7 +94,7 @@ namespace Networking
             }
 
             //serialize data 
-            ByteStream.Serialize(rbsByteStream, ref Input.m_gmsStateCandidate);
+            NetworkingByteStream.Serialize(rbsByteStream, ref Input.m_gmsStateCandidate);
             ByteStream.Serialize(rbsByteStream, ref Input.m_lNextLinkHash);
 
         }
@@ -102,7 +102,7 @@ namespace Networking
         public static void Serialize(WriteByteStream wbsByteStream, ref GlobalMessageStartStateCandidate Input)
         {
             //serialize data 
-            ByteStream.Serialize(wbsByteStream, ref Input.m_gmsStateCandidate);
+            NetworkingByteStream.Serialize(wbsByteStream, ref Input.m_gmsStateCandidate);
             ByteStream.Serialize(wbsByteStream, ref Input.m_lNextLinkHash);
 
         }
