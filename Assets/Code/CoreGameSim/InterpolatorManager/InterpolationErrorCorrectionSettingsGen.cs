@@ -13,7 +13,7 @@ namespace Sim
     public class InterpolationErrorCorrectionSettings : InterpolationErrorCorrectionSettingsBase
     {
 		
-		public ErrorCorrectionSetting m_bShipHealthErrorCorrectionSetting; 
+		public ErrorCorrectionSetting m_fixShipHealthErrorCorrectionSetting; 
 		
 		public ErrorCorrectionSetting m_fixShipHealDelayTimeOutErrorCorrectionSetting; 
 		

@@ -26,21 +26,21 @@ namespace GameManagers
                 }
             }
 
-            public SimInputManager.UserInput m_uipInputState;
+            public byte m_bInputState;
 
             public override int DataSize()
             {
-                return ByteStream.DataSize(m_uipInputState.m_bPayload);
+                return ByteStream.DataSize(m_bInputState);
             }
 
             public override void Serialize(ReadByteStream rbsByteStream)
             {
-                ByteStream.Serialize(rbsByteStream, ref m_uipInputState.m_bPayload);
+                ByteStream.Serialize(rbsByteStream, ref m_bInputState);
             }
 
             public override void Serialize(WriteByteStream wbsByteStream)
             {
-                ByteStream.Serialize(wbsByteStream, ref m_uipInputState.m_bPayload);
+                ByteStream.Serialize(wbsByteStream, ref m_bInputState);
             }
         }
 
@@ -86,7 +86,7 @@ namespace GameManagers
         public DateTime m_dtmTimeOfLastInputMessageCreation;
 
         //the local state of the input 
-        public SimInputManager.UserInput m_uipInputState;
+        public byte m_bInputState;
 
         public int m_iNumberOfInputsCreated = 0;
         
@@ -103,7 +103,7 @@ namespace GameManagers
             m_ngpGlobalMessageProcessor = ngpGlobalMessageProcessor;
 
             //register user input message type
-            TestingUserInput.TypeID = m_ngpGlobalMessageProcessor.RegisterCustomMessageType<TestingUserInput>(TestingUserInput.TypeID);
+            UserInputGlobalMessage.TypeID = m_ngpGlobalMessageProcessor.RegisterCustomMessageType<UserInputGlobalMessage>(UserInputGlobalMessage.TypeID);
         }
 
         public void Update()
@@ -120,10 +120,10 @@ namespace GameManagers
         public void CreateUserInputMessage()
         {
             //create user input message
-            TestingUserInput tuiUserInputMessage = m_ngpGlobalMessageProcessor.m_cifGlobalMessageFactory.CreateType<TestingUserInput>(TestingUserInput.TypeID);
+            UserInputGlobalMessage tuiUserInputMessage = m_ngpGlobalMessageProcessor.m_cifGlobalMessageFactory.CreateType<UserInputGlobalMessage>(UserInputGlobalMessage.TypeID);
 
             //set values
-            tuiUserInputMessage.m_iInput = m_iNumberOfInputsCreated;
+            tuiUserInputMessage.m_bInputState = m_bInputState;
 
             //get lock on out message stack
 
@@ -138,40 +138,34 @@ namespace GameManagers
 
         //get inputs 
         #region Callbacks
-        public void IncrementNumberOfMessages()
-        {
-            m_iNumberOfInputsCreated++;
-
-            CreateUserInputMessage();
-        }
 
         public void OnLeftPressed()
         {
-            m_uipInputState.TurnLeft = true;
+            m_bInputState = SimInputManager.SetTurnLeft(m_bInputState, true);
             m_bDirtyInputState = true;
         }
 
         public void OnLeftReleased()
         {
-            m_uipInputState.TurnLeft = false;
+            m_bInputState = SimInputManager.SetTurnLeft(m_bInputState, false);
             m_bDirtyInputState = true;
         }
 
         public void OnRightPressed()
         {
-            m_uipInputState.TurnRight = true;
+            m_bInputState = SimInputManager.SetTurnRight(m_bInputState, true);
             m_bDirtyInputState = true;
         }
 
         public void OnRightReleased()
         {
-            m_uipInputState.TurnRight = false;
+            m_bInputState = SimInputManager.SetTurnRight(m_bInputState, false);
             m_bDirtyInputState = true;
         }
 
         public void OnSpecialTap()
         {
-            m_uipInputState.DropDisruptorEvent = true;
+            m_bInputState = SimInputManager.SetDropDisruptorEvent(m_bInputState, true);
 
             //trigger message strait away as this is an event
             CreateUserInputMessage();
@@ -180,13 +174,13 @@ namespace GameManagers
 
         public void OnSpecialHold()
         {
-            m_uipInputState.ChargeingMissile = true;
+            m_bInputState = SimInputManager.SetChargeMissile(m_bInputState, true);
             m_bDirtyInputState = true;
         }
 
         public void OnSpecialRelease()
         {
-            m_uipInputState.ChargeingMissile = false;
+            m_bInputState = SimInputManager.SetChargeMissile(m_bInputState, false);
             m_bDirtyInputState = true;
         }
         #endregion
@@ -218,99 +212,86 @@ namespace GameManagers
                 m_dtmTimeOfLastUpdate = DateTime.UtcNow;
             }
 
-            while(DateTime.UtcNow - m_dtmTimeOfLastUpdate > TimeSpan.FromSeconds(1f/3f))
+            float fDeltaTime = (float)(DateTime.UtcNow - m_dtmTimeOfLastUpdate).TotalSeconds;
+            
+            m_dtmTimeOfLastUpdate = DateTime.UtcNow;
+            
+            //check for direction change 
+            if (UnityEngine.Random.Range(0.0f, 1.0f ) < m_fChanceOfDirectionChange * fDeltaTime)
             {
-                m_dtmTimeOfLastUpdate += TimeSpan.FromSeconds(1f / 3f);
-
-                m_lpiLocalPeerInputManager.IncrementNumberOfMessages();
+                int iMoveType = UnityEngine.Random.Range(0, 4);
+            
+                switch(iMoveType)
+                {
+                    case 0:
+                        if(SimInputManager.GetTurnLeft(m_lpiLocalPeerInputManager.m_bInputState) == true)
+                        {
+                            m_lpiLocalPeerInputManager.OnLeftReleased();
+                        }
+            
+                        if (SimInputManager.GetTurnRight(m_lpiLocalPeerInputManager.m_bInputState) == true)
+                        {
+                            m_lpiLocalPeerInputManager.OnRightReleased();
+                        }
+            
+                        if (SimInputManager.GetBoost(m_lpiLocalPeerInputManager.m_bInputState) == true)
+                        {
+                            m_lpiLocalPeerInputManager.OnLeftReleased();
+                            m_lpiLocalPeerInputManager.OnRightReleased();
+                        }
+            
+                        break;
+            
+                    case 1:
+            
+                        if (SimInputManager.GetBoost(m_lpiLocalPeerInputManager.m_bInputState) == false)
+                        {
+                            m_lpiLocalPeerInputManager.OnRightPressed();
+                            m_lpiLocalPeerInputManager.OnLeftPressed();
+                        }
+            
+                        break;
+            
+                    case 2:
+            
+                        if (SimInputManager.GetBoost(m_lpiLocalPeerInputManager.m_bInputState) == true)
+                        {
+                            m_lpiLocalPeerInputManager.OnRightReleased();
+                        }
+            
+                        if (SimInputManager.GetTurnLeft(m_lpiLocalPeerInputManager.m_bInputState) == false)
+                        {
+                            m_lpiLocalPeerInputManager.OnLeftPressed();
+                        }
+            
+                        if (SimInputManager.GetTurnRight(m_lpiLocalPeerInputManager.m_bInputState) == true)
+                        {
+                            m_lpiLocalPeerInputManager.OnRightReleased();
+                        }
+            
+                        break;
+            
+            
+                    case 3:
+            
+                        if (SimInputManager.GetBoost(m_lpiLocalPeerInputManager.m_bInputState) == true)
+                        {
+                            m_lpiLocalPeerInputManager.OnLeftReleased();
+                        }
+            
+                        if (SimInputManager.GetTurnLeft(m_lpiLocalPeerInputManager.m_bInputState) == true)
+                        {
+                            m_lpiLocalPeerInputManager.OnLeftReleased();
+                        }
+            
+                        if (SimInputManager.GetTurnRight(m_lpiLocalPeerInputManager.m_bInputState) == false)
+                        {
+                            m_lpiLocalPeerInputManager.OnRightPressed();
+                        }
+            
+                        break;
+                }                
             }
-
-
-
-
-
-            //float fDeltaTime = (float)(DateTime.UtcNow - m_dtmTimeOfLastUpdate).TotalSeconds;
-            //
-            //m_dtmTimeOfLastUpdate = DateTime.UtcNow;
-            //
-            ////check for direction change 
-            //if (UnityEngine.Random.Range(0.0f, 1.0f ) < m_fChanceOfDirectionChange * fDeltaTime)
-            //{
-            //    int iMoveType = UnityEngine.Random.Range(0, 4);
-            //
-            //    switch(iMoveType)
-            //    {
-            //        case 0:
-            //            if(m_lpiLocalPeerInputManager.m_uipInputState.TurnLeft == true)
-            //            {
-            //                m_lpiLocalPeerInputManager.OnLeftReleased();
-            //            }
-            //
-            //            if (m_lpiLocalPeerInputManager.m_uipInputState.TurnRight == true)
-            //            {
-            //                m_lpiLocalPeerInputManager.OnRightReleased();
-            //            }
-            //
-            //            if (m_lpiLocalPeerInputManager.m_uipInputState.Boost == true)
-            //            {
-            //                m_lpiLocalPeerInputManager.OnLeftReleased();
-            //                m_lpiLocalPeerInputManager.OnRightReleased();
-            //            }
-            //
-            //            break;
-            //
-            //        case 1:
-            //
-            //            if (m_lpiLocalPeerInputManager.m_uipInputState.Boost == false)
-            //            {
-            //                m_lpiLocalPeerInputManager.OnRightPressed();
-            //                m_lpiLocalPeerInputManager.OnLeftPressed();
-            //            }
-            //
-            //            break;
-            //
-            //        case 2:
-            //
-            //            if (m_lpiLocalPeerInputManager.m_uipInputState.Boost == true)
-            //            {
-            //                m_lpiLocalPeerInputManager.OnRightReleased();
-            //            }
-            //
-            //            if (m_lpiLocalPeerInputManager.m_uipInputState.TurnLeft == false)
-            //            {
-            //                m_lpiLocalPeerInputManager.OnLeftPressed();
-            //            }
-            //
-            //            if (m_lpiLocalPeerInputManager.m_uipInputState.TurnRight == true)
-            //            {
-            //                m_lpiLocalPeerInputManager.OnRightReleased();
-            //            }
-            //
-            //            break;
-            //
-            //
-            //        case 3:
-            //
-            //            if (m_lpiLocalPeerInputManager.m_uipInputState.Boost == true)
-            //            {
-            //                m_lpiLocalPeerInputManager.OnLeftReleased();
-            //            }
-            //
-            //            if (m_lpiLocalPeerInputManager.m_uipInputState.TurnLeft == true)
-            //            {
-            //                m_lpiLocalPeerInputManager.OnLeftReleased();
-            //            }
-            //
-            //            if (m_lpiLocalPeerInputManager.m_uipInputState.TurnRight == false)
-            //            {
-            //                m_lpiLocalPeerInputManager.OnRightPressed();
-            //            }
-            //
-            //            break;
-            //    }                
-            //}
-            //
-
             //TODO: add code to test disruptor and missile firing 
 
         }

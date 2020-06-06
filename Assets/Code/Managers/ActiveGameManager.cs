@@ -35,10 +35,10 @@ namespace GameManagers
         //the state of the game
         public ActiveGameState State { get; private set; } = ActiveGameState.GettingGateway;
 
-        public SimProcessManager<FrameData, ConstData, SettingsData> m_spmSimProcessManager;
+        public SimProcessManager<FrameData, ConstData, SimProcessorSettings> m_spmSimProcessManager;
 
         //the sim manager that handles getting data from the data bridge and passing it to the sim to be processed 
-        public TestingSimManager<FrameData, ConstData,SettingsData> m_tsmSimManager;
+        public TestingSimManager<FrameData, ConstData,SimProcessorSettings> m_tsmSimManager;
 
         //data structure for passing all data from networking to sim 
         public NetworkingDataBridge m_ndbDataBridge;
@@ -46,7 +46,7 @@ namespace GameManagers
         //the web interface 
         public WebInterface m_winWebInterface = null;
 
-        public SettingsData m_sdaSimSettingsData;
+        public SimProcessorSettings m_sdaSimSettingsData;
 
         public ConstData m_cdaConstData;
 
@@ -89,7 +89,7 @@ namespace GameManagers
         //the amount of time ahead of the current network time to schedule a fetch for the game state 
         protected TimeSpan m_fSimStateLeadTime = TimeSpan.FromSeconds(0.1f);
 
-        public ActiveGameManager(SettingsData sdaSimSettingsData, ConstData cdaConstantSimData, WebInterface winWebInterface, IPeerTransmitterFactory ptfTransmitterFactory)
+        public ActiveGameManager(SimProcessorSettings sdaSimSettingsData, ConstData cdaConstantSimData, WebInterface winWebInterface, IPeerTransmitterFactory ptfTransmitterFactory)
         {
             m_ptfTransmitterFactory = ptfTransmitterFactory;
             m_winWebInterface = winWebInterface;
@@ -234,7 +234,7 @@ namespace GameManagers
             long lConnectionID = m_winWebInterface.ExternalGateway.Value.m_lGateOwnerUserID;
 
             //setup the peer to peer network to match the settings of the taget network
-            m_ngpGlobalMessagingProcessor.Initalize(m_iDefaultMaxGameSize);
+            m_ngpGlobalMessagingProcessor.Initalize(m_sdaSimSettingsData.MaxPlayers);
 
             //tell the connection propegator who to try to connect to
             m_ncpConnectionPropegator.StartRequest(lConnectionID);
@@ -345,12 +345,12 @@ namespace GameManagers
             State = ActiveGameState.SetUpNewSim;
 
             //setup the peer to peer network settings 
-            m_ngpGlobalMessagingProcessor.Initalize(m_iDefaultMaxGameSize);
+            m_ngpGlobalMessagingProcessor.Initalize(m_sdaSimSettingsData.MaxPlayers);
 
             //use passed in target sim settings to setup inital sim
 
             // sim manager setup sim
-            m_tsmSimManager.InitalizeAsFirstPeer(m_iDefaultMaxGameSize, m_ncnNetworkConnection.m_lPeerID);
+            m_tsmSimManager.InitalizeAsFirstPeer(m_ncnNetworkConnection.m_lPeerID);
 
         }
 
@@ -576,11 +576,47 @@ namespace GameManagers
 
             m_ndbDataBridge = new NetworkingDataBridge();
 
-            m_spmSimProcessManager = new SimProcessManager<FrameData, ConstData, SettingsData>();
+            //manager for all the processes that calculate new game stated
+            m_spmSimProcessManager = new SimProcessManager<FrameData, ConstData, SimProcessorSettings>();
+
+            //add code to setup ship movement values
+            SetupShipMovementProcess<FrameData, SimProcessorSettings> smpShipMovemntProcessor = new SetupShipMovementProcess<FrameData, SimProcessorSettings>();
+
+            m_spmSimProcessManager.AddSimSetupProcess(smpShipMovemntProcessor);
+
+            //add code to process peer slot asignment 
+            ProcessPeerSlotAssignment<FrameData, ConstData, SimProcessorSettings> psaPeerSlotAsignment = new ProcessPeerSlotAssignment<FrameData, ConstData, SimProcessorSettings>();
+
+            m_spmSimProcessManager.AddSimSetupProcess(psaPeerSlotAsignment);
+            m_spmSimProcessManager.AddSimProcess(psaPeerSlotAsignment);
+
+            //add code to process user inputs
+            ProcessPeerInputs<FrameData, ConstData, SimProcessorSettings> ppiPeerInputProcessor = new ProcessPeerInputs<FrameData, ConstData, SimProcessorSettings>();
+
+            m_spmSimProcessManager.AddSimSetupProcess(ppiPeerInputProcessor);
+            m_spmSimProcessManager.AddSimProcess(ppiPeerInputProcessor);
+
+            //add code to spawn ships
+            ProcessShipSpawn<FrameData, ConstData, SimProcessorSettings> pssShipSpawnProcess = new ProcessShipSpawn<FrameData, ConstData, SimProcessorSettings>();
+
+            m_spmSimProcessManager.AddSimSetupProcess(pssShipSpawnProcess);
+            m_spmSimProcessManager.AddSimProcess(pssShipSpawnProcess);
+
+            //add ship health
+            ProcessShipHealth<FrameData, ConstData, SimProcessorSettings> pshShipHealthProcessor = new ProcessShipHealth<FrameData, ConstData, SimProcessorSettings>();
+
+            m_spmSimProcessManager.AddSimSetupProcess(pshShipHealthProcessor);
+            m_spmSimProcessManager.AddSimProcess(pshShipHealthProcessor);
+
+            //add ship movement 
+            ProcessShipMovement<FrameData, ConstData, SimProcessorSettings> psmShipMovementProcessor = new ProcessShipMovement<FrameData, ConstData, SimProcessorSettings>();
+
+            m_spmSimProcessManager.AddSimProcess(psmShipMovementProcessor);
+
 
             //m_spmSimProcessManager.AddSimSetupProcess();
 
-            m_tsmSimManager = new TestingSimManager<FrameData,ConstData,SettingsData>(m_cdaConstData, m_sdaSimSettingsData, m_ndbDataBridge, m_spmSimProcessManager);
+            m_tsmSimManager = new TestingSimManager<FrameData,ConstData,SimProcessorSettings>(m_cdaConstData, m_sdaSimSettingsData, m_ndbDataBridge, m_spmSimProcessManager);
 
             m_ngpGlobalMessagingProcessor = new NetworkGlobalMessengerProcessor(m_ndbDataBridge);
             m_ncnNetworkConnection.AddPacketProcessor(m_ngpGlobalMessagingProcessor);

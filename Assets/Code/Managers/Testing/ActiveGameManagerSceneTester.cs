@@ -1,4 +1,5 @@
-﻿using Networking;
+﻿using FixedPointy;
+using Networking;
 using Sim;
 using System;
 using System.Collections;
@@ -55,13 +56,20 @@ namespace GameManagers
     public struct ActiveGameManagerSceneTesterSimState
     {
         [SerializeField]
-        public int[] m_iInputVal;
+        public bool m_bDrawDebugData;
 
         [SerializeField]
-        public int[] m_iInputCount;
+        public long[] m_lPeersAssignedToSlot;
+
+        public float[] m_fShipHealth;
+
+        public float[] m_fShipSpawnCountdown;
+
+        public float[] m_fShipPosX;
+        public float[] m_fShipPosY;
+        public float[] m_fShipVelocityX;
+        public float[] m_fShipVelocityY;
         
-        [SerializeField]
-        public long[] m_lPeerAssignedToSlot;
     }
 
     public class ActiveGameManagerSceneTester : MonoBehaviour
@@ -83,7 +91,7 @@ namespace GameManagers
         public ConstData m_cdaConstSimData;
 
         [SerializeField]
-        public SettingsDataInterface m_sdiSettingsDataInderface;
+        public SimProcessorSettingsInterface m_sdiSettingsDataInderface;
 
         [SerializeField]
         public long m_lPeerID;
@@ -231,7 +239,7 @@ namespace GameManagers
 
             NetworkGlobalMessengerProcessor gmpGlobalMessagingProcessor = m_agmActiveGameManager.m_ncnNetworkConnection.GetPacketProcessor<NetworkGlobalMessengerProcessor>();
             TimeNetworkProcessor tnpTimeProcessor = m_agmActiveGameManager.m_ncnNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
-            TestingSimManager<FrameData,ConstData,SettingsData> tsmTestSimManager = m_agmActiveGameManager.m_tsmSimManager;
+            TestingSimManager<FrameData,ConstData,SimProcessorSettings> tsmTestSimManager = m_agmActiveGameManager.m_tsmSimManager;
 
             m_staGlobalMessagingState = gmpGlobalMessagingProcessor.m_staState;
 
@@ -331,13 +339,54 @@ namespace GameManagers
 
             if(tsmTestSimManager.m_fdaSimStateBuffer != null && tsmTestSimManager.m_fdaSimStateBuffer.Count > 0)
             {
-                //TestingSimManager.SimState sstState = tsmTestSimManager.m_sstSimStateBuffer.PeakEnqueue();
-                //
-                //m_sstSimState.m_iInputVal = sstState.m_iInputVal;
-                //m_sstSimState.m_iInputCount = sstState.m_iInputCount;
-                //m_sstSimState.m_lPeerAssignedToSlot = sstState.m_lPeerAssignedToSlot;
+                FrameData fdaFrameData = tsmTestSimManager.m_fdaSimStateBuffer.PeakEnqueue();
+                
+                m_sstSimState.m_lPeersAssignedToSlot = fdaFrameData.m_lPeersAssignedToSlot;
+
+                if(fdaFrameData.m_fixShipHealth != null)
+                {
+                    if(m_sstSimState.m_fShipHealth.Length != fdaFrameData.m_fixShipHealth.Length)
+                    {
+                        m_sstSimState.m_fShipHealth = new float[fdaFrameData.m_fixShipHealth.Length];
+                        m_sstSimState.m_fShipSpawnCountdown = new float[fdaFrameData.m_fixShipHealth.Length];
+                        m_sstSimState.m_fShipPosX = new float[fdaFrameData.m_fixShipHealth.Length];
+                        m_sstSimState.m_fShipPosY = new float[fdaFrameData.m_fixShipHealth.Length];
+                        m_sstSimState.m_fShipVelocityX = new float[fdaFrameData.m_fixShipHealth.Length];
+                        m_sstSimState.m_fShipVelocityY = new float[fdaFrameData.m_fixShipHealth.Length];
+                    }
+
+                    for(int i = 0; i < fdaFrameData.m_fixShipHealth.Length; i++)
+                    {
+                        m_sstSimState.m_fShipHealth[i] = (float)fdaFrameData.m_fixShipHealth[i];
+                        m_sstSimState.m_fShipSpawnCountdown[i] = (float)fdaFrameData.m_fixTimeUntilRespawn[i];
+                        m_sstSimState.m_fShipPosX[i] = (float)fdaFrameData.m_fixShipPosX[i];
+                        m_sstSimState.m_fShipPosY[i] = (float)fdaFrameData.m_fixShipPosY[i];
+                        m_sstSimState.m_fShipVelocityX[i] = (float)fdaFrameData.m_fixShipVelocityX[i];
+                        m_sstSimState.m_fShipVelocityY[i] = (float)fdaFrameData.m_fixShipVelocityY[i];
+                    }
+                }
+
             }
         }
 
+        protected void OnDrawGizmosSelected()
+        {
+           if(m_sstSimState.m_bDrawDebugData && m_sstSimState.m_fShipHealth != null)
+            {
+                for(int i = 0; i < m_sstSimState.m_fShipHealth.Length; i++)
+                {
+                    // Draw a random colour sphere for each player
+                    Gizmos.color = new Color((((m_sstSimState.m_lPeersAssignedToSlot[i] % 256) + 256) % 256) / 256.0f,
+                        ((((m_sstSimState.m_lPeersAssignedToSlot[i] >> 2)  % 256) + 256) % 256) / 256.0f,
+                        ((((m_sstSimState.m_lPeersAssignedToSlot[i] >> 4) % 256) + 256) % 256) / 256.0f, 1);
+
+
+                    Gizmos.DrawSphere(new Vector3(m_sstSimState.m_fShipPosX[i],0, m_sstSimState.m_fShipPosY[i]), 1);
+                    Gizmos.DrawLine(new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]), 
+                        new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]) +
+                        (new Vector3(m_sstSimState.m_fShipVelocityX[i], 0, m_sstSimState.m_fShipVelocityY[i]) * 2));
+                }
+            }
+        }
     }
 }

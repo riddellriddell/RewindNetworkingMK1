@@ -4,16 +4,18 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
-public struct FixValueUnityInterface
+public struct FixTo3PlacesUnityInterface
 {
     [SerializeField]
-    public int IntValue;
+    public int Int;
+
     [SerializeField]
-    public int DecimalOffset;
+    [Range(0,999)]
+    public int Dec_To_3_Places;
 
     private bool m_bCalculated;
 
-    public Fix m_fValue;
+    public Fix Value;
 
     public Fix FixValue
     {
@@ -25,7 +27,7 @@ public struct FixValueUnityInterface
             }
 
             //set the decimal value 
-            return m_fValue;
+            return Value;
         }
     }
 
@@ -33,18 +35,7 @@ public struct FixValueUnityInterface
     {
         m_bCalculated = true;
 
-        Fix outFixNumber = new Fix(IntValue << Fix.FRACTIONAL_BITS);
-
-        Fix offset = new Fix(DecimalOffset << Fix.FRACTIONAL_BITS);
-
-        m_bCalculated = true;
-
-        if(offset == 0)
-        {
-            Debug.LogError("0 value set on divider for fix value setter");
-        }
-
-        m_fValue = (outFixNumber / offset);
+        Value = Fix.Mix(Int,Dec_To_3_Places,1000);
     }
 }
 

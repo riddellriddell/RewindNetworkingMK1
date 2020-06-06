@@ -14,7 +14,7 @@ namespace Sim
 
         public void AddSimProcess(ISimProcess<TFrameData, TConstData, TSettingsData> spcSimProcess)
         {
-            m_spcSimProcesses.Add(spcSimProcess.Priotity, spcSimProcess);
+            m_spcSimProcesses.Add(spcSimProcess.Priority, spcSimProcess);
         }
 
         public void AddSimSetupProcess(in ISimSetupProcesses<TFrameData, TSettingsData> sspSetupProcess)
@@ -30,7 +30,7 @@ namespace Sim
             for (int i = 0; i < m_spcSimProcesses.Count; i++)
             {
 
-                bool bProcessSuccelssfull = m_spcSimProcesses[i].ProcessFrameData(iTick, sdaSettingsData, cdaConstData, fdaBaseFrameData, objInputs, ref fdaOutFrameData);
+                bool bProcessSuccelssfull = m_spcSimProcesses.Values[i].ProcessFrameData(iTick, sdaSettingsData, cdaConstData, fdaBaseFrameData, objInputs, ref fdaOutFrameData);
 
                 //check if process ran successfully 
                 if(bProcessSuccelssfull == false)
@@ -51,7 +51,7 @@ namespace Sim
             //apply all the setup processes 
             for(int i = 0; i < m_sspSimSetupProcesses.Count; i++)
             {
-                bool bSetupSetpResult = m_sspSimSetupProcesses[i].ApplySetupProcess(iInitalFrameTick, sdaSettingsData, lFirstPeer, ref fdaFirstFrameData);
+                bool bSetupSetpResult = m_sspSimSetupProcesses.Values[i].ApplySetupProcess(iInitalFrameTick, sdaSettingsData, lFirstPeer, ref fdaFirstFrameData);
 
                 if(bSetupSetpResult == false)
                 {

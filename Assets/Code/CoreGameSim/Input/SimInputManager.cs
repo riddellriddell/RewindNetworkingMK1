@@ -5,6 +5,140 @@ namespace Sim
     //the job of this class is to consume input change messages from the input buffer and merge them into a single input struct that can be acted upon by the sim
     public class SimInputManager
     {
+        #region InputAccess
+        public const byte c_bButtonInputMask = 1 | 2 | 4;
+
+        public const byte c_bEventInputMask = 8;
+
+        public static bool GetTurnLeft(byte bInput)
+        {
+            if (GetBoost(bInput) == false)
+            {
+                return (bInput & 1) != 0;
+            }
+
+            return false;
+        }
+
+        public static byte SetTurnLeft(byte bInput, bool bValue)
+        {
+            if (bValue)
+            {
+                bInput = (byte)(bInput | 1);
+            }
+            else
+            {
+                bInput = (byte)(bInput & ~1);
+            }
+
+            return bInput;
+        }
+
+        public static bool GetTurnRight(byte bInput)
+        {
+            if (GetBoost(bInput) == false)
+            {
+                return (bInput & 2) != 0;
+            }
+
+            return false;
+        }
+        public static byte SetTurnRight(byte bInput, bool bValue)
+        {
+            if (bValue)
+            {
+                bInput = (byte)(bInput | 2);
+            }
+            else
+            {
+                bInput = (byte)(bInput & ~2);
+            }
+
+            return bInput;
+        }
+
+        public static byte SetBoost(byte bInput, bool bValue)
+        {
+            if (bValue)
+            {
+                bInput = (byte)(bInput | (1 & 2));
+            }
+            else
+            {
+                bInput = (byte)(bInput & ~(1 & 2));
+            }
+
+            return bInput;
+
+        }
+
+        public static bool GetBoost(byte bInput)
+        {
+            return ((bInput & 1) != 0) && ((bInput & 2) != 0);
+        }
+
+        public static bool GetChargeMissile(byte bInput)
+        {
+            return ((bInput & 4) != 0);
+        }
+
+        public static byte SetChargeMissile(byte binput, bool bValue)
+        {
+            if (bValue)
+            {
+                binput = (byte)(binput | 4);
+            }
+            else
+            {
+                binput = (byte)(binput & ~4);
+            }
+
+            return binput;
+        }
+
+        public static bool GetDropDisruptorEvent(byte bInput)
+        {
+            return ((bInput & 8) != 0);
+        }
+
+        public static byte SetDropDisruptorEvent(byte binput, bool bValue)
+        {
+            if (bValue)
+            {
+                binput = (byte)(binput | 8);
+            }
+            else
+            {
+                binput = (byte)(binput & ~8);
+            }
+
+            return binput;
+        }
+
+
+        public static byte ProcessInput(byte bInput, byte bMessageChange)
+        {
+            //set button inputs
+            bInput = (byte)((bInput & ~c_bButtonInputMask) + (bMessageChange & c_bButtonInputMask));
+
+            //set event inputs
+            bInput = (byte)(bInput | (bMessageChange & c_bEventInputMask));
+
+            return bInput;
+        }
+
+        public static byte ClearEvents(byte bInput)
+        {
+            return (byte)(bInput & ~c_bEventInputMask);
+        }
+
+        public static byte DefaultInput()
+        {
+            return 0;
+        }
+
+        #endregion
+
         #region FutureCodeForMoreAdvancedInputSchemes 
         //a button that is either on or off 
         //if tapped it registeres as pressed for one tick even if it is released before the end of the tick
@@ -234,9 +368,7 @@ namespace Sim
                     }
                 }
             }
-
-
-
+                       
             public void ProcessInput(byte bMessageChange)
             {
                 //set button inputs

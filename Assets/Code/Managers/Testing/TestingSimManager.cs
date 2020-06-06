@@ -5,6 +5,7 @@ using UnityEngine;
 using GameManagers;
 using Sim;
 using Utility;
+using FixedPointy;
 
 public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFrameData : IFrameData, new()
 {
@@ -50,6 +51,8 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
 
     public static long s_lSimTickLenght = TimeSpan.TicksPerSecond / s_TicksPerSecond;
 
+    public static Fix s_fixSecondsPerTick = Fix.Ratio(1 , s_TicksPerSecond);
+
     public TConstData m_cdaConstantData;
 
     public TSettingsData m_sdaSettingsData;
@@ -83,7 +86,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
         m_spmSimProcessManager = spmSimProcessManager;
     }
 
-    public void InitalizeAsFirstPeer(int iMaxPeerCount, long lPeerID)
+    public void InitalizeAsFirstPeer(long lPeerID)
     {
         m_iSimHeadTick = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetNetworkTime()) - 1;
 

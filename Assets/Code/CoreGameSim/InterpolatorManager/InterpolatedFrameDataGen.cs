@@ -10,11 +10,11 @@ namespace Sim
 	{
 		public System.Single[] m_lPeersAssignedToSlot;
 		public System.Int32[] m_bInput;
-		public System.Byte[] m_bShipHealth;
+		public System.Byte[] m_fixShipHealth;
 																																									
-		public System.Single[] m_bShipHealthErrorOffset; 
+		public System.Single[] m_fixShipHealthErrorOffset; 
 
-		public System.Byte[] m_bShipHealthErrorAdjusted;
+		public System.Byte[] m_fixShipHealthErrorAdjusted;
 
 		public System.Single[] m_fixShipHealDelayTimeOut;
 																																									
@@ -71,14 +71,14 @@ namespace Sim
 			}
 
 			
-			if(m_bShipHealth == null || m_bShipHealth.Length != fdaFrameData.m_bShipHealth.Length)
+			if(m_fixShipHealth == null || m_fixShipHealth.Length != fdaFrameData.m_fixShipHealth.Length)
 			{
-				m_bShipHealth = new System.Byte[fdaFrameData.m_bShipHealth.Length] ;
+				m_fixShipHealth = new System.Byte[fdaFrameData.m_fixShipHealth.Length] ;
 
 																																									
-				m_bShipHealthErrorOffset = new System.Single[fdaFrameData.m_bShipHealth.Length] ;
+				m_fixShipHealthErrorOffset = new System.Single[fdaFrameData.m_fixShipHealth.Length] ;
 
-				m_bShipHealthErrorAdjusted = new System.Byte[fdaFrameData.m_bShipHealth.Length] ;
+				m_fixShipHealthErrorAdjusted = new System.Byte[fdaFrameData.m_fixShipHealth.Length] ;
 			
 			}
 
