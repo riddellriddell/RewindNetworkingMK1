@@ -16,6 +16,7 @@ namespace Sim
               ISimProcess<TFrameData, TConstData, TSettingsData>
         where TFrameData : IShipPositions, IPeerSlotAssignmentFrameData, IShipHealthframeData, IPeerInputFrameData, IFrameData, new()
         where TSettingsData : IPeerSlotAssignmentSettingsData, IShipMovementSettingsData, ISimTickRateSettings
+        where TConstData : IShipRespawnConstData
     {
         public int Priority { get; } = 4;
 
@@ -33,14 +34,22 @@ namespace Sim
                     {
                         //calc rotation angle 
                         Fix fixTurn = Fix.Zero;
-                        if (SimInputManager.GetTurnLeft(fdaOutFrameData.PeerInput[i]))
-                        {
-                            fixTurn = fixTurn + sdaSettingsData.ShipTurnRate * sdaSettingsData.SecondsPerTick;
-                        }
 
-                        if (SimInputManager.GetTurnRight(fdaOutFrameData.PeerInput[i]))
+                        if (IsShipOutOfBounds(fdaOutFrameData.ShipPositionX[i], fdaOutFrameData.ShipPositionY[i], cdaConstantData))
                         {
-                            fixTurn = fixTurn - sdaSettingsData.ShipTurnRate * sdaSettingsData.SecondsPerTick;
+                            fixTurn = ReturnToGameSpaceTurn(fdaOutFrameData.ShipPositionX[i], fdaOutFrameData.ShipPositionY[i], fdaOutFrameData.ShipBaseAngle[i], sdaSettingsData);
+                        }
+                        else
+                        {
+                            if (SimInputManager.GetTurnLeft(fdaOutFrameData.PeerInput[i]))
+                            {
+                                fixTurn = fixTurn + sdaSettingsData.ShipTurnRate * sdaSettingsData.SecondsPerTick;
+                            }
+
+                            if (SimInputManager.GetTurnRight(fdaOutFrameData.PeerInput[i]))
+                            {
+                                fixTurn = fixTurn - sdaSettingsData.ShipTurnRate * sdaSettingsData.SecondsPerTick;
+                            }
                         }
 
                         //update ship rotation 
@@ -73,6 +82,30 @@ namespace Sim
             }
 
             return true;
+        }
+
+        public bool IsShipOutOfBounds(Fix fixShipPosX, Fix fixShipPosY, TConstData cdaConstData)
+        {
+            Fix fixDistSqr = FixMath.Abs((fixShipPosX * fixShipPosX * Fix.Ratio(1, 1000)) + (fixShipPosY * fixShipPosY * Fix.Ratio(1,1000)));
+
+            if(fixDistSqr > (cdaConstData.SpawnRadius * cdaConstData.SpawnRadius * Fix.Ratio(1, 1000)))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public Fix ReturnToGameSpaceTurn(Fix fixShipPosX, Fix fixShipPosY, Fix fixShipBaseAngle, TSettingsData sdaSettingsData)
+        {
+            //calculate angle back to world center 
+            Fix fixAngleToCenter = FixMath.Atan2(fixShipPosY, fixShipPosX);
+
+            Fix fixAngleDifference = (((fixShipBaseAngle - fixAngleToCenter) +180) % 360) - 180;
+
+            Fix fixMaxTurnAmount = sdaSettingsData.ShipTurnRate * sdaSettingsData.SecondsPerTick;
+
+            return FixMath.Max(FixMath.Min(fixMaxTurnAmount, fixAngleDifference), -fixMaxTurnAmount);
         }
     }
 }

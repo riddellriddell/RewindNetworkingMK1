@@ -44,7 +44,7 @@ namespace Utility
 
         public Fix GetRandomFix(Fix fixMinValue, Fix fixMaxValue)
         {
-            Fix fixRngScale = fixMaxValue = fixMinValue;
+            Fix fixRngScale = fixMaxValue - fixMinValue;
 
             return fixMinValue + (GetRandomFix() * fixRngScale);
         }

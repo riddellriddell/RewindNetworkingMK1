@@ -170,8 +170,10 @@ MonoBehaviour:
   m_bUseWebRTCTransmitter: 0
   m_strUniqueDeviceID: user5
   m_bAlive: 1
-  m_sdiSettingsDataInderface: {fileID: 0}
-  m_ecsErrorCorrectionSettings: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
   m_iTotalChainLinks: 0
@@ -328,8 +330,10 @@ MonoBehaviour:
   m_bUseWebRTCTransmitter: 0
   m_strUniqueDeviceID: user7
   m_bAlive: 1
-  m_sdiSettingsDataInderface: {fileID: 0}
-  m_ecsErrorCorrectionSettings: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
   m_iTotalChainLinks: 0
@@ -380,8 +384,10 @@ MonoBehaviour:
   m_bUseWebRTCTransmitter: 0
   m_strUniqueDeviceID: user2
   m_bAlive: 1
-  m_sdiSettingsDataInderface: {fileID: 0}
-  m_ecsErrorCorrectionSettings: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
   m_iTotalChainLinks: 0
@@ -514,8 +520,10 @@ MonoBehaviour:
   m_bUseWebRTCTransmitter: 0
   m_strUniqueDeviceID: user3
   m_bAlive: 1
-  m_sdiSettingsDataInderface: {fileID: 0}
-  m_ecsErrorCorrectionSettings: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
   m_iTotalChainLinks: 0
@@ -594,8 +602,10 @@ MonoBehaviour:
   m_bUseWebRTCTransmitter: 0
   m_strUniqueDeviceID: user4
   m_bAlive: 1
-  m_sdiSettingsDataInderface: {fileID: 0}
-  m_ecsErrorCorrectionSettings: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
   m_iTotalChainLinks: 0
@@ -718,7 +728,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 804547388}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 80ee9de96deb5d04fa9edf44502b7d0d, type: 3}
   m_Name: 
@@ -831,8 +841,10 @@ MonoBehaviour:
   m_bUseWebRTCTransmitter: 0
   m_strUniqueDeviceID: user6
   m_bAlive: 1
-  m_sdiSettingsDataInderface: {fileID: 0}
-  m_ecsErrorCorrectionSettings: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
   m_iTotalChainLinks: 0
@@ -919,7 +931,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1933776695
 MonoBehaviour:
   m_ObjectHideFlags: 0
