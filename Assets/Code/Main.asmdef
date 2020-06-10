@@ -3,14 +3,20 @@
     "references": [
         "FixedPointy",
         "Utility",
-        "Networking"
+        "Networking",
+        "Sim",
+        "SharedTypes",
+        "ProjectSharedTypes",
+        "SimDataInterpolation",
+        "ProjectSimDataInterpolation"
     ],
-    "optionalUnityReferences": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": []
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }

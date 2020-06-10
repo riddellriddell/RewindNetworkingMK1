@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿using FixedPointy;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -25,8 +27,7 @@ namespace Sim
         [SerializeField]
         public FixTo3PlacesUnityInterface m_fixHealDelayTime;
         #endregion
-
-
+        
         #region IShipMovementSettingsData
         [SerializeField]
         public FixTo3PlacesUnityInterface m_fixShipSpeed;
@@ -34,6 +35,11 @@ namespace Sim
         public FixTo3PlacesUnityInterface m_fixShipAcceleration;
         [SerializeField]
         public FixTo3PlacesUnityInterface m_fixShipTurnRate;
+        #endregion
+
+        #region ISimTickRateSettings
+        [SerializeField]
+        public int m_iTicksPerSecond;
         #endregion
 
         //convert scriptable object to settings data struct 
@@ -81,7 +87,13 @@ namespace Sim
                 #region IShipMovementSettingsData
                 m_fixShipSpeed = m_fixShipSpeed.Value,
                 m_fixShipAcceleration = m_fixShipAcceleration.Value,
-                m_fixShipTurnRate = m_fixShipTurnRate.Value
+                m_fixShipTurnRate = m_fixShipTurnRate.Value,
+                #endregion
+
+                #region ISimSecondsPerTick
+                m_iTicksPerSecond = m_iTicksPerSecond,
+                m_lSimTickLength = TimeSpan.TicksPerSecond / m_iTicksPerSecond,
+                m_fixSecondsPerTick = Fix.Ratio(1 , m_iTicksPerSecond)
                 #endregion
             };
 

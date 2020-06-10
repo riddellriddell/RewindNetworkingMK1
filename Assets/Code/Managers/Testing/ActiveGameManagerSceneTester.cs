@@ -1,6 +1,7 @@
 ﻿using FixedPointy;
 using Networking;
 using Sim;
+using SimDataInterpolation;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -94,6 +95,9 @@ namespace GameManagers
         public SimProcessorSettingsInterface m_sdiSettingsDataInderface;
 
         [SerializeField]
+        public InterpolationErrorCorrectionSettingsGen m_ecsErrorCorrectionSettings;
+
+        [SerializeField]
         public long m_lPeerID;
         
         [SerializeField]
@@ -119,7 +123,7 @@ namespace GameManagers
 
         [SerializeField]
         public ActiveGameManagerSceneTesterSimState m_sstSimState;
-
+        
 
         // Start is called before the first frame update
         void Start()
@@ -213,7 +217,7 @@ namespace GameManagers
 
             m_agmActiveGameManager?.OnCleanup();
 
-            m_agmActiveGameManager = new ActiveGameManager(m_sdiSettingsDataInderface.ConvertToSettingsData(),new ConstData(), m_wbiWebInterface, m_ptfTransmitterFactory);
+            m_agmActiveGameManager = new ActiveGameManager(m_sdiSettingsDataInderface.ConvertToSettingsData(), m_ecsErrorCorrectionSettings, new ConstData(), m_wbiWebInterface, m_ptfTransmitterFactory);
 
             while(m_bAlive)
             {              
@@ -337,32 +341,34 @@ namespace GameManagers
                 m_stcNetworkDebugData.Add(stcConnection);
             }
 
-            if(tsmTestSimManager.m_fdaSimStateBuffer != null && tsmTestSimManager.m_fdaSimStateBuffer.Count > 0)
+            if(m_agmActiveGameManager.m_fimFrameDataInterpolationManager.m_ifdUnsmoothedLastFrameData != null)
             {
                 FrameData fdaFrameData = tsmTestSimManager.m_fdaSimStateBuffer.PeakEnqueue();
-                
-                m_sstSimState.m_lPeersAssignedToSlot = fdaFrameData.m_lPeersAssignedToSlot;
 
-                if(fdaFrameData.m_fixShipHealth != null)
+                InterpolatedFrameDataGen ifdInterpolatedFrameData = m_agmActiveGameManager.m_fimFrameDataInterpolationManager.m_ifdSmoothedInterpolatedFrameData;
+
+                m_sstSimState.m_lPeersAssignedToSlot = ifdInterpolatedFrameData.m_lPeersAssignedToSlot;
+
+                if(ifdInterpolatedFrameData.m_fixShipHealthErrorOffset != null)
                 {
-                    if(m_sstSimState.m_fShipHealth.Length != fdaFrameData.m_fixShipHealth.Length)
+                    if(m_sstSimState.m_fShipHealth.Length != ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length)
                     {
-                        m_sstSimState.m_fShipHealth = new float[fdaFrameData.m_fixShipHealth.Length];
-                        m_sstSimState.m_fShipSpawnCountdown = new float[fdaFrameData.m_fixShipHealth.Length];
-                        m_sstSimState.m_fShipPosX = new float[fdaFrameData.m_fixShipHealth.Length];
-                        m_sstSimState.m_fShipPosY = new float[fdaFrameData.m_fixShipHealth.Length];
-                        m_sstSimState.m_fShipVelocityX = new float[fdaFrameData.m_fixShipHealth.Length];
-                        m_sstSimState.m_fShipVelocityY = new float[fdaFrameData.m_fixShipHealth.Length];
+                        m_sstSimState.m_fShipHealth = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
+                        m_sstSimState.m_fShipSpawnCountdown = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
+                        m_sstSimState.m_fShipPosX = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
+                        m_sstSimState.m_fShipPosY = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
+                        m_sstSimState.m_fShipVelocityX = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
+                        m_sstSimState.m_fShipVelocityY = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
                     }
 
-                    for(int i = 0; i < fdaFrameData.m_fixShipHealth.Length; i++)
+                    for(int i = 0; i < ifdInterpolatedFrameData.m_fixShipHealthErrorOffset.Length; i++)
                     {
-                        m_sstSimState.m_fShipHealth[i] = (float)fdaFrameData.m_fixShipHealth[i];
-                        m_sstSimState.m_fShipSpawnCountdown[i] = (float)fdaFrameData.m_fixTimeUntilRespawn[i];
-                        m_sstSimState.m_fShipPosX[i] = (float)fdaFrameData.m_fixShipPosX[i];
-                        m_sstSimState.m_fShipPosY[i] = (float)fdaFrameData.m_fixShipPosY[i];
-                        m_sstSimState.m_fShipVelocityX[i] = (float)fdaFrameData.m_fixShipVelocityX[i];
-                        m_sstSimState.m_fShipVelocityY[i] = (float)fdaFrameData.m_fixShipVelocityY[i];
+                        m_sstSimState.m_fShipHealth[i] = (float)ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted[i];
+                        m_sstSimState.m_fShipSpawnCountdown[i] = (float)ifdInterpolatedFrameData.m_fixTimeUntilRespawnErrorAdjusted[i];
+                        m_sstSimState.m_fShipPosX[i] = (float)ifdInterpolatedFrameData.m_fixShipPosXErrorAdjusted[i];
+                        m_sstSimState.m_fShipPosY[i] = (float)ifdInterpolatedFrameData.m_fixShipPosYErrorAdjusted[i];
+                        m_sstSimState.m_fShipVelocityX[i] = (float)ifdInterpolatedFrameData.m_fixShipVelocityXErrorAdjusted[i];
+                        m_sstSimState.m_fShipVelocityY[i] = (float)ifdInterpolatedFrameData.m_fixShipVelocityYErrorAdjusted[i];
                     }
                 }
 
@@ -371,18 +377,34 @@ namespace GameManagers
 
         protected void OnDrawGizmosSelected()
         {
-           if(m_sstSimState.m_bDrawDebugData && m_sstSimState.m_fShipHealth != null)
+            if (m_sstSimState.m_bDrawDebugData)
             {
-                for(int i = 0; i < m_sstSimState.m_fShipHealth.Length; i++)
+                BaseDrawGismos(1);
+            }
+        }
+
+        protected void OnDrawGizmos()
+        {
+            if (m_sstSimState.m_bDrawDebugData)
+            {
+                BaseDrawGismos(0.25f);
+            }
+        }
+
+        protected void BaseDrawGismos(float fAlpha)
+        {
+            if (m_sstSimState.m_bDrawDebugData && m_sstSimState.m_fShipHealth != null)
+            {
+                for (int i = 0; i < m_sstSimState.m_fShipHealth.Length; i++)
                 {
                     // Draw a random colour sphere for each player
                     Gizmos.color = new Color((((m_sstSimState.m_lPeersAssignedToSlot[i] % 256) + 256) % 256) / 256.0f,
-                        ((((m_sstSimState.m_lPeersAssignedToSlot[i] >> 2)  % 256) + 256) % 256) / 256.0f,
-                        ((((m_sstSimState.m_lPeersAssignedToSlot[i] >> 4) % 256) + 256) % 256) / 256.0f, 1);
+                        ((((m_sstSimState.m_lPeersAssignedToSlot[i] >> 2) % 256) + 256) % 256) / 256.0f,
+                        ((((m_sstSimState.m_lPeersAssignedToSlot[i] >> 4) % 256) + 256) % 256) / 256.0f, fAlpha);
 
 
-                    Gizmos.DrawSphere(new Vector3(m_sstSimState.m_fShipPosX[i],0, m_sstSimState.m_fShipPosY[i]), 1);
-                    Gizmos.DrawLine(new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]), 
+                    Gizmos.DrawSphere(new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]), 0.5f);
+                    Gizmos.DrawLine(new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]),
                         new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]) +
                         (new Vector3(m_sstSimState.m_fShipVelocityX[i], 0, m_sstSimState.m_fShipVelocityY[i]) * 2));
                 }

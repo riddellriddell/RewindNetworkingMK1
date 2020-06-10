@@ -1,4 +1,4 @@
-﻿using Networking;
+﻿using SharedTypes;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -51,9 +51,9 @@ namespace Sim
         {
             for (int i = 0; i < objInputs.Length; i++)
             {
-                if (objInputs[i] is NetworkingDataBridge.UserConnecionChange)
+                if (objInputs[i] is UserConnecionChange)
                 {
-                    NetworkingDataBridge.UserConnecionChange uccUserConnectionChange = (NetworkingDataBridge.UserConnecionChange)objInputs[i];
+                    UserConnecionChange uccUserConnectionChange = (UserConnecionChange)objInputs[i];
 
                     //apply all the join messages
                     for (int j = 0; j < uccUserConnectionChange.m_iJoinPeerChannelIndex.Length; j++)

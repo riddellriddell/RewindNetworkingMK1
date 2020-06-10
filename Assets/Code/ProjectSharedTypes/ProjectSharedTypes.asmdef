@@ -1,0 +1,16 @@
+{
+    "name": "ProjectSharedTypes",
+    "references": [
+        "GUID:f0e02c337375de145b4c6e671b9e9d12",
+        "GUID:a05f5c8ba77930541a9955282464c4a9"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

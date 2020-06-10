@@ -1,5 +1,6 @@
 ﻿using Networking;
 using Sim;
+using SimDataInterpolation;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -48,6 +49,8 @@ namespace GameManagers
 
         public SimProcessorSettings m_sdaSimSettingsData;
 
+        public InterpolationErrorCorrectionSettingsGen m_ecsInterpolationErrorCorrectionSettings;
+
         public ConstData m_cdaConstData;
 
         //the peer to peer network
@@ -70,7 +73,16 @@ namespace GameManagers
 
         public LoclaPeerInputManagerTester m_pitLocalPeerInputTester;
 
-               
+        public FrameDataInterpolatorManager<
+            FrameData,
+            InterpolationErrorCorrectionSettingsGen,
+            InterpolatedFrameDataGen,
+            FrameDataInterpolator,
+            TestingSimManager<FrameData, ConstData, SimProcessorSettings>,
+            NetworkingDataBridge>
+            m_fimFrameDataInterpolationManager;
+
+
         public IPeerTransmitterFactory m_ptfTransmitterFactory;
 
         public int m_iDefaultMaxGameSize = 6;
@@ -89,11 +101,12 @@ namespace GameManagers
         //the amount of time ahead of the current network time to schedule a fetch for the game state 
         protected TimeSpan m_fSimStateLeadTime = TimeSpan.FromSeconds(0.1f);
 
-        public ActiveGameManager(SimProcessorSettings sdaSimSettingsData, ConstData cdaConstantSimData, WebInterface winWebInterface, IPeerTransmitterFactory ptfTransmitterFactory)
+        public ActiveGameManager(SimProcessorSettings sdaSimSettingsData, InterpolationErrorCorrectionSettingsGen ecsInterpolationErrorCorrectionSettings, ConstData cdaConstantSimData, WebInterface winWebInterface, IPeerTransmitterFactory ptfTransmitterFactory)
         {
             m_ptfTransmitterFactory = ptfTransmitterFactory;
             m_winWebInterface = winWebInterface;
             m_sdaSimSettingsData = sdaSimSettingsData;
+            m_ecsInterpolationErrorCorrectionSettings = ecsInterpolationErrorCorrectionSettings;
             m_cdaConstData = cdaConstantSimData;
 
             //start the connection process
@@ -352,6 +365,8 @@ namespace GameManagers
             // sim manager setup sim
             m_tsmSimManager.InitalizeAsFirstPeer(m_ncnNetworkConnection.m_lPeerID);
 
+
+            
         }
 
         protected void UpdateSetUpNewSim()
@@ -380,7 +395,9 @@ namespace GameManagers
 
             State = ActiveGameState.RunningStandardGame;
 
-            //change setting on network to running standard game
+            //initalize frame data interpolator 
+            m_fimFrameDataInterpolationManager.Initalize();
+
         }
 
         protected void UpdateRunningGame()
@@ -424,6 +441,9 @@ namespace GameManagers
 
             //update simulation
             m_tsmSimManager.Update();
+
+            //update interpolated data 
+            m_fimFrameDataInterpolationManager.UpdateInterpolatedData();
 
             //update networking 
             m_ncnNetworkConnection.UpdateConnectionsAndProcessors();
@@ -627,7 +647,19 @@ namespace GameManagers
             m_lpiLocalPeerInputManager = new LocalPeerInputManager(m_ndbDataBridge, m_ngpGlobalMessagingProcessor);
             m_pitLocalPeerInputTester = new LoclaPeerInputManagerTester(m_lpiLocalPeerInputManager);
 
-
+            m_fimFrameDataInterpolationManager = new FrameDataInterpolatorManager<
+                FrameData,
+                InterpolationErrorCorrectionSettingsGen,
+                InterpolatedFrameDataGen,
+                FrameDataInterpolator,
+                TestingSimManager<FrameData, ConstData, SimProcessorSettings>,
+                NetworkingDataBridge>
+                (
+                m_ecsInterpolationErrorCorrectionSettings,
+                m_tsmSimManager,
+                new FrameDataInterpolator(),
+                m_ndbDataBridge
+                );
         }
     }
 }

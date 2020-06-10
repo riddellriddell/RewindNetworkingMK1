@@ -25,7 +25,7 @@ namespace Sim
         ISimProcess<TFrameData, TConstData, TSettingsData>, 
         ISimSetupProcesses<TFrameData,TSettingsData>  
         where TFrameData: IPeerSlotAssignmentFrameData, IShipRespawnFrameData, IShipHealthframeData, IShipPositions, IFrameData, new()
-        where TSettingsData : IPeerSlotAssignmentSettingsData, IShipRespawnSettingsData, IShipHealthSettingsData
+        where TSettingsData : IPeerSlotAssignmentSettingsData, IShipRespawnSettingsData, IShipHealthSettingsData, ISimTickRateSettings
         where TConstData : IShipRespawnConstData
     {
         public int Priority { get; } = 2;
@@ -57,7 +57,7 @@ namespace Sim
                 else if (fdaOutFrameData.ShipHealth[i] <= Fix.Zero)
                 {
                     //count down respawn timer 
-                    fdaOutFrameData.TimeUntilRespawn[i] = fdaOutFrameData.TimeUntilRespawn[i] - TestingSimManager<TFrameData, TConstData, TSettingsData>.s_fixSecondsPerTick;
+                    fdaOutFrameData.TimeUntilRespawn[i] = fdaOutFrameData.TimeUntilRespawn[i] - sdaSettingsData.SecondsPerTick;
 
                     //check if the player can respawn 
                     if(fdaOutFrameData.TimeUntilRespawn[i] < Fix.Zero)

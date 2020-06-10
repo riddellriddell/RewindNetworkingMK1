@@ -171,6 +171,7 @@ MonoBehaviour:
   m_strUniqueDeviceID: user5
   m_bAlive: 1
   m_sdiSettingsDataInderface: {fileID: 0}
+  m_ecsErrorCorrectionSettings: {fileID: 0}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
   m_iTotalChainLinks: 0
@@ -328,6 +329,7 @@ MonoBehaviour:
   m_strUniqueDeviceID: user7
   m_bAlive: 1
   m_sdiSettingsDataInderface: {fileID: 0}
+  m_ecsErrorCorrectionSettings: {fileID: 0}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
   m_iTotalChainLinks: 0
@@ -379,6 +381,7 @@ MonoBehaviour:
   m_strUniqueDeviceID: user2
   m_bAlive: 1
   m_sdiSettingsDataInderface: {fileID: 0}
+  m_ecsErrorCorrectionSettings: {fileID: 0}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
   m_iTotalChainLinks: 0
@@ -445,6 +448,8 @@ MonoBehaviour:
   m_bAlive: 1
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
   m_iTotalChainLinks: 0
@@ -510,6 +515,7 @@ MonoBehaviour:
   m_strUniqueDeviceID: user3
   m_bAlive: 1
   m_sdiSettingsDataInderface: {fileID: 0}
+  m_ecsErrorCorrectionSettings: {fileID: 0}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
   m_iTotalChainLinks: 0
@@ -589,6 +595,7 @@ MonoBehaviour:
   m_strUniqueDeviceID: user4
   m_bAlive: 1
   m_sdiSettingsDataInderface: {fileID: 0}
+  m_ecsErrorCorrectionSettings: {fileID: 0}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
   m_iTotalChainLinks: 0
@@ -825,6 +832,7 @@ MonoBehaviour:
   m_strUniqueDeviceID: user6
   m_bAlive: 1
   m_sdiSettingsDataInderface: {fileID: 0}
+  m_ecsErrorCorrectionSettings: {fileID: 0}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
   m_iTotalChainLinks: 0
@@ -871,15 +879,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ccc095eb5b2172f429f42eee2b2d8d4e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_bEnableLag: 1
-  m_fMinLag: 0.15
-  m_fMaxLag: 0.2
+  m_bEnableLag: 0
+  m_fMinLag: 0.5
+  m_fMaxLag: 0.5
   m_bEnableOutages: 0
   m_fMinOutage: 0.25
   m_fMaxOutage: 8
   m_fMinTimeBetweenOutages: 3
   m_fMaxTimeBetweenOutages: 9
-  m_bEnablePacketLoss: 1
+  m_bEnablePacketLoss: 0
   m_fPacketLoss: 0.01
 --- !u!4 &1737021096
 Transform:
@@ -929,6 +937,8 @@ MonoBehaviour:
   m_strUniqueDeviceID: user0
   m_bAlive: 1
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0

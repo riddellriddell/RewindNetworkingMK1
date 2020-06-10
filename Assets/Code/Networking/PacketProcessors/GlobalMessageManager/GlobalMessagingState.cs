@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SharedTypes;
+using System;
 using System.Collections.Generic;
 using Utility;
 
@@ -587,7 +588,7 @@ namespace Networking
             }
 
             //build kick and join message
-            NetworkingDataBridge.UserConnecionChange uccConnectionChange = new NetworkingDataBridge.UserConnecionChange(iPeersToKick.Count, iPeersToAdd.Count);
+            UserConnecionChange uccConnectionChange = new UserConnecionChange(iPeersToKick.Count, iPeersToAdd.Count);
 
             for(int i = 0; i < iPeersToKick.Count; i++)
             {

@@ -1,0 +1,15 @@
+{
+    "name": "SharedTypes",
+    "references": [
+        "GUID:a05f5c8ba77930541a9955282464c4a9"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -4,19 +4,6 @@ using UnityEngine;
 
 namespace Networking
 {
-    public interface ISimMessagePayload 
-    {
-
-    }
-
-    public struct PeerConnectedMessage : ISimMessagePayload
-    {
-
-    }
-
-    public struct PeerDisconnectMessage : ISimMessagePayload
-    {
-
-    }
+   
 
 }

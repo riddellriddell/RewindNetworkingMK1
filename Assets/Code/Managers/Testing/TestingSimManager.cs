@@ -6,8 +6,12 @@ using GameManagers;
 using Sim;
 using Utility;
 using FixedPointy;
+using SharedTypes;
 
-public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFrameData : IFrameData, new()
+public class TestingSimManager<TFrameData, TConstData, TSettingsData>: 
+    ISimFrameDataProvider<TFrameData>
+    where TFrameData : IFrameData, new()
+    where TSettingsData : ISimTickRateSettings
 {
     public struct SimState
     {
@@ -47,12 +51,6 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
         public bool m_bShouldThreadStayAlive = true;
     }
 
-    public static int s_TicksPerSecond = 20;
-
-    public static long s_lSimTickLenght = TimeSpan.TicksPerSecond / s_TicksPerSecond;
-
-    public static Fix s_fixSecondsPerTick = Fix.Ratio(1 , s_TicksPerSecond);
-
     public TConstData m_cdaConstantData;
 
     public TSettingsData m_sdaSettingsData;
@@ -88,11 +86,11 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
 
     public void InitalizeAsFirstPeer(long lPeerID)
     {
-        m_iSimHeadTick = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetNetworkTime()) - 1;
+        m_iSimHeadTick = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetCurrentSimTime()) - 1;
 
         m_iNumberOfInputsInHeadSateCalculation = 0;
 
-        DateTime dtmSimStartTime = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.GetNetworkTime(), m_iSimHeadTick);
+        DateTime dtmSimStartTime = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.GetCurrentSimTime(), m_iSimHeadTick);
 
 
 
@@ -199,7 +197,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
                 m_iNumberOfInputsInHeadSateCalculation = 0;
             }
 
-            DateTime dtmStartOfState = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.GetNetworkTime(), iSimDataTick);
+            DateTime dtmStartOfState = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.GetCurrentSimTime(), iSimDataTick);
 
             //sim messages older or equal to this have been processed / are not needed / there are not the resources to compute
             m_ndbNetworkingDataBridge.SetOldestActiveSimTime(new SortingValue((ulong)dtmStartOfState.Ticks, ulong.MaxValue));
@@ -249,7 +247,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
 
         long lTickSinceStartOfYear = dateTime.Ticks - startOfYear.Ticks;
 
-        uint iSimTicksSinceStartOfYear = (uint)((lTickSinceStartOfYear + s_lSimTickLenght - 1) / s_lSimTickLenght);
+        uint iSimTicksSinceStartOfYear = (uint)((lTickSinceStartOfYear + m_sdaSettingsData.SimTickLength - 1) / m_sdaSettingsData.SimTickLength);
 
         return iSimTicksSinceStartOfYear;
     }
@@ -259,7 +257,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
         //get number of ticks since start of year 
         DateTime startOfYear = new DateTime(dtmCurrnetTime.Year, 1, 1);
 
-        return startOfYear + TimeSpan.FromTicks(iTick * s_lSimTickLenght);
+        return startOfYear + TimeSpan.FromTicks(iTick * m_sdaSettingsData.SimTickLength);
     }
 
     public void Update()
@@ -336,11 +334,11 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
 
         for (int i = 0; i < inputs.Length; i++)
         {
-            if(inputs[i] is NetworkingDataBridge.MessagePayloadWrapper)
+            if(inputs[i] is MessagePayloadWrapper)
             {
                // Debug.Log("Handling custom user input message");
 
-                NetworkingDataBridge.MessagePayloadWrapper mpwMessageWrapper = (NetworkingDataBridge.MessagePayloadWrapper)inputs[i];
+                MessagePayloadWrapper mpwMessageWrapper = (MessagePayloadWrapper)inputs[i];
 
                 LocalPeerInputManager.TestingUserInput peerInput = mpwMessageWrapper.m_smpPayload as LocalPeerInputManager.TestingUserInput;
 
@@ -351,11 +349,11 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
                 //sstNewState.m_lSimValue1 = (sstNewState.m_lSimValue1 + (peerInput.m_uipInputState.m_bPayload * peerInput.m_uipInputState.m_bPayload)) % long.MaxValue;
 
             }
-            else if(inputs[i] is NetworkingDataBridge.UserConnecionChange)
+            else if(inputs[i] is UserConnecionChange)
             {
                 Debug.Log("Handling user connection change message");
             
-                NetworkingDataBridge.UserConnecionChange uccUserConnectionChange = (NetworkingDataBridge.UserConnecionChange)inputs[i];
+                UserConnecionChange uccUserConnectionChange = (UserConnecionChange)inputs[i];
 
                 //apply all the join messages
                 for(int j  = 0; j < uccUserConnectionChange.m_iJoinPeerChannelIndex.Length; j++)
@@ -373,23 +371,6 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
             }
         }
     }
-    
-
-    public int GetMaxPlayerCount()
-    {
-        //get lock on game state array
-
-        return m_fdaSimStateBuffer.PeakEnqueue().MaxPlayerCount;
-
-        //release lock
-    }
-
-    //TODO: Find a way to get this data to the interpolator without coppying the entire game state
-    // maybe do read only lock on game state or only clone the needed frame data segment 
-    public void GetDataInterpolationPairCopy(DateTime dtmTargetTime, ref TFrameData fdaFromFrameData, ref TFrameData fdaToFrameData)
-    {
-
-    }
 
     public bool NewInputsForHead()
     {
@@ -397,8 +378,8 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
 
         //get the indexes for the head message buffer
         m_ndbNetworkingDataBridge.GetIndexesBetweenTimes(ConvertSimTickToDateTime(
-            m_ndbNetworkingDataBridge.GetNetworkTime(), m_iSimHeadTick - 1),
-            ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.GetNetworkTime(), m_iSimHeadTick),
+            m_ndbNetworkingDataBridge.GetCurrentSimTime(), m_iSimHeadTick - 1),
+            ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.GetCurrentSimTime(), m_iSimHeadTick),
             out int iStartMessageIndex,
             out int iEndMessageIndex);
 
@@ -417,7 +398,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
 
     public bool TimeForNewHeadTick()
     {
-        uint iTickAtCurrentTime = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetNetworkTime());
+        uint iTickAtCurrentTime = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetCurrentSimTime());
 
         if (iTickAtCurrentTime > m_iSimHeadTick)
         {
@@ -466,7 +447,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
 
         //unlock thread tick array
 
-        while (iBaseTick < ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetNetworkTime()))
+        while (iBaseTick < ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetCurrentSimTime()))
         {
             //get lock on should save data
             if (tsdSaveDataLock.m_bShouldThreadStayAlive == false)
@@ -518,7 +499,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
             //create data for next state
             TFrameData fdaNextState = m_fopFrameDataObjectPool.GetFrameData();
 
-            DateTime dtmCurrentTime = m_ndbNetworkingDataBridge.GetNetworkTime();
+            DateTime dtmCurrentTime = m_ndbNetworkingDataBridge.GetCurrentSimTime();
 
             DateTime dtmFrom = ConvertSimTickToDateTime(dtmCurrentTime, iBaseTick);
 
@@ -533,7 +514,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
             //unlock sim messages array
 
             //check if processing head state
-            if (iNextTick == ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetNetworkTime()))
+            if (iNextTick == ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetCurrentSimTime()))
             {
                 //update number of messages in head tick
                 m_iNumberOfInputsInHeadSateCalculation = objMessages.Length;
@@ -648,9 +629,45 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData> where TFra
 
             TFrameData fdaOldState = m_fdaSimStateBuffer.Dequeue();
 
-            TestingSimDataSyncVerifier<TFrameData>.VerifyData(iDequeueTick,ref fdaOldState, 0,s_TicksPerSecond * 2);
+            TestingSimDataSyncVerifier<TFrameData>.VerifyData(iDequeueTick,ref fdaOldState, 0, (int)m_sdaSettingsData.TicksPerSecond * 2);
         }
     }
 
+    //TODO: Find a way to get this data to the interpolator without coppying the entire game state
+    // maybe do read only lock on game state or only clone the needed frame data segment 
+    public void GetInterpolationFrameData(DateTime dtmSimTime, ref TFrameData fdaOutFrom, ref TFrameData fdaOutToo, out float fOutLerp)
+    {
+        //check that frame buffer holds more than one entry 
+        if(m_fdaSimStateBuffer.Count == 1)
+        {
+            //get lock on buffer
+
+            fdaOutFrom.ResetToState(m_fdaSimStateBuffer[0]);
+            fdaOutToo.ResetToState(m_fdaSimStateBuffer[0]);
+
+            //release llock on buffer
+            fOutLerp = 0;
+
+            return;            
+        }
+
+        //convert date time to sim tick
+        uint iFromTick = Math.Min( Math.Max(ConvertDateTimeToTick(dtmSimTime), m_fdaSimStateBuffer.BaseIndex), m_fdaSimStateBuffer.HeadIndex -1);
+        uint iToTick = iFromTick + 1;
+
+        //get lock on buffer
+
+        fdaOutFrom.ResetToState(m_fdaSimStateBuffer[iFromTick]);
+        fdaOutToo.ResetToState(m_fdaSimStateBuffer[iToTick]);
+
+        //release lock on buffer
+
+        //get tick of from data
+        DateTime dtmFromDataTime = ConvertSimTickToDateTime(dtmSimTime, iFromTick);
+
+        TimeSpan tspTimeDif = dtmSimTime - dtmFromDataTime;
+
+        fOutLerp = tspTimeDif.Ticks / (float)m_sdaSettingsData.SimTickLength;
+    }
 }
 

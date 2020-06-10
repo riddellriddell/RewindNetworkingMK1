@@ -3,6 +3,8 @@ using Sim;
 using UnityEngine;
 using System;
 using Utility;
+using SharedTypes;
+using ProjectSharedTypes;
 
 //this class tracks inputs from the local peer
 namespace GameManagers
@@ -10,39 +12,7 @@ namespace GameManagers
     public class LocalPeerInputManager
     {
         #region UserInputGlobalMessage
-        public class UserInputGlobalMessage : GlobalMessageBase, ISimMessagePayload
-        {
-            public static int TypeID { get; set; } = int.MinValue;
-
-            public override int TypeNumber
-            {
-                get
-                {
-                    return UserInputGlobalMessage.TypeID;
-                }
-                set
-                {
-                    TypeID = value;
-                }
-            }
-
-            public byte m_bInputState;
-
-            public override int DataSize()
-            {
-                return ByteStream.DataSize(m_bInputState);
-            }
-
-            public override void Serialize(ReadByteStream rbsByteStream)
-            {
-                ByteStream.Serialize(rbsByteStream, ref m_bInputState);
-            }
-
-            public override void Serialize(WriteByteStream wbsByteStream)
-            {
-                ByteStream.Serialize(wbsByteStream, ref m_bInputState);
-            }
-        }
+        
 
         public class TestingUserInput : GlobalMessageBase, ISimMessagePayload
         {
@@ -190,7 +160,7 @@ namespace GameManagers
     {
         public LocalPeerInputManager m_lpiLocalPeerInputManager;
 
-        public float m_fChanceOfDirectionChange = 0.5f;
+        public float m_fChanceOfDirectionChange = 1f;
 
         public float m_fChanceOfSpecial = 4f;
 

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Sim
 {
-    public struct SimProcessorSettings : IPeerSlotAssignmentSettingsData, IShipRespawnSettingsData, IShipHealthSettingsData, IShipMovementSettingsData
+    public struct SimProcessorSettings : IPeerSlotAssignmentSettingsData, IShipRespawnSettingsData, IShipHealthSettingsData, IShipMovementSettingsData, ISimTickRateSettings 
     {
         #region IPeerSlotAssignmentSettingsData
         public int m_iMaxPlayers;
@@ -44,6 +44,22 @@ namespace Sim
         public Fix ShipAcceleration { get => m_fixShipAcceleration; }
 
         public Fix ShipTurnRate { get => m_fixShipTurnRate; }
+
+        #endregion
+
+        #region ISimTickRateSettings
+
+        public int m_iTicksPerSecond;
+
+        public long m_lSimTickLength;
+
+        public Fix m_fixSecondsPerTick;
+
+        public int TicksPerSecond { get => m_iTicksPerSecond; }
+
+        public long SimTickLength { get => m_lSimTickLength; }
+
+        public Fix SecondsPerTick { get => m_fixSecondsPerTick; }
         #endregion
 
         //public Fix m_fixShipBoostSpeed;

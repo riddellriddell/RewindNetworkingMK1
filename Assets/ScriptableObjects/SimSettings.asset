@@ -34,3 +34,4 @@ MonoBehaviour:
   m_fixShipTurnRate:
     Int: 90
     Dec_To_3_Places: 0
+  m_iTicksPerSecond: 20

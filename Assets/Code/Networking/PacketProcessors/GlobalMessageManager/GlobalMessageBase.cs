@@ -1,20 +1,9 @@
-﻿using System;
+﻿using SharedTypes;
+using System;
 using Utility;
 
 namespace Networking
-{
-    public abstract class GlobalMessageBase
-    {
-        public abstract int TypeNumber { get; set; }
-
-        public abstract void Serialize(ReadByteStream rbsByteStream);
-
-        public abstract void Serialize(WriteByteStream rbsByteStream);
-
-        public abstract int DataSize();
-
-    }
-
+{  
     //this message indicates a peer is voting to kick another peer
     public class VoteMessage : GlobalMessageBase
     {

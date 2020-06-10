@@ -24,7 +24,7 @@ namespace Sim
         ISimProcess<TFrameData, TConstData, TSettingsData>, 
         ISimSetupProcesses<TFrameData, TSettingsData> 
         where TFrameData : IShipHealthframeData, IPeerSlotAssignmentFrameData, IFrameData, new()
-        where TSettingsData : IPeerSlotAssignmentSettingsData, IShipHealthSettingsData
+        where TSettingsData : IPeerSlotAssignmentSettingsData, IShipHealthSettingsData, ISimTickRateSettings
     {
         public int Priority { get; } = 3;
 
@@ -77,12 +77,12 @@ namespace Sim
                     else if (fdaOutFrameData.ShipHealDelayTimeOut[i] > Fix.Zero)
                     {
                         //reduce amount of time until ship can start healing 
-                        fdaOutFrameData.ShipHealDelayTimeOut[i] = fdaOutFrameData.ShipHealDelayTimeOut[i] - TestingSimManager<TFrameData, TConstData, TSettingsData>.s_fixSecondsPerTick;
+                        fdaOutFrameData.ShipHealDelayTimeOut[i] = fdaOutFrameData.ShipHealDelayTimeOut[i] - staSettingsData.SecondsPerTick;
                     }
                     else
                     {
                         //add health to ship
-                        fdaOutFrameData.ShipHealth[i] = fdaOutFrameData.ShipHealth[i] + (staSettingsData.ShipHealRate * TestingSimManager<TFrameData, TConstData, TSettingsData>.s_fixSecondsPerTick);
+                        fdaOutFrameData.ShipHealth[i] = fdaOutFrameData.ShipHealth[i] + (staSettingsData.ShipHealRate * staSettingsData.SecondsPerTick);
 
                         //check if reached max health
                         if(fdaOutFrameData.ShipHealth[i] > staSettingsData.ShipMaxHealth)

@@ -19,7 +19,7 @@ namespace Sim
             }
         }
                
-        [FrameDataInterpilationTypeAttribute(typeof(float), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
+        [FrameDataInterpilationTypeAttribute(typeof(long), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
         public long[] m_lPeersAssignedToSlot;
 
         #region IPeerSlotAssignmentFrameData

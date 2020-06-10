@@ -1,5 +1,6 @@
-﻿using GameManagers;
-using Networking;
+﻿
+using ProjectSharedTypes;
+using SharedTypes;
 
 namespace Sim
 {
@@ -40,17 +41,17 @@ namespace Sim
             {
                 //check if message is a disconnect message 
                 //TODO shift this class into a shared typed folder or something
-                if(objInputs[i] is NetworkingDataBridge.MessagePayloadWrapper)
+                if(objInputs[i] is MessagePayloadWrapper)
                 {
-                    NetworkingDataBridge.MessagePayloadWrapper mpwPayloadWrapper = (NetworkingDataBridge.MessagePayloadWrapper)objInputs[i];
-                    LocalPeerInputManager.UserInputGlobalMessage uimInputMessage = (LocalPeerInputManager.UserInputGlobalMessage)mpwPayloadWrapper.m_smpPayload;
+                    MessagePayloadWrapper mpwPayloadWrapper = (MessagePayloadWrapper)objInputs[i];
+                    UserInputGlobalMessage uimInputMessage = (UserInputGlobalMessage)mpwPayloadWrapper.m_smpPayload;
 
                     fdaOutFrameData.PeerInput[mpwPayloadWrapper.m_iChannelIndex] = SimInputManager.ProcessInput(fdaOutFrameData.PeerInput[mpwPayloadWrapper.m_iChannelIndex], uimInputMessage.m_bInputState);
 
                 }
-                else if (objInputs[i] is NetworkingDataBridge.UserConnecionChange)
+                else if (objInputs[i] is UserConnecionChange)
                 {
-                    NetworkingDataBridge.UserConnecionChange uccUserConnectionChange = (NetworkingDataBridge.UserConnecionChange)objInputs[i];
+                    UserConnecionChange uccUserConnectionChange = (UserConnecionChange)objInputs[i];
 
                     //clear all inputs for peers that have left
                     for(int j = 0; j < uccUserConnectionChange.m_iKickPeerChannelIndex.Length; j++)

@@ -1,0 +1,322 @@
+<#@ template language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="Sim" #>
+<#@ import namespace="System.Reflection" #>
+<#@ import namespace="System.Collections" #>
+<#@ import namespace="UnityEngine" #>
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using SimDataInterpolation;
+using Sim;
+
+<#
+	Type typFrameDataType = typeof(FrameData); 
+	PropertyInfo [] prpPropertyInfo = typFrameDataType.GetProperties();
+	
+	FieldInfo [] fldFieldInfo = typFrameDataType.GetFields();
+#>
+//Generated Code do not edit!!!!
+namespace SimDataInterpolation
+{
+	public class FrameDataInterpolator : IFrameDataInterpolator<InterpolationErrorCorrectionSettingsGen,FrameData,InterpolatedFrameDataGen>
+	{
+        public float CalculateErrorScalingAmount(float fError, float fDeltaTime, InterpolationErrorCorrectionSettingsBase.ErrorCorrectionSetting ecsErrorCorrectionSetting)
+        {
+			float fMagnitudeOfError = Mathf.Abs(fError);
+
+            //check if there is no error
+            if (fMagnitudeOfError == 0)
+            {
+                return 0;
+            }
+
+            //check if error bigger than snap distance 
+            if (fMagnitudeOfError > ecsErrorCorrectionSetting.m_fSnapDistance)
+            {
+                return 0;
+            }
+
+            //check if the error is within the min error adjustment amount
+            if (fMagnitudeOfError < ecsErrorCorrectionSetting.m_fMinInterpDistance)
+            {
+                return 1;
+            }
+
+            //scale down error magnitude
+            float fReductionAmount = fMagnitudeOfError - (fMagnitudeOfError * (1 - ecsErrorCorrectionSetting.m_fQuadraticInterpRate));
+
+            //apply linear clamping
+            fReductionAmount = Mathf.Clamp(fReductionAmount, ecsErrorCorrectionSetting.m_fMinLinearInterpSpeed, ecsErrorCorrectionSetting.m_fMaxLinearInterpSpeed);
+
+            //convert to scale multiplier
+            float fScalePercent = Mathf.Clamp01(1 - ((fReductionAmount / fMagnitudeOfError) * fDeltaTime));
+
+            return fScalePercent;
+        }	
+
+		public InterpolatedFrameDataGen CalculateErrorOffsets(InterpolatedFrameDataGen ifdOldFrameData, InterpolatedFrameDataGen ifdNewFrameData, InterpolationErrorCorrectionSettingsGen ecsErrorCorrectionSetting)
+		{
+			//check input
+			if(ifdOldFrameData == null)
+			{
+				return ifdNewFrameData;
+			}
+			
+			if(ifdNewFrameData == null)
+			{
+				return ifdOldFrameData;
+			}
+
+			if(ecsErrorCorrectionSetting.m_bEnableInterpolation == false)
+			{
+				return ifdNewFrameData;
+			}
+
+			//loop throuhg all variables and calculate the difference 
+<# 	
+	foreach(FieldInfo fldField in fldFieldInfo)
+	{
+		//try and get atttributes of target
+		FrameDataInterpilationTypeAttribute fiaAttribute = fldField.GetCustomAttribute<FrameDataInterpilationTypeAttribute>();
+	
+		//check if this is to be interpolated / tracked
+		if(fiaAttribute != null)
+	    {
+	
+			Type typErrorType = typeof(float);
+	
+			//check if value is an integer value that will require a float offset 
+			if(fiaAttribute.m_tType !=  typeof(long) && fiaAttribute.m_tType !=  typeof(int) && fiaAttribute.m_tType !=  typeof(short) && fiaAttribute.m_tType !=  typeof(byte))
+	        {
+				typErrorType = fiaAttribute.m_tType;
+	        }
+	
+			//check if an error is needed 
+			if(!(fiaAttribute.m_itpInterpolation == FrameDataInterpilationTypeAttribute.InterpolationType.None))
+	        {			
+	
+				//check if it is an array 
+				if( typeof(IEnumerable).IsAssignableFrom(fldField.FieldType) )
+				{
+					string strNumberValue = "Count";
+
+					if(fldField.FieldType.IsArray)
+                    {
+						strNumberValue = "Length";
+                    }
+														//check which type of interpolation should be used 
+#>
+			for(int i = 0 ; i < ifdOldFrameData.<#=fldField.Name + "." + strNumberValue #>; i++)
+			{
+				ifdOldFrameData.<#= fldField.Name #>ErrorOffset[i] += (<#=typErrorType.ToString()#>) (ifdNewFrameData.<#=fldField.Name#>[i] - ifdOldFrameData.<#=fldField.Name#>[i]);
+			}
+
+<#				}
+				else
+                {	
+#>									
+			ifdOldFrameData.<#= fldField.Name #>ErrorOffset += (<#=typErrorType.ToString()#>) (ifdNewFrameData.<#=fldField.Name#> - ifdOldFrameData.<#=fldField.Name#>);
+
+<#								
+				}	
+	        }
+	    }	
+	}
+#>
+			return ifdOldFrameData;
+
+		}
+
+		public InterpolatedFrameDataGen CalculateOffsetInterpolationData(InterpolatedFrameDataGen ifdFrameData)
+		{
+					//loop throuhg all variables and calculate the difference 
+<# 	
+	foreach(FieldInfo fldField in fldFieldInfo)
+	{
+		//try and get atttributes of target
+		FrameDataInterpilationTypeAttribute fiaAttribute = fldField.GetCustomAttribute<FrameDataInterpilationTypeAttribute>();
+	
+		//check if this is to be interpolated / tracked
+		if(fiaAttribute != null)
+	    {
+	
+			Type typErrorType = typeof(float);
+	
+			//check if value is an integer value that will require a float offset 
+			if(fiaAttribute.m_tType !=  typeof(long) && fiaAttribute.m_tType !=  typeof(int) && fiaAttribute.m_tType !=  typeof(short) && fiaAttribute.m_tType !=  typeof(byte))
+	        {
+				typErrorType = fiaAttribute.m_tType;
+	        }
+	
+			//check if an error is needed 
+			if(!(fiaAttribute.m_itpInterpolation == FrameDataInterpilationTypeAttribute.InterpolationType.None))
+	        {			
+	
+				//check if it is an array 
+				if( typeof(IEnumerable ).IsAssignableFrom(fldField.FieldType) )
+				{
+					string strNumberValue = "Count";
+
+					if(fldField.FieldType.IsArray)
+                    {
+						strNumberValue = "Length";
+                    }
+
+														//check which type of interpolation should be used 
+#>
+			for(int i = 0 ; i < ifdFrameData.<#=fldField.Name + "." + strNumberValue #>; i++)
+			{
+				ifdFrameData.<#= fldField.Name #>ErrorAdjusted[i] = (<#=fiaAttribute.m_tType.ToString()#>)(ifdFrameData.<#= fldField.Name #>[i] - ifdFrameData.<#= fldField.Name #>ErrorOffset[i]);
+			}
+
+<#				}
+				else
+                {	
+#>									
+			ifdFrameData.<#= fldField.Name #>ErrorAdjusted = (<#=fiaAttribute.m_tType.ToString()#>)(ifdFrameData.<#= fldField.Name #> - ifdFrameData.<#= fldField.Name #>ErrorOffset );
+
+<#								
+				}	
+	        }
+	    }	
+	}
+#>
+			return ifdFrameData;
+		}
+
+		public  InterpolatedFrameDataGen ReduceOffsets(InterpolatedFrameDataGen ifdFrameData, float fDeltaTime, InterpolationErrorCorrectionSettingsGen ecsErrorCorrectionSetting)
+		{
+<# 	
+	foreach(FieldInfo fldField in fldFieldInfo)
+	{
+		//try and get atttributes of target
+		FrameDataInterpilationTypeAttribute fiaAttribute = fldField.GetCustomAttribute<FrameDataInterpilationTypeAttribute>();
+	
+		//check if this is to be interpolated / tracked
+		if(fiaAttribute != null)
+	    {
+	
+			Type typErrorType = typeof(float);
+	
+			//check if value is an integer value that will require a float offset 
+			if(fiaAttribute.m_tType !=  typeof(long) && fiaAttribute.m_tType !=  typeof(int) && fiaAttribute.m_tType !=  typeof(short) && fiaAttribute.m_tType !=  typeof(byte))
+	        {
+				typErrorType = fiaAttribute.m_tType;
+	        }
+
+			string strMagnnitude = null;
+
+			if(typErrorType ==  typeof(float))
+            {
+				strMagnnitude =  "";
+            }
+			else if( typErrorType  == typeof(Vector2) || typErrorType == typeof(Vector3))
+            {
+				strMagnnitude = ".magnitude";
+            }
+	
+			//check if an error is needed 
+			if(!(fiaAttribute.m_itpInterpolation == FrameDataInterpilationTypeAttribute.InterpolationType.None))
+	        {			
+	
+				//check if it is an array 
+				if( typeof(IEnumerable ).IsAssignableFrom(fldField.FieldType) )
+				{
+					string strNumberValue = "Count";
+
+					if(fldField.FieldType.IsArray)
+                    {
+						strNumberValue = "Length";
+                    }
+
+														//check which type of interpolation should be used 
+#>
+			for(int i = 0 ; i < ifdFrameData.<#=fldField.Name + "." + strNumberValue#>; i++)
+			{
+				ifdFrameData.<#= fldField.Name #>ErrorOffset[i] *= CalculateErrorScalingAmount(<#= (strMagnnitude == null) ? "0" :  "ifdFrameData." + fldField.Name + "ErrorOffset[i]" + strMagnnitude #>,fDeltaTime,ecsErrorCorrectionSetting.<#= fldField.Name#>ErrorCorrectionSetting );
+			}
+
+<#				}
+				else
+                {	
+#>				
+			ifdFrameData.<#= fldField.Name #>ErrorOffset *= CalculateErrorScalingAmount(<#= (strMagnnitude == null) ? "0" :  "ifdFrameData." + fldField.Name + "ErrorOffset" + strMagnnitude #>,fDeltaTime,ecsErrorCorrectionSetting.<#= fldField.Name#>ErrorCorrectionSetting );
+
+<#								
+				}	
+	        }
+	    }
+    }	
+#>
+			return ifdFrameData;
+		}
+
+		public void CreateInterpolatedFrameData(in FrameData fdaFromFrame,in FrameData fdaToFrame,float fInterpolation, ref InterpolatedFrameDataGen ifdInterpolatedFrameData)
+        {
+			//loop throuhg all the non time offset interpolation variables
+			//that are not in arrays 
+<#	
+	foreach(FieldInfo fldField in fldFieldInfo)
+	{
+		//try and get atttributes of target
+		FrameDataInterpilationTypeAttribute fiaAttribute = fldField.GetCustomAttribute<FrameDataInterpilationTypeAttribute>();
+	
+		//check if this is to be interpolated / tracked
+		if(fiaAttribute != null)
+	    {
+	
+			//check if it is an array 
+			if( !typeof(IEnumerable ).IsAssignableFrom(fldField.FieldType) )
+			{
+				//check which type of interpolation should be used 
+				switch(fiaAttribute.m_itpInterpolation)
+				{
+					case FrameDataInterpilationTypeAttribute.InterpolationType.None:#>			
+			ifdInterpolatedFrameData.<#=fldField.Name#> = (<#=fiaAttribute.m_tType.ToString()#>) fdaToFrame.<#=fldField.Name#>;
+
+<#						
+						break;
+						
+					case FrameDataInterpilationTypeAttribute.InterpolationType.Linear:#>
+			ifdInterpolatedFrameData.<#=fldField.Name#> = (<#=fiaAttribute.m_tType.ToString()#>)( ((<#=fiaAttribute.m_tType.ToString()#>)(fdaFromFrame.<#=fldField.Name#>) * (1 - fInterpolation)) +  ((<#=fiaAttribute.m_tType.ToString()#>)(fdaToFrame.<#=fldField.Name#>) * fInterpolation));
+						
+<#						
+						break;
+				}	
+	            
+			}
+			else
+            {#>
+			for(int i = 0 ; i < ifdInterpolatedFrameData.<#=fldField.Name#>.<#= fldField.FieldType.IsArray? "Length" : "Count" #> ; i++)
+			{
+<#
+				//interpolate non player related array values 
+				//check which type of interpolation should be used 
+				switch(fiaAttribute.m_itpInterpolation)
+						{
+					case FrameDataInterpilationTypeAttribute.InterpolationType.None:#>
+
+					ifdInterpolatedFrameData.<#=fldField.Name#>[i] = (<#=fiaAttribute.m_tType.ToString()#>) fdaToFrame.<#=fldField.Name#>[i];
+
+<#						
+							break;
+						case FrameDataInterpilationTypeAttribute.InterpolationType.Linear:#>
+
+					ifdInterpolatedFrameData.<#=fldField.Name#>[i] = (<#=fiaAttribute.m_tType.ToString()#>)( ((<#=fiaAttribute.m_tType.ToString()#>)(fdaFromFrame.<#=fldField.Name#>[i]) * (1 - fInterpolation)) +  ((<#=fiaAttribute.m_tType.ToString()#>)(fdaToFrame.<#=fldField.Name#>[i]) * fInterpolation));
+						
+<#						
+							break;
+                    }#>
+			}
+<#	
+
+            }
+		}
+	
+	}
+#>
+        }
+	}
+}

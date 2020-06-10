@@ -15,7 +15,7 @@ namespace Sim
     public class ProcessShipMovement<TFrameData, TConstData, TSettingsData> :
               ISimProcess<TFrameData, TConstData, TSettingsData>
         where TFrameData : IShipPositions, IPeerSlotAssignmentFrameData, IShipHealthframeData, IPeerInputFrameData, IFrameData, new()
-        where TSettingsData : IPeerSlotAssignmentSettingsData, IShipMovementSettingsData
+        where TSettingsData : IPeerSlotAssignmentSettingsData, IShipMovementSettingsData, ISimTickRateSettings
     {
         public int Priority { get; } = 4;
 
@@ -35,12 +35,12 @@ namespace Sim
                         Fix fixTurn = Fix.Zero;
                         if (SimInputManager.GetTurnLeft(fdaOutFrameData.PeerInput[i]))
                         {
-                            fixTurn = fixTurn + sdaSettingsData.ShipTurnRate * TestingSimManager<TFrameData, TConstData, TSettingsData>.s_fixSecondsPerTick;
+                            fixTurn = fixTurn + sdaSettingsData.ShipTurnRate * sdaSettingsData.SecondsPerTick;
                         }
 
                         if (SimInputManager.GetTurnRight(fdaOutFrameData.PeerInput[i]))
                         {
-                            fixTurn = fixTurn - sdaSettingsData.ShipTurnRate * TestingSimManager<TFrameData, TConstData, TSettingsData>.s_fixSecondsPerTick;
+                            fixTurn = fixTurn - sdaSettingsData.ShipTurnRate * sdaSettingsData.SecondsPerTick;
                         }
 
                         //update ship rotation 
@@ -52,7 +52,7 @@ namespace Sim
                         //check if existing speed is too slow
                         if (fixShipSpeed < sdaSettingsData.ShipSpeed)
                         {
-                            fixShipSpeed = fixShipSpeed + sdaSettingsData.ShipAcceleration * TestingSimManager<TFrameData, TConstData, TSettingsData>.s_fixSecondsPerTick;
+                            fixShipSpeed = fixShipSpeed + sdaSettingsData.ShipAcceleration * sdaSettingsData.SecondsPerTick;
                         }
 
                         //check if ship is too fast
