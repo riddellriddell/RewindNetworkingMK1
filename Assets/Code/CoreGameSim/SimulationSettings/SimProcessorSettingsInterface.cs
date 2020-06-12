@@ -42,6 +42,20 @@ namespace Sim
         public int m_iTicksPerSecond;
         #endregion
 
+        #region IShipCollisionSettingsData
+
+        public FixTo3PlacesUnityInterface m_fixShipRestitution;
+
+        public FixTo3PlacesUnityInterface m_fixShipFriction;
+
+        public FixTo3PlacesUnityInterface m_fixShipSize;
+
+        public FixTo3PlacesUnityInterface m_fixShipMass;
+
+        public FixTo3PlacesUnityInterface m_fixShipImpactDamage;
+
+        #endregion
+
         //convert scriptable object to settings data struct 
         public SimProcessorSettings ConvertToSettingsData()
         {
@@ -57,17 +71,28 @@ namespace Sim
             m_fixShipHealRate.CalculateValue();
             m_fixHealDelayTime.CalculateValue();
             #endregion
-
-
+            
             #region IShipMovementSettingsData
             m_fixShipSpeed.CalculateValue();
             m_fixShipAcceleration.CalculateValue();
             m_fixShipTurnRate.CalculateValue();
             #endregion
 
+            #region IShipCollisionSettingsData
+
+            m_fixShipRestitution.CalculateValue();
+
+            m_fixShipFriction.CalculateValue();
+
+            m_fixShipSize.CalculateValue();
+
+            m_fixShipMass.CalculateValue();
+
+            m_fixShipImpactDamage.CalculateValue();
+            #endregion
 
 
-            SimProcessorSettings sdaOut = new SimProcessorSettings()
+        SimProcessorSettings sdaOut = new SimProcessorSettings()
             {
                 #region IPeerSlotAssignmentSettingsData
                 m_iMaxPlayers = m_iMaxPlayers,
@@ -82,8 +107,7 @@ namespace Sim
                 m_fixShipHealRate = m_fixShipHealRate.Value,
                 m_fixHealDelayTime = m_fixHealDelayTime.Value,
                 #endregion
-
-
+                
                 #region IShipMovementSettingsData
                 m_fixShipSpeed = m_fixShipSpeed.Value,
                 m_fixShipAcceleration = m_fixShipAcceleration.Value,
@@ -93,9 +117,22 @@ namespace Sim
                 #region ISimSecondsPerTick
                 m_iTicksPerSecond = m_iTicksPerSecond,
                 m_lSimTickLength = TimeSpan.TicksPerSecond / m_iTicksPerSecond,
-                m_fixSecondsPerTick = Fix.Ratio(1 , m_iTicksPerSecond)
+                m_fixSecondsPerTick = Fix.Ratio(1 , m_iTicksPerSecond),
                 #endregion
-            };
+
+            #region IShipCollisionSettingsData
+
+            m_fixShipRestitution = m_fixShipRestitution.Value,
+
+            m_fixShipFriction = m_fixShipFriction.Value,
+
+            m_fixShipSize = m_fixShipSize.Value,
+
+            m_fixShipInverseMass = Fix.One / m_fixShipMass.Value,
+
+            m_fixShipImpactDamage = m_fixShipImpactDamage.Value,
+            #endregion
+        };
 
             return sdaOut;
         }

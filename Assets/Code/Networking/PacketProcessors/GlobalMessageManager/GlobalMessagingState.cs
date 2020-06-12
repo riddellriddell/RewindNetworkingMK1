@@ -1,6 +1,7 @@
 ﻿using SharedTypes;
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 using Utility;
 
 namespace Networking
@@ -423,10 +424,20 @@ namespace Networking
                 if (gmcChangedChannel.m_chvVotes[i].m_vtpVoteType == GlobalMessageChannelState.ChannelVote.VoteType.Kick &&
                     gmcChangedChannel.m_chvVotes[i].IsActive(dtmTimeOfVote, s_tspVoteTimeout))
                 {
+                    //todo remove this code
+                    if(i < 0 || i > 5)
+                    {
+                        Debug.LogError("Attempting to kick peer out of bounds");
+                    }
+
                     iKickPeers.Add(i);
                 }
                 else if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Assigned) //get non kick peer list
                 {
+                    if (i < 0 || i > 5)
+                    {
+                        Debug.LogError("Attempting to add peer out of bounds");
+                    }
                     iKeepList.Add(i);
                 }
             }

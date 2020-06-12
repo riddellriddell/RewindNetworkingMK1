@@ -35,3 +35,18 @@ MonoBehaviour:
     Int: 90
     Dec_To_3_Places: 0
   m_iTicksPerSecond: 20
+  m_fixShipRestitution:
+    Int: 2
+    Dec_To_3_Places: 0
+  m_fixShipFriction:
+    Int: 0
+    Dec_To_3_Places: 500
+  m_fixShipSize:
+    Int: 0
+    Dec_To_3_Places: 500
+  m_fixShipMass:
+    Int: 1
+    Dec_To_3_Places: 0
+  m_fixShipImpactDamage:
+    Int: 10
+    Dec_To_3_Places: 0

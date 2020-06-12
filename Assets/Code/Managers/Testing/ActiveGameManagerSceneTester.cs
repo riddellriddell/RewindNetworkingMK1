@@ -1,5 +1,4 @@
-﻿using FixedPointy;
-using Networking;
+﻿using Networking;
 using Sim;
 using SimDataInterpolation;
 using System;
@@ -41,7 +40,7 @@ namespace GameManagers
 
         [SerializeField]
         public GlobalMessageChannelState.State m_staState;
-        
+
         [SerializeField]
         public int m_iVotes;
     }
@@ -70,7 +69,7 @@ namespace GameManagers
         public float[] m_fShipPosY;
         public float[] m_fShipVelocityX;
         public float[] m_fShipVelocityY;
-        
+
     }
 
     public class ActiveGameManagerSceneTester : MonoBehaviour
@@ -99,13 +98,13 @@ namespace GameManagers
 
         [SerializeField]
         public long m_lPeerID;
-        
+
         [SerializeField]
         public NetworkGlobalMessengerProcessor.State m_staGlobalMessagingState;
 
         [SerializeField]
         public int m_iTotalChainLinks;
-        
+
         [SerializeField]
         public int m_iActiveChainLinks;
 
@@ -113,7 +112,7 @@ namespace GameManagers
         public int m_iBaseChainLinkIndex;
 
         [SerializeField]
-        public int m_iGlobalMessagingChannelIndex;      
+        public int m_iGlobalMessagingChannelIndex;
 
         [SerializeField]
         public List<ActiveGameManagerSceneTesterGlobalMessageChannel> m_gmsGlobalMessagingState;
@@ -123,12 +122,12 @@ namespace GameManagers
 
         [SerializeField]
         public ActiveGameManagerSceneTesterSimState m_sstSimState;
-        
+
 
         // Start is called before the first frame update
         void Start()
         {
-            if(m_bUseWebRTCTransmitter)
+            if (m_bUseWebRTCTransmitter)
             {
                 m_ptfTransmitterFactory = new WebRTCFactory(this);
             }
@@ -179,7 +178,7 @@ namespace GameManagers
             m_wbiWebInterface = null;
 
             m_agmActiveGameManager?.OnCleanup();
-            
+
             m_agmActiveGameManager = null;
         }
 
@@ -201,10 +200,10 @@ namespace GameManagers
             }
 
             m_wbiWebInterface.GetPlayerID(m_strUniqueDeviceID);
-                        
 
-            while (m_bAlive && m_wbiWebInterface.PlayerIDCommunicationStatus.m_cmsStatus != WebInterface.WebAPICommunicationTracker.CommunctionStatus.Succedded )
-            {              
+
+            while (m_bAlive && m_wbiWebInterface.PlayerIDCommunicationStatus.m_cmsStatus != WebInterface.WebAPICommunicationTracker.CommunctionStatus.Succedded)
+            {
                 m_wbiWebInterface.UpdateCommunication();
 
                 yield return null;
@@ -217,10 +216,12 @@ namespace GameManagers
 
             m_agmActiveGameManager?.OnCleanup();
 
-            m_agmActiveGameManager = new ActiveGameManager(m_sdiSettingsDataInderface.ConvertToSettingsData(), m_ecsErrorCorrectionSettings, new ConstData(), m_wbiWebInterface, m_ptfTransmitterFactory);
+            m_cdaConstSimData = new ConstData();
 
-            while(m_bAlive)
-            {              
+            m_agmActiveGameManager = new ActiveGameManager(m_sdiSettingsDataInderface.ConvertToSettingsData(), m_ecsErrorCorrectionSettings, m_cdaConstSimData, m_wbiWebInterface, m_ptfTransmitterFactory);
+
+            while (m_bAlive)
+            {
                 m_wbiWebInterface.UpdateCommunication();
 
                 m_agmActiveGameManager.UpdateGame(Time.deltaTime);
@@ -243,7 +244,7 @@ namespace GameManagers
 
             NetworkGlobalMessengerProcessor gmpGlobalMessagingProcessor = m_agmActiveGameManager.m_ncnNetworkConnection.GetPacketProcessor<NetworkGlobalMessengerProcessor>();
             TimeNetworkProcessor tnpTimeProcessor = m_agmActiveGameManager.m_ncnNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
-            TestingSimManager<FrameData,ConstData,SimProcessorSettings> tsmTestSimManager = m_agmActiveGameManager.m_tsmSimManager;
+            TestingSimManager<FrameData, ConstData, SimProcessorSettings> tsmTestSimManager = m_agmActiveGameManager.m_tsmSimManager;
 
             m_staGlobalMessagingState = gmpGlobalMessagingProcessor.m_staState;
 
@@ -267,7 +268,7 @@ namespace GameManagers
                 {
                     m_iGlobalMessagingChannelIndex = -1;
                 }
-                               
+
                 m_gmsGlobalMessagingState = new List<ActiveGameManagerSceneTesterGlobalMessageChannel>();
 
                 for (int i = 0; i < gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels.Count; i++)
@@ -276,7 +277,7 @@ namespace GameManagers
 
                     int iVotes = 0;
 
-                    for(int j = 0; j < gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels.Count; j++)
+                    for (int j = 0; j < gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels.Count; j++)
                     {
                         GlobalMessageChannelState gcsVotingChannel = gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[j];
 
@@ -285,10 +286,10 @@ namespace GameManagers
                         {
                             //if(gcsVotingChannel.m_chvVotes[i].m_lPeerID == gcsChannelState.m_lChannelPeer)
                             //{
-                                if(gcsVotingChannel.m_chvVotes[i].IsActive(tnpTimeProcessor.NetworkTime, GlobalMessagingState.s_tspVoteTimeout) == true)
-                                {
-                                    iVotes++;
-                                }
+                            if (gcsVotingChannel.m_chvVotes[i].IsActive(tnpTimeProcessor.NetworkTime, GlobalMessagingState.s_tspVoteTimeout) == true)
+                            {
+                                iVotes++;
+                            }
                             //}
                         }
 
@@ -307,7 +308,7 @@ namespace GameManagers
 
             NetworkLayoutProcessor nlpNetworkLayout = m_agmActiveGameManager.m_ncnNetworkConnection.GetPacketProcessor<NetworkLayoutProcessor>();
 
-            foreach (KeyValuePair<long,ConnectionNetworkLayoutProcessor> cnlConnectionLayout in nlpNetworkLayout.ChildConnectionProcessors)
+            foreach (KeyValuePair<long, ConnectionNetworkLayoutProcessor> cnlConnectionLayout in nlpNetworkLayout.ChildConnectionProcessors)
             {
                 ActiveGameManagerSceneTesterConnection stcConnection = new ActiveGameManagerSceneTesterConnection();
 
@@ -341,18 +342,15 @@ namespace GameManagers
                 m_stcNetworkDebugData.Add(stcConnection);
             }
 
-            if(m_agmActiveGameManager.m_fimFrameDataInterpolationManager.m_ifdUnsmoothedLastFrameData != null)
+            if (m_agmActiveGameManager.m_fimFrameDataInterpolationManager.m_ifdUnsmoothedLastFrameData != null)
             {
-                FrameData fdaFrameData = tsmTestSimManager.m_fdaSimStateBuffer.PeakEnqueue();
-
                 InterpolatedFrameDataGen ifdInterpolatedFrameData = m_agmActiveGameManager.m_fimFrameDataInterpolationManager.m_ifdSmoothedInterpolatedFrameData;
 
-                m_sstSimState.m_lPeersAssignedToSlot = ifdInterpolatedFrameData.m_lPeersAssignedToSlot;
-
-                if(ifdInterpolatedFrameData.m_fixShipHealthErrorOffset != null)
+                if (ifdInterpolatedFrameData.m_fixShipHealthErrorOffset != null)
                 {
-                    if(m_sstSimState.m_fShipHealth.Length != ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length)
+                    if (m_sstSimState.m_fShipHealth.Length != ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length)
                     {
+                        m_sstSimState.m_lPeersAssignedToSlot = new long[ifdInterpolatedFrameData.m_lPeersAssignedToSlot.Length];
                         m_sstSimState.m_fShipHealth = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
                         m_sstSimState.m_fShipSpawnCountdown = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
                         m_sstSimState.m_fShipPosX = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
@@ -361,14 +359,15 @@ namespace GameManagers
                         m_sstSimState.m_fShipVelocityY = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
                     }
 
-                    for(int i = 0; i < ifdInterpolatedFrameData.m_fixShipHealthErrorOffset.Length; i++)
+                    for (int i = 0; i < ifdInterpolatedFrameData.m_fixShipHealthErrorOffset.Length; i++)
                     {
-                        m_sstSimState.m_fShipHealth[i] = (float)ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted[i];
-                        m_sstSimState.m_fShipSpawnCountdown[i] = (float)ifdInterpolatedFrameData.m_fixTimeUntilRespawnErrorAdjusted[i];
-                        m_sstSimState.m_fShipPosX[i] = (float)ifdInterpolatedFrameData.m_fixShipPosXErrorAdjusted[i];
-                        m_sstSimState.m_fShipPosY[i] = (float)ifdInterpolatedFrameData.m_fixShipPosYErrorAdjusted[i];
-                        m_sstSimState.m_fShipVelocityX[i] = (float)ifdInterpolatedFrameData.m_fixShipVelocityXErrorAdjusted[i];
-                        m_sstSimState.m_fShipVelocityY[i] = (float)ifdInterpolatedFrameData.m_fixShipVelocityYErrorAdjusted[i];
+                        m_sstSimState.m_lPeersAssignedToSlot[i] = ifdInterpolatedFrameData.m_lPeersAssignedToSlot[i];
+                        m_sstSimState.m_fShipHealth[i] = ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted[i];
+                        m_sstSimState.m_fShipSpawnCountdown[i] = ifdInterpolatedFrameData.m_fixTimeUntilRespawnErrorAdjusted[i];
+                        m_sstSimState.m_fShipPosX[i] = ifdInterpolatedFrameData.m_fixShipPosXErrorAdjusted[i];
+                        m_sstSimState.m_fShipPosY[i] = ifdInterpolatedFrameData.m_fixShipPosYErrorAdjusted[i];
+                        m_sstSimState.m_fShipVelocityX[i] = ifdInterpolatedFrameData.m_fixShipVelocityXErrorAdjusted[i];
+                        m_sstSimState.m_fShipVelocityY[i] = ifdInterpolatedFrameData.m_fixShipVelocityYErrorAdjusted[i];
                     }
                 }
 
@@ -397,16 +396,31 @@ namespace GameManagers
             {
                 for (int i = 0; i < m_sstSimState.m_fShipHealth.Length; i++)
                 {
+                    if (m_sstSimState.m_fShipHealth[i] > 0)
+                    {
+
+                        // Draw a random colour sphere for each player
+                        Gizmos.color = new Color((((m_sstSimState.m_lPeersAssignedToSlot[i] % 256) + 256) % 256) / 256.0f,
+                            ((((m_sstSimState.m_lPeersAssignedToSlot[i] >> 2) % 256) + 256) % 256) / 256.0f,
+                            ((((m_sstSimState.m_lPeersAssignedToSlot[i] >> 4) % 256) + 256) % 256) / 256.0f, fAlpha);
+
+
+                        Gizmos.DrawSphere(new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]), (float)m_sdiSettingsDataInderface.m_fixShipSize.Value);
+                        Gizmos.DrawLine(new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]),
+                            new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]) +
+                            (new Vector3(m_sstSimState.m_fShipVelocityX[i], 0, m_sstSimState.m_fShipVelocityY[i]) * 4));
+                    }
+                }
+            }
+
+            if (m_cdaConstSimData != null && m_cdaConstSimData.m_fixAsteroidPositionX != null)
+            {
+                for (int i = 0; i < m_cdaConstSimData.m_fixAsteroidPositionX.Length; i++)
+                {
                     // Draw a random colour sphere for each player
-                    Gizmos.color = new Color((((m_sstSimState.m_lPeersAssignedToSlot[i] % 256) + 256) % 256) / 256.0f,
-                        ((((m_sstSimState.m_lPeersAssignedToSlot[i] >> 2) % 256) + 256) % 256) / 256.0f,
-                        ((((m_sstSimState.m_lPeersAssignedToSlot[i] >> 4) % 256) + 256) % 256) / 256.0f, fAlpha);
+                    Gizmos.color = new Color(1, 0.5f, 0, 1);
 
-
-                    Gizmos.DrawSphere(new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]), 0.5f);
-                    Gizmos.DrawLine(new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]),
-                        new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]) +
-                        (new Vector3(m_sstSimState.m_fShipVelocityX[i], 0, m_sstSimState.m_fShipVelocityY[i]) * 2));
+                    Gizmos.DrawSphere(new Vector3((float)m_cdaConstSimData.m_fixAsteroidPositionX[i], 0, (float)m_cdaConstSimData.m_fixAsteroidPositionY[i]), (float)m_cdaConstSimData.m_fixAsteroidSize[i]);
                 }
             }
         }

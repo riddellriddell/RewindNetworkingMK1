@@ -183,7 +183,7 @@ MonoBehaviour:
   m_gmsGlobalMessagingState: []
   m_stcNetworkDebugData: []
   m_sstSimState:
-    m_bDrawDebugData: 0
+    m_bDrawDebugData: 1
     m_lPeersAssignedToSlot: 
     m_fShipHealth: []
     m_fShipSpawnCountdown: []
@@ -343,7 +343,7 @@ MonoBehaviour:
   m_gmsGlobalMessagingState: []
   m_stcNetworkDebugData: []
   m_sstSimState:
-    m_bDrawDebugData: 0
+    m_bDrawDebugData: 1
     m_lPeersAssignedToSlot: 
     m_fShipHealth: []
     m_fShipSpawnCountdown: []
@@ -397,7 +397,7 @@ MonoBehaviour:
   m_gmsGlobalMessagingState: []
   m_stcNetworkDebugData: []
   m_sstSimState:
-    m_bDrawDebugData: 0
+    m_bDrawDebugData: 1
     m_lPeersAssignedToSlot: 
     m_fShipHealth: []
     m_fShipSpawnCountdown: []
@@ -533,7 +533,7 @@ MonoBehaviour:
   m_gmsGlobalMessagingState: []
   m_stcNetworkDebugData: []
   m_sstSimState:
-    m_bDrawDebugData: 0
+    m_bDrawDebugData: 1
     m_lPeersAssignedToSlot: 
     m_fShipHealth: []
     m_fShipSpawnCountdown: []
@@ -615,7 +615,7 @@ MonoBehaviour:
   m_gmsGlobalMessagingState: []
   m_stcNetworkDebugData: []
   m_sstSimState:
-    m_bDrawDebugData: 0
+    m_bDrawDebugData: 1
     m_lPeersAssignedToSlot: 
     m_fShipHealth: []
     m_fShipSpawnCountdown: []
@@ -854,7 +854,7 @@ MonoBehaviour:
   m_gmsGlobalMessagingState: []
   m_stcNetworkDebugData: []
   m_sstSimState:
-    m_bDrawDebugData: 0
+    m_bDrawDebugData: 1
     m_lPeersAssignedToSlot: 
     m_fShipHealth: []
     m_fShipSpawnCountdown: []

@@ -633,6 +633,16 @@ namespace GameManagers
 
             m_spmSimProcessManager.AddSimProcess(psmShipMovementProcessor);
 
+            //add ship to ship collision 
+            ProcessShipShipCollisions<FrameData, ConstData, SimProcessorSettings> sscShipShipCollisionProcessor = new ProcessShipShipCollisions<FrameData, ConstData, SimProcessorSettings>();
+
+            m_spmSimProcessManager.AddSimProcess(sscShipShipCollisionProcessor);
+
+            //add ship asteroid collisions 
+            ProcessShipAsteroidCollisions<FrameData, ConstData, SimProcessorSettings> sacShipAsteroidCollisionProcessor = new ProcessShipAsteroidCollisions<FrameData, ConstData, SimProcessorSettings>();
+
+            m_spmSimProcessManager.AddSimProcess(sacShipAsteroidCollisionProcessor);
+
 
             //m_spmSimProcessManager.AddSimSetupProcess();
 

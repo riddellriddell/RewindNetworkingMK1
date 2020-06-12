@@ -58,6 +58,6 @@ MonoBehaviour:
   m_fixShipBaseAngleErrorCorrectionSetting:
     m_fSnapDistance: 20
     m_fMinInterpDistance: 0
-    m_fMinLinearInterpSpeed: 0
-    m_fMaxLinearInterpSpeed: 1
-    m_fQuadraticInterpRate: 1
+    m_fMinLinearInterpSpeed: 5
+    m_fMaxLinearInterpSpeed: 10
+    m_fQuadraticInterpRate: 10

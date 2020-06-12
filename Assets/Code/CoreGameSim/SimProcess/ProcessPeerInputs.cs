@@ -56,7 +56,7 @@ namespace Sim
                     //clear all inputs for peers that have left
                     for(int j = 0; j < uccUserConnectionChange.m_iKickPeerChannelIndex.Length; j++)
                     {
-                        fdaOutFrameData.PeerInput[uccUserConnectionChange.m_iKickPeerChannelIndex[i]] = SimInputManager.DefaultInput();
+                        fdaOutFrameData.PeerInput[uccUserConnectionChange.m_iKickPeerChannelIndex[j]] = SimInputManager.DefaultInput();
                     }
                 }
                 

@@ -75,6 +75,9 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
 
     //how many inputs occured during the head state tick, this is used to check if new inputs have been createad and a new head state needs to be calculated 
     public int m_iNumberOfInputsInHeadSateCalculation = 0;
+
+    //TODO remobe this value, this is a testing value to check the sim has a stat on frist update
+    public bool m_bFirstUpdate = true;
     
     public TestingSimManager(TConstData cdaSimConstantData, TSettingsData sdaSimSettingsData, NetworkingDataBridge ndbNetworkingDataBridge,SimProcessManager<TFrameData, TConstData, TSettingsData> spmSimProcessManager)
     {
@@ -263,6 +266,16 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
     public void Update()
     {
         CheckForNewData();
+
+        if(m_bFirstUpdate)
+        {
+            m_bFirstUpdate = false;
+
+            if(m_fdaSimStateBuffer.Count == 0 )
+            {
+                Debug.LogError("No State on first update");
+            }
+        }
 
         //check if a sim state has been setup on peer
         if (m_fdaSimStateBuffer.Count != 0)
