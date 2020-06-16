@@ -61,3 +61,39 @@ MonoBehaviour:
     m_fMinLinearInterpSpeed: 5
     m_fMaxLinearInterpSpeed: 10
     m_fQuadraticInterpRate: 10
+  m_fixTimeUntilNextFireErrorCorrectionSetting:
+    m_fSnapDistance: 1
+    m_fMinInterpDistance: 0
+    m_fMinLinearInterpSpeed: 2
+    m_fMaxLinearInterpSpeed: 5
+    m_fQuadraticInterpRate: 5
+  m_fixLazerLifeRemainingErrorCorrectionSetting:
+    m_fSnapDistance: 1
+    m_fMinInterpDistance: 0
+    m_fMinLinearInterpSpeed: 2
+    m_fMaxLinearInterpSpeed: 5
+    m_fQuadraticInterpRate: 5
+  m_fixLazerPositionXErrorCorrectionSetting:
+    m_fSnapDistance: 0.5
+    m_fMinInterpDistance: 0
+    m_fMinLinearInterpSpeed: 2
+    m_fMaxLinearInterpSpeed: 5
+    m_fQuadraticInterpRate: 5
+  m_fixLazerPositionYErrorCorrectionSetting:
+    m_fSnapDistance: 0.5
+    m_fMinInterpDistance: 0
+    m_fMinLinearInterpSpeed: 2
+    m_fMaxLinearInterpSpeed: 5
+    m_fQuadraticInterpRate: 5
+  m_fixLazerVelocityXErrorCorrectionSetting:
+    m_fSnapDistance: 0.5
+    m_fMinInterpDistance: 0
+    m_fMinLinearInterpSpeed: 2
+    m_fMaxLinearInterpSpeed: 5
+    m_fQuadraticInterpRate: 5
+  m_fixLazerVelocityYErrorCorrectionSetting:
+    m_fSnapDistance: 0.5
+    m_fMinInterpDistance: 0
+    m_fMinLinearInterpSpeed: 2
+    m_fMaxLinearInterpSpeed: 5
+    m_fQuadraticInterpRate: 5

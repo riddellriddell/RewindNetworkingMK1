@@ -70,6 +70,9 @@ namespace GameManagers
         public float[] m_fShipVelocityX;
         public float[] m_fShipVelocityY;
 
+        public float[] m_fLazerPosX;
+        public float[] m_fLazerPosY;
+        public float[] m_fLazerLife;
     }
 
     public class ActiveGameManagerSceneTester : MonoBehaviour
@@ -369,6 +372,21 @@ namespace GameManagers
                         m_sstSimState.m_fShipVelocityX[i] = ifdInterpolatedFrameData.m_fixShipVelocityXErrorAdjusted[i];
                         m_sstSimState.m_fShipVelocityY[i] = ifdInterpolatedFrameData.m_fixShipVelocityYErrorAdjusted[i];
                     }
+
+                    if (m_sstSimState.m_fLazerLife.Length != ifdInterpolatedFrameData.m_fixLazerLifeRemaining.Length)
+                    {
+                        
+                        m_sstSimState.m_fLazerLife = new float[ifdInterpolatedFrameData.m_fixLazerLifeRemaining.Length];
+                        m_sstSimState.m_fLazerPosX = new float[ifdInterpolatedFrameData.m_fixLazerLifeRemaining.Length];
+                        m_sstSimState.m_fLazerPosY = new float[ifdInterpolatedFrameData.m_fixLazerLifeRemaining.Length];
+                    }                                                                                                 
+
+                    for (int i = 0; i < ifdInterpolatedFrameData.m_fixLazerLifeRemaining.Length; i++)
+                    {
+                        m_sstSimState.m_fLazerLife[i] = ifdInterpolatedFrameData.m_fixLazerLifeRemaining[i];
+                        m_sstSimState.m_fLazerPosX[i] = ifdInterpolatedFrameData.m_fixLazerPositionX[i];
+                        m_sstSimState.m_fLazerPosY[i] = ifdInterpolatedFrameData.m_fixLazerPositionY[i];
+                    }
                 }
 
             }
@@ -411,6 +429,16 @@ namespace GameManagers
                             (new Vector3(m_sstSimState.m_fShipVelocityX[i], 0, m_sstSimState.m_fShipVelocityY[i]) * 4));
                     }
                 }
+
+                for(int i = 0; i < m_sstSimState.m_fLazerLife.Length; i++)
+                {
+                    if(m_sstSimState.m_fLazerLife[i] > 0)
+                    {
+                        Gizmos.color = new Color(0, 0, 1, fAlpha);
+
+                        Gizmos.DrawSphere(new Vector3(m_sstSimState.m_fLazerPosX[i], 0, m_sstSimState.m_fLazerPosY[i]), (float)m_sdiSettingsDataInderface.m_fixLazerSize.Value);
+                    }
+                }
             }
 
             if (m_cdaConstSimData != null && m_cdaConstSimData.m_fixAsteroidPositionX != null)
@@ -423,6 +451,8 @@ namespace GameManagers
                     Gizmos.DrawSphere(new Vector3((float)m_cdaConstSimData.m_fixAsteroidPositionX[i], 0, (float)m_cdaConstSimData.m_fixAsteroidPositionY[i]), (float)m_cdaConstSimData.m_fixAsteroidSize[i]);
                 }
             }
+            
+
         }
     }
 }

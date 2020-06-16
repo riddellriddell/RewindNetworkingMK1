@@ -12,7 +12,7 @@ namespace SimDataInterpolation
 	{
         public float CalculateErrorScalingAmount(float fError, float fDeltaTime, InterpolationErrorCorrectionSettingsBase.ErrorCorrectionSetting ecsErrorCorrectionSetting)
         {
-            float fMagnitudeOfError = Mathf.Abs(fError);
+			float fMagnitudeOfError = Mathf.Abs(fError);
 
             //check if there is no error
             if (fMagnitudeOfError == 0)
@@ -103,6 +103,36 @@ namespace SimDataInterpolation
 				ifdOldFrameData.m_fixShipBaseAngleErrorOffset[i] += (System.Single) (ifdNewFrameData.m_fixShipBaseAngle[i] - ifdOldFrameData.m_fixShipBaseAngle[i]);
 			}
 
+			for(int i = 0 ; i < ifdOldFrameData.m_fixTimeUntilNextFire.Length; i++)
+			{
+				ifdOldFrameData.m_fixTimeUntilNextFireErrorOffset[i] += (System.Single) (ifdNewFrameData.m_fixTimeUntilNextFire[i] - ifdOldFrameData.m_fixTimeUntilNextFire[i]);
+			}
+
+			for(int i = 0 ; i < ifdOldFrameData.m_fixLazerLifeRemaining.Length; i++)
+			{
+				ifdOldFrameData.m_fixLazerLifeRemainingErrorOffset[i] += (System.Single) (ifdNewFrameData.m_fixLazerLifeRemaining[i] - ifdOldFrameData.m_fixLazerLifeRemaining[i]);
+			}
+
+			for(int i = 0 ; i < ifdOldFrameData.m_fixLazerPositionX.Length; i++)
+			{
+				ifdOldFrameData.m_fixLazerPositionXErrorOffset[i] += (System.Single) (ifdNewFrameData.m_fixLazerPositionX[i] - ifdOldFrameData.m_fixLazerPositionX[i]);
+			}
+
+			for(int i = 0 ; i < ifdOldFrameData.m_fixLazerPositionY.Length; i++)
+			{
+				ifdOldFrameData.m_fixLazerPositionYErrorOffset[i] += (System.Single) (ifdNewFrameData.m_fixLazerPositionY[i] - ifdOldFrameData.m_fixLazerPositionY[i]);
+			}
+
+			for(int i = 0 ; i < ifdOldFrameData.m_fixLazerVelocityX.Length; i++)
+			{
+				ifdOldFrameData.m_fixLazerVelocityXErrorOffset[i] += (System.Single) (ifdNewFrameData.m_fixLazerVelocityX[i] - ifdOldFrameData.m_fixLazerVelocityX[i]);
+			}
+
+			for(int i = 0 ; i < ifdOldFrameData.m_fixLazerVelocityY.Length; i++)
+			{
+				ifdOldFrameData.m_fixLazerVelocityYErrorOffset[i] += (System.Single) (ifdNewFrameData.m_fixLazerVelocityY[i] - ifdOldFrameData.m_fixLazerVelocityY[i]);
+			}
+
 			return ifdOldFrameData;
 
 		}
@@ -150,6 +180,36 @@ namespace SimDataInterpolation
 				ifdFrameData.m_fixShipBaseAngleErrorAdjusted[i] = (System.Single)(ifdFrameData.m_fixShipBaseAngle[i] - ifdFrameData.m_fixShipBaseAngleErrorOffset[i]);
 			}
 
+			for(int i = 0 ; i < ifdFrameData.m_fixTimeUntilNextFire.Length; i++)
+			{
+				ifdFrameData.m_fixTimeUntilNextFireErrorAdjusted[i] = (System.Single)(ifdFrameData.m_fixTimeUntilNextFire[i] - ifdFrameData.m_fixTimeUntilNextFireErrorOffset[i]);
+			}
+
+			for(int i = 0 ; i < ifdFrameData.m_fixLazerLifeRemaining.Length; i++)
+			{
+				ifdFrameData.m_fixLazerLifeRemainingErrorAdjusted[i] = (System.Single)(ifdFrameData.m_fixLazerLifeRemaining[i] - ifdFrameData.m_fixLazerLifeRemainingErrorOffset[i]);
+			}
+
+			for(int i = 0 ; i < ifdFrameData.m_fixLazerPositionX.Length; i++)
+			{
+				ifdFrameData.m_fixLazerPositionXErrorAdjusted[i] = (System.Single)(ifdFrameData.m_fixLazerPositionX[i] - ifdFrameData.m_fixLazerPositionXErrorOffset[i]);
+			}
+
+			for(int i = 0 ; i < ifdFrameData.m_fixLazerPositionY.Length; i++)
+			{
+				ifdFrameData.m_fixLazerPositionYErrorAdjusted[i] = (System.Single)(ifdFrameData.m_fixLazerPositionY[i] - ifdFrameData.m_fixLazerPositionYErrorOffset[i]);
+			}
+
+			for(int i = 0 ; i < ifdFrameData.m_fixLazerVelocityX.Length; i++)
+			{
+				ifdFrameData.m_fixLazerVelocityXErrorAdjusted[i] = (System.Single)(ifdFrameData.m_fixLazerVelocityX[i] - ifdFrameData.m_fixLazerVelocityXErrorOffset[i]);
+			}
+
+			for(int i = 0 ; i < ifdFrameData.m_fixLazerVelocityY.Length; i++)
+			{
+				ifdFrameData.m_fixLazerVelocityYErrorAdjusted[i] = (System.Single)(ifdFrameData.m_fixLazerVelocityY[i] - ifdFrameData.m_fixLazerVelocityYErrorOffset[i]);
+			}
+
 			return ifdFrameData;
 		}
 
@@ -193,6 +253,36 @@ namespace SimDataInterpolation
 			for(int i = 0 ; i < ifdFrameData.m_fixShipBaseAngle.Length; i++)
 			{
 				ifdFrameData.m_fixShipBaseAngleErrorOffset[i] *= CalculateErrorScalingAmount(ifdFrameData.m_fixShipBaseAngleErrorOffset[i],fDeltaTime,ecsErrorCorrectionSetting.m_fixShipBaseAngleErrorCorrectionSetting );
+			}
+
+			for(int i = 0 ; i < ifdFrameData.m_fixTimeUntilNextFire.Length; i++)
+			{
+				ifdFrameData.m_fixTimeUntilNextFireErrorOffset[i] *= CalculateErrorScalingAmount(ifdFrameData.m_fixTimeUntilNextFireErrorOffset[i],fDeltaTime,ecsErrorCorrectionSetting.m_fixTimeUntilNextFireErrorCorrectionSetting );
+			}
+
+			for(int i = 0 ; i < ifdFrameData.m_fixLazerLifeRemaining.Length; i++)
+			{
+				ifdFrameData.m_fixLazerLifeRemainingErrorOffset[i] *= CalculateErrorScalingAmount(ifdFrameData.m_fixLazerLifeRemainingErrorOffset[i],fDeltaTime,ecsErrorCorrectionSetting.m_fixLazerLifeRemainingErrorCorrectionSetting );
+			}
+
+			for(int i = 0 ; i < ifdFrameData.m_fixLazerPositionX.Length; i++)
+			{
+				ifdFrameData.m_fixLazerPositionXErrorOffset[i] *= CalculateErrorScalingAmount(ifdFrameData.m_fixLazerPositionXErrorOffset[i],fDeltaTime,ecsErrorCorrectionSetting.m_fixLazerPositionXErrorCorrectionSetting );
+			}
+
+			for(int i = 0 ; i < ifdFrameData.m_fixLazerPositionY.Length; i++)
+			{
+				ifdFrameData.m_fixLazerPositionYErrorOffset[i] *= CalculateErrorScalingAmount(ifdFrameData.m_fixLazerPositionYErrorOffset[i],fDeltaTime,ecsErrorCorrectionSetting.m_fixLazerPositionYErrorCorrectionSetting );
+			}
+
+			for(int i = 0 ; i < ifdFrameData.m_fixLazerVelocityX.Length; i++)
+			{
+				ifdFrameData.m_fixLazerVelocityXErrorOffset[i] *= CalculateErrorScalingAmount(ifdFrameData.m_fixLazerVelocityXErrorOffset[i],fDeltaTime,ecsErrorCorrectionSetting.m_fixLazerVelocityXErrorCorrectionSetting );
+			}
+
+			for(int i = 0 ; i < ifdFrameData.m_fixLazerVelocityY.Length; i++)
+			{
+				ifdFrameData.m_fixLazerVelocityYErrorOffset[i] *= CalculateErrorScalingAmount(ifdFrameData.m_fixLazerVelocityYErrorOffset[i],fDeltaTime,ecsErrorCorrectionSetting.m_fixLazerVelocityYErrorCorrectionSetting );
 			}
 
 			return ifdFrameData;
@@ -266,6 +356,54 @@ namespace SimDataInterpolation
 			{
 
 					ifdInterpolatedFrameData.m_fixShipBaseAngle[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixShipBaseAngle[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixShipBaseAngle[i]) * fInterpolation));
+						
+			}
+			for(int i = 0 ; i < ifdInterpolatedFrameData.m_bLazerFireIndex.Length ; i++)
+			{
+
+					ifdInterpolatedFrameData.m_bLazerFireIndex[i] = (System.Byte) fdaToFrame.m_bLazerFireIndex[i];
+
+			}
+			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixTimeUntilNextFire.Length ; i++)
+			{
+
+					ifdInterpolatedFrameData.m_fixTimeUntilNextFire[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixTimeUntilNextFire[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixTimeUntilNextFire[i]) * fInterpolation));
+						
+			}
+			for(int i = 0 ; i < ifdInterpolatedFrameData.m_bLazerOwner.Length ; i++)
+			{
+
+					ifdInterpolatedFrameData.m_bLazerOwner[i] = (System.Byte) fdaToFrame.m_bLazerOwner[i];
+
+			}
+			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerLifeRemaining.Length ; i++)
+			{
+
+					ifdInterpolatedFrameData.m_fixLazerLifeRemaining[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixLazerLifeRemaining[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixLazerLifeRemaining[i]) * fInterpolation));
+						
+			}
+			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerPositionX.Length ; i++)
+			{
+
+					ifdInterpolatedFrameData.m_fixLazerPositionX[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixLazerPositionX[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixLazerPositionX[i]) * fInterpolation));
+						
+			}
+			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerPositionY.Length ; i++)
+			{
+
+					ifdInterpolatedFrameData.m_fixLazerPositionY[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixLazerPositionY[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixLazerPositionY[i]) * fInterpolation));
+						
+			}
+			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerVelocityX.Length ; i++)
+			{
+
+					ifdInterpolatedFrameData.m_fixLazerVelocityX[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixLazerVelocityX[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixLazerVelocityX[i]) * fInterpolation));
+						
+			}
+			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerVelocityY.Length ; i++)
+			{
+
+					ifdInterpolatedFrameData.m_fixLazerVelocityY[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixLazerVelocityY[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixLazerVelocityY[i]) * fInterpolation));
 						
 			}
         }

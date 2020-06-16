@@ -11,7 +11,10 @@ namespace Sim
         IShipHealthSettingsData, 
         IShipMovementSettingsData, 
         ISimTickRateSettings, 
-        IShipCollisionSettingsData 
+        IShipCollisionSettingsData,
+        IShipWeaponsSettingsData,
+        ILazerSettingsData
+        
     {
         #region IPeerSlotAssignmentSettingsData
         public int m_iMaxPlayers;
@@ -90,6 +93,43 @@ namespace Sim
         public Fix ShipInverseMass => m_fixShipInverseMass;
 
         public Fix ShipImpactDamage => m_fixShipImpactDamage;
+
+        #endregion
+
+
+        #region IShipWeaponsSettingsData
+
+        public Fix m_fixAutofireCone;
+
+        public Fix m_fixAutoFireConeRangeSqr;
+
+        public Fix m_fixTimeBetweenShots;
+
+        public Fix AutofireCone => m_fixAutofireCone;
+
+        public Fix AutoFireConeRangeSqr => m_fixAutoFireConeRangeSqr;
+
+        public Fix TimeBetweenShots => m_fixTimeBetweenShots;
+        #endregion
+
+
+        #region ILazerSettingsData
+        public Fix m_fixLazerLife;
+
+        public Fix m_fixLazerSpeed;
+
+        public Fix m_fixLazerDamage;
+
+        public Fix m_fixLazerSize;
+
+        public Fix LazerLife => m_fixLazerLife;
+
+        public Fix LazerSpeed => m_fixLazerSpeed;
+
+        public Fix LazerDamage => m_fixLazerDamage;
+
+        public Fix LazerSize => m_fixLazerSize;
+
         #endregion
 
 

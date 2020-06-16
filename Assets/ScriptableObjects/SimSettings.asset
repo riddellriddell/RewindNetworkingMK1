@@ -50,3 +50,24 @@ MonoBehaviour:
   m_fixShipImpactDamage:
     Int: 10
     Dec_To_3_Places: 0
+  m_fixAutofireCone:
+    Int: 10
+    Dec_To_3_Places: 0
+  m_fixAutoFireConeRange:
+    Int: 10
+    Dec_To_3_Places: 0
+  m_fixTimeBetweenShots:
+    Int: 1
+    Dec_To_3_Places: 0
+  m_fixLazerLife:
+    Int: 10
+    Dec_To_3_Places: 0
+  m_fixLazerSpeed:
+    Int: 0
+    Dec_To_3_Places: 500
+  m_fixLazerDamage:
+    Int: 25
+    Dec_To_3_Places: 0
+  m_fixLazerSize:
+    Int: 0
+    Dec_To_3_Places: 100

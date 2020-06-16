@@ -643,6 +643,18 @@ namespace GameManagers
 
             m_spmSimProcessManager.AddSimProcess(sacShipAsteroidCollisionProcessor);
 
+            //add ship weapons processor
+            ProcessShipWeapons<FrameData, ConstData, SimProcessorSettings> pcwShipWeaponsProcessor = new ProcessShipWeapons<FrameData, ConstData, SimProcessorSettings>();
+
+            m_spmSimProcessManager.AddSimSetupProcess(pcwShipWeaponsProcessor);
+            m_spmSimProcessManager.AddSimProcess(pcwShipWeaponsProcessor);
+
+            //add lazer processor  
+            ProcessLazers<FrameData, ConstData, SimProcessorSettings> plzLazerProcessor = new ProcessLazers<FrameData, ConstData, SimProcessorSettings>();
+
+            m_spmSimProcessManager.AddSimSetupProcess(plzLazerProcessor);
+            m_spmSimProcessManager.AddSimProcess(plzLazerProcessor);
+
 
             //m_spmSimProcessManager.AddSimSetupProcess();
 

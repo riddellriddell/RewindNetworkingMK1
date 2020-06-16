@@ -1,13 +1,19 @@
 ﻿using FixedPointy;
 using System;
-using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
 using Utility;
 
 namespace Sim
 {
-    public class FrameData : IFrameData, IShipPositions, IPeerSlotAssignmentFrameData, IPeerInputFrameData, IShipRespawnFrameData, IShipHealthframeData
+    public class FrameData :
+        IFrameData,
+        IShipPositions,
+        IPeerSlotAssignmentFrameData,
+        IPeerInputFrameData,
+        IShipRespawnFrameData,
+        IShipHealthframeData,
+        IShipWeaponFrameData,
+        ILazerFrameData
     {
         #region PeerAssignment
 
@@ -18,7 +24,7 @@ namespace Sim
                 return m_lPeersAssignedToSlot.Length;
             }
         }
-               
+
         [FrameDataInterpilationTypeAttribute(typeof(long), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
         public long[] m_lPeersAssignedToSlot;
 
@@ -88,15 +94,49 @@ namespace Sim
         public Fix[] ShipVelocityY { get => m_fixShipVelocityY; set => m_fixShipVelocityY = value; }
         public Fix[] ShipBaseAngle { get => m_fixShipBaseAngle; set => m_fixShipBaseAngle = value; }
 
-
-
-
         #endregion
 
         #endregion
 
+        #region IShipWeaponFrameData
+        [FrameDataInterpilationTypeAttribute(typeof(byte), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
+        public byte[] m_bLazerFireIndex;
 
+        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        public Fix[] m_fixTimeUntilNextFire;
 
+        public byte[] LazerFireIndex { get => m_bLazerFireIndex; set => m_bLazerFireIndex = value; }
+        public Fix[] TimeUntilNextFire { get => m_fixTimeUntilNextFire; set => m_fixTimeUntilNextFire = value; }
+
+        #endregion
+
+        #region ILazerFrameData
+
+        [FrameDataInterpilationTypeAttribute(typeof(byte), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
+        public byte[] m_bLazerOwner;
+
+        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        public Fix[] m_fixLazerLifeRemaining;
+
+        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        public Fix[] m_fixLazerPositionX;
+
+        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        public Fix[] m_fixLazerPositionY;
+
+        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        public Fix[] m_fixLazerVelocityX;
+
+        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        public Fix[] m_fixLazerVelocityY;
+
+        public byte[] LazerOwner { get => m_bLazerOwner; set => m_bLazerOwner = value; }
+        public Fix[] LazerLifeRemaining { get => m_fixLazerLifeRemaining; set => m_fixLazerLifeRemaining = value; }
+        public Fix[] LazerPositionX { get => m_fixLazerPositionX; set => m_fixLazerPositionX = value; }
+        public Fix[] LazerPositionY { get => m_fixLazerPositionY; set => m_fixLazerPositionY = value; }
+        public Fix[] LazerVelocityX { get => m_fixLazerVelocityX; set => m_fixLazerVelocityX = value; }
+        public Fix[] LazerVelocityY { get => m_fixLazerVelocityY; set => m_fixLazerVelocityY = value; }
+        #endregion
         public FrameData()
         {
 
@@ -179,6 +219,41 @@ namespace Sim
 
             #endregion
 
+            #region IShipWeaponFrameData
+            if (m_bLazerFireIndex == null || m_bLazerFireIndex.Length != fdaTargetData.m_bLazerFireIndex.Length)
+            {
+
+                m_bLazerFireIndex = fdaTargetData.m_bLazerFireIndex.Clone() as byte[];
+                m_fixTimeUntilNextFire = fdaTargetData.m_fixTimeUntilNextFire.Clone() as Fix[];
+            }
+            else
+            {
+                Array.Copy(fdaTargetData.m_bLazerFireIndex, m_bLazerFireIndex, fdaTargetData.m_bLazerFireIndex.Length);
+                Array.Copy(fdaTargetData.m_fixTimeUntilNextFire, m_fixTimeUntilNextFire, fdaTargetData.m_fixTimeUntilNextFire.Length);
+            }
+            #endregion
+
+            #region ILazerFrameData
+            if (m_bLazerOwner == null || m_bLazerOwner.Length != fdaTargetData.m_bLazerOwner.Length)
+            {
+                m_bLazerOwner = fdaTargetData.m_bLazerOwner.Clone() as byte[];
+                m_fixLazerLifeRemaining = fdaTargetData.m_fixLazerLifeRemaining.Clone() as Fix[];
+                m_fixLazerPositionX = fdaTargetData.m_fixLazerPositionX.Clone() as Fix[];
+                m_fixLazerPositionY = fdaTargetData.m_fixLazerPositionY.Clone() as Fix[];
+                m_fixLazerVelocityX = fdaTargetData.m_fixLazerVelocityX.Clone() as Fix[];
+                m_fixLazerVelocityY = fdaTargetData.m_fixLazerVelocityY.Clone() as Fix[];
+            }
+            else
+            {
+                Array.Copy(fdaTargetData.m_bLazerOwner, m_bLazerOwner, fdaTargetData.m_bLazerOwner.Length);
+                Array.Copy(fdaTargetData.m_fixLazerLifeRemaining, m_fixLazerLifeRemaining, fdaTargetData.m_fixLazerLifeRemaining.Length);
+                Array.Copy(fdaTargetData.m_fixLazerPositionX, m_fixLazerPositionX, fdaTargetData.m_fixLazerPositionX.Length);
+                Array.Copy(fdaTargetData.m_fixLazerPositionY, m_fixLazerPositionY, fdaTargetData.m_fixLazerPositionY.Length);
+                Array.Copy(fdaTargetData.m_fixLazerVelocityX, m_fixLazerVelocityX, fdaTargetData.m_fixLazerVelocityX.Length);
+                Array.Copy(fdaTargetData.m_fixLazerVelocityY, m_fixLazerVelocityY, fdaTargetData.m_fixLazerVelocityY.Length);
+            }
+
+            #endregion
 
             return true;
         }
@@ -227,6 +302,22 @@ namespace Sim
             bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixShipBaseAngle, m_lPeersAssignedToSlot.Length);
 
             #endregion
+
+            #region IShipWeaponFrameData
+            bWasASuccess &= ByteStream.Serialize(wbsByteStream, ref m_bLazerFireIndex, m_lPeersAssignedToSlot.Length);
+            bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixTimeUntilNextFire, m_lPeersAssignedToSlot.Length);
+            #endregion
+
+            #region ILazerFrameData
+            bWasASuccess &= ByteStream.Serialize(wbsByteStream, ref m_bLazerOwner);
+            bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixLazerLifeRemaining, m_bLazerOwner.Length);
+            bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixLazerPositionX, m_bLazerOwner.Length);
+            bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixLazerPositionY, m_bLazerOwner.Length);
+            bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixLazerVelocityX, m_bLazerOwner.Length);
+            bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixLazerVelocityY, m_bLazerOwner.Length);
+            #endregion
+
+
 
             return bWasASuccess;
         }
@@ -278,6 +369,21 @@ namespace Sim
 
             #endregion
 
+            #region IShipWeaponFrameData
+            bWasASuccess &= ByteStream.Serialize(rbsReadByteStream, ref m_bLazerFireIndex, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= FixSerialization.Serialize(rbsReadByteStream, ref m_fixTimeUntilNextFire, m_lPeersAssignedToSlot.Length);
+            #endregion
+
+            #region ILazerFrameData
+            bWasASuccess &= ByteStream.Serialize(rbsReadByteStream, ref m_bLazerOwner);
+            bWasASuccess &= FixSerialization.Serialize(rbsReadByteStream, ref m_fixLazerLifeRemaining, m_bLazerOwner.Length);
+            bWasASuccess &= FixSerialization.Serialize(rbsReadByteStream, ref m_fixLazerPositionX, m_bLazerOwner.Length);
+            bWasASuccess &= FixSerialization.Serialize(rbsReadByteStream, ref m_fixLazerPositionY, m_bLazerOwner.Length);
+            bWasASuccess &= FixSerialization.Serialize(rbsReadByteStream, ref m_fixLazerVelocityX, m_bLazerOwner.Length);
+            bWasASuccess &= FixSerialization.Serialize(rbsReadByteStream, ref m_fixLazerVelocityY, m_bLazerOwner.Length);
+            #endregion
+
             return bWasASuccess;
         }
 
@@ -287,7 +393,7 @@ namespace Sim
 
             #region IPeerSlotAssignmentFrameData
 
-            iSize += ByteStream.DataSize( m_lPeersAssignedToSlot);
+            iSize += ByteStream.DataSize(m_lPeersAssignedToSlot);
 
             #endregion
 
@@ -300,8 +406,7 @@ namespace Sim
             #region IShipRespawnFrameData
             iSize += FixSerialization.DataSize(m_fixTimeUntilRespawn, m_lPeersAssignedToSlot.Length);
             #endregion
-
-
+            
             #region IShipHealthframeData
 
             //list of all the ship Healths 
@@ -327,9 +432,24 @@ namespace Sim
 
             #endregion
 
+            #region IShipWeaponFrameData
+            iSize += ByteStream.DataSize(m_bLazerFireIndex, m_lPeersAssignedToSlot.Length);
+
+            iSize += FixSerialization.DataSize(m_fixTimeUntilNextFire, m_lPeersAssignedToSlot.Length);
+            #endregion
+
+            #region ILazerFrameData
+            iSize += ByteStream.DataSize(m_bLazerOwner);
+            iSize += FixSerialization.DataSize(m_fixLazerLifeRemaining, m_bLazerOwner.Length);
+            iSize += FixSerialization.DataSize(m_fixLazerPositionX, m_bLazerOwner.Length);
+            iSize += FixSerialization.DataSize(m_fixLazerPositionY, m_bLazerOwner.Length);
+            iSize += FixSerialization.DataSize(m_fixLazerVelocityX, m_bLazerOwner.Length);
+            iSize += FixSerialization.DataSize(m_fixLazerVelocityY, m_bLazerOwner.Length);
+            #endregion
+
             return iSize;
         }
-               
+
         //generate a hash of all the values 
         public void GetHash(byte[] bOutput)
         {

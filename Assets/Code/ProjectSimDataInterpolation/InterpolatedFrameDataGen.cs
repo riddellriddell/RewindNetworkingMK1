@@ -60,6 +60,44 @@ namespace SimDataInterpolation
 
 		public System.Single[] m_fixShipBaseAngleErrorAdjusted;
 
+		public System.Byte[] m_bLazerFireIndex;
+		public System.Single[] m_fixTimeUntilNextFire;
+																																									
+		public System.Single[] m_fixTimeUntilNextFireErrorOffset; 
+
+		public System.Single[] m_fixTimeUntilNextFireErrorAdjusted;
+
+		public System.Byte[] m_bLazerOwner;
+		public System.Single[] m_fixLazerLifeRemaining;
+																																									
+		public System.Single[] m_fixLazerLifeRemainingErrorOffset; 
+
+		public System.Single[] m_fixLazerLifeRemainingErrorAdjusted;
+
+		public System.Single[] m_fixLazerPositionX;
+																																									
+		public System.Single[] m_fixLazerPositionXErrorOffset; 
+
+		public System.Single[] m_fixLazerPositionXErrorAdjusted;
+
+		public System.Single[] m_fixLazerPositionY;
+																																									
+		public System.Single[] m_fixLazerPositionYErrorOffset; 
+
+		public System.Single[] m_fixLazerPositionYErrorAdjusted;
+
+		public System.Single[] m_fixLazerVelocityX;
+																																									
+		public System.Single[] m_fixLazerVelocityXErrorOffset; 
+
+		public System.Single[] m_fixLazerVelocityXErrorAdjusted;
+
+		public System.Single[] m_fixLazerVelocityY;
+																																									
+		public System.Single[] m_fixLazerVelocityYErrorOffset; 
+
+		public System.Single[] m_fixLazerVelocityYErrorAdjusted;
+
 
 		public void MatchFormat(FrameData fdaFrameData)
 		{
@@ -177,6 +215,92 @@ namespace SimDataInterpolation
 				m_fixShipBaseAngleErrorOffset = new System.Single[fdaFrameData.m_fixShipBaseAngle.Length] ;
 
 				m_fixShipBaseAngleErrorAdjusted = new System.Single[fdaFrameData.m_fixShipBaseAngle.Length] ;
+			
+			}
+
+			
+			if(m_bLazerFireIndex == null || m_bLazerFireIndex.Length != fdaFrameData.m_bLazerFireIndex.Length)
+			{
+				m_bLazerFireIndex = new System.Byte[fdaFrameData.m_bLazerFireIndex.Length] ;
+
+			}
+
+			
+			if(m_fixTimeUntilNextFire == null || m_fixTimeUntilNextFire.Length != fdaFrameData.m_fixTimeUntilNextFire.Length)
+			{
+				m_fixTimeUntilNextFire = new System.Single[fdaFrameData.m_fixTimeUntilNextFire.Length] ;
+
+																																									
+				m_fixTimeUntilNextFireErrorOffset = new System.Single[fdaFrameData.m_fixTimeUntilNextFire.Length] ;
+
+				m_fixTimeUntilNextFireErrorAdjusted = new System.Single[fdaFrameData.m_fixTimeUntilNextFire.Length] ;
+			
+			}
+
+			
+			if(m_bLazerOwner == null || m_bLazerOwner.Length != fdaFrameData.m_bLazerOwner.Length)
+			{
+				m_bLazerOwner = new System.Byte[fdaFrameData.m_bLazerOwner.Length] ;
+
+			}
+
+			
+			if(m_fixLazerLifeRemaining == null || m_fixLazerLifeRemaining.Length != fdaFrameData.m_fixLazerLifeRemaining.Length)
+			{
+				m_fixLazerLifeRemaining = new System.Single[fdaFrameData.m_fixLazerLifeRemaining.Length] ;
+
+																																									
+				m_fixLazerLifeRemainingErrorOffset = new System.Single[fdaFrameData.m_fixLazerLifeRemaining.Length] ;
+
+				m_fixLazerLifeRemainingErrorAdjusted = new System.Single[fdaFrameData.m_fixLazerLifeRemaining.Length] ;
+			
+			}
+
+			
+			if(m_fixLazerPositionX == null || m_fixLazerPositionX.Length != fdaFrameData.m_fixLazerPositionX.Length)
+			{
+				m_fixLazerPositionX = new System.Single[fdaFrameData.m_fixLazerPositionX.Length] ;
+
+																																									
+				m_fixLazerPositionXErrorOffset = new System.Single[fdaFrameData.m_fixLazerPositionX.Length] ;
+
+				m_fixLazerPositionXErrorAdjusted = new System.Single[fdaFrameData.m_fixLazerPositionX.Length] ;
+			
+			}
+
+			
+			if(m_fixLazerPositionY == null || m_fixLazerPositionY.Length != fdaFrameData.m_fixLazerPositionY.Length)
+			{
+				m_fixLazerPositionY = new System.Single[fdaFrameData.m_fixLazerPositionY.Length] ;
+
+																																									
+				m_fixLazerPositionYErrorOffset = new System.Single[fdaFrameData.m_fixLazerPositionY.Length] ;
+
+				m_fixLazerPositionYErrorAdjusted = new System.Single[fdaFrameData.m_fixLazerPositionY.Length] ;
+			
+			}
+
+			
+			if(m_fixLazerVelocityX == null || m_fixLazerVelocityX.Length != fdaFrameData.m_fixLazerVelocityX.Length)
+			{
+				m_fixLazerVelocityX = new System.Single[fdaFrameData.m_fixLazerVelocityX.Length] ;
+
+																																									
+				m_fixLazerVelocityXErrorOffset = new System.Single[fdaFrameData.m_fixLazerVelocityX.Length] ;
+
+				m_fixLazerVelocityXErrorAdjusted = new System.Single[fdaFrameData.m_fixLazerVelocityX.Length] ;
+			
+			}
+
+			
+			if(m_fixLazerVelocityY == null || m_fixLazerVelocityY.Length != fdaFrameData.m_fixLazerVelocityY.Length)
+			{
+				m_fixLazerVelocityY = new System.Single[fdaFrameData.m_fixLazerVelocityY.Length] ;
+
+																																									
+				m_fixLazerVelocityYErrorOffset = new System.Single[fdaFrameData.m_fixLazerVelocityY.Length] ;
+
+				m_fixLazerVelocityYErrorAdjusted = new System.Single[fdaFrameData.m_fixLazerVelocityY.Length] ;
 			
 			}
 

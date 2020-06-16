@@ -1,7 +1,4 @@
 ﻿using FixedPointy;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 
 namespace Sim
 {
@@ -17,12 +14,12 @@ namespace Sim
         Fix ShipMaxHealth { get; }
         Fix ShipHealDelayTime { get; }
         Fix ShipHealRate { get; }
-        
+
     }
 
-    public class ProcessShipHealth<TFrameData, TConstData, TSettingsData> : 
-        ISimProcess<TFrameData, TConstData, TSettingsData>, 
-        ISimSetupProcesses<TFrameData, TSettingsData> 
+    public class ProcessShipHealth<TFrameData, TConstData, TSettingsData> :
+        ISimProcess<TFrameData, TConstData, TSettingsData>,
+        ISimSetupProcesses<TFrameData, TSettingsData>
         where TFrameData : IShipHealthframeData, IPeerSlotAssignmentFrameData, IFrameData, new()
         where TSettingsData : IPeerSlotAssignmentSettingsData, IShipHealthSettingsData, ISimTickRateSettings
     {
@@ -33,7 +30,7 @@ namespace Sim
         public static void DamageShip(TFrameData fdaFrameData, int iIndex, Fix fixDamage, byte bAttackingPeerIndex = byte.MaxValue)
         {
             fdaFrameData.ShipHealth[iIndex] = fdaFrameData.ShipHealth[iIndex] - fixDamage;
-            if(bAttackingPeerIndex != byte.MaxValue)
+            if (bAttackingPeerIndex != byte.MaxValue)
             {
                 fdaFrameData.ShipLastDamagedBy[iIndex] = bAttackingPeerIndex;
             }
@@ -48,11 +45,11 @@ namespace Sim
 
         public bool ApplySetupProcess(uint iTick, in TSettingsData sdaSettingsData, long lFirstPeerID, ref TFrameData fdaFrameData)
         {
-            fdaFrameData.ShipHealth = new Fix[sdaSettingsData.MaxPlayers]; 
+            fdaFrameData.ShipHealth = new Fix[sdaSettingsData.MaxPlayers];
             fdaFrameData.ShipHealDelayTimeOut = new Fix[sdaSettingsData.MaxPlayers];
             fdaFrameData.ShipLastDamagedBy = new byte[sdaSettingsData.MaxPlayers];
 
-            for(int i = 0;i < fdaFrameData.ShipLastDamagedBy.Length; i++)
+            for (int i = 0; i < fdaFrameData.ShipLastDamagedBy.Length; i++)
             {
                 fdaFrameData.ShipLastDamagedBy[i] = byte.MaxValue;
             }
@@ -63,13 +60,13 @@ namespace Sim
         public bool ProcessFrameData(uint iTick, in TSettingsData staSettingsData, in TConstData cdaConstantData, in TFrameData fdaInFrameData, in object[] objInputs, ref TFrameData fdaOutFrameData)
         {
             //loop through all ships 
-            for(int i = 0; i < staSettingsData.MaxPlayers; i++ )
+            for (int i = 0; i < staSettingsData.MaxPlayers; i++)
             {
                 //check if peer exists in game 
-                if(fdaOutFrameData.PeerSlotAssignment[i] != long.MinValue)
+                if (fdaOutFrameData.PeerSlotAssignment[i] != long.MinValue)
                 {
                     //check if ship is dead
-                    if(fdaOutFrameData.ShipHealth[i] <= Fix.Zero)
+                    if (fdaOutFrameData.ShipHealth[i] <= Fix.Zero)
                     {
 
                     }
@@ -85,7 +82,7 @@ namespace Sim
                         fdaOutFrameData.ShipHealth[i] = fdaOutFrameData.ShipHealth[i] + (staSettingsData.ShipHealRate * staSettingsData.SecondsPerTick);
 
                         //check if reached max health
-                        if(fdaOutFrameData.ShipHealth[i] > staSettingsData.ShipMaxHealth)
+                        if (fdaOutFrameData.ShipHealth[i] > staSettingsData.ShipMaxHealth)
                         {
                             fdaOutFrameData.ShipHealth[i] = staSettingsData.ShipMaxHealth;
 
@@ -94,6 +91,13 @@ namespace Sim
                         }
                     }
                 }
+                else
+                {
+                    fdaOutFrameData.ShipHealth[i] = Fix.Zero;
+                    fdaOutFrameData.ShipLastDamagedBy[i] = byte.MaxValue;
+                    fdaOutFrameData.ShipHealDelayTimeOut[i] = Fix.Zero;
+                }
+
             }
 
             return true;

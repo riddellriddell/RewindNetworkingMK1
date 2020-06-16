@@ -35,18 +35,29 @@ namespace Sim
             }
         }
 
-        public static void DetectCollision(Fix[] fixObjectAX, Fix[] fixObjectAY, Fix[] fixObjectBX, Fix[] fixObjectBY, Fix fixObjectARadius, Fix fixObjectBRadius, TFrameData fdaFrameData, TSettingsData sdaSettingsData, Func<TFrameData, int, bool> fncFilter, Action<TFrameData, TSettingsData, int, int, Fix, Fix, Fix, Fix> actCollisionResolution)
+        public static void DetectCollision(
+            Fix[] fixObjectAX, 
+            Fix[] fixObjectAY, 
+            Fix[] fixObjectBX, 
+            Fix[] fixObjectBY, 
+            Fix fixObjectARadius, 
+            Fix fixObjectBRadius, 
+            TFrameData fdaFrameData, 
+            TSettingsData sdaSettingsData, 
+            Func<TFrameData, int, bool> fncFilterA, 
+            Func<TFrameData, int, bool> fncFilterB, 
+            Action<TFrameData, TSettingsData, int, int, Fix, Fix, Fix, Fix> actCollisionResolution)
         {
             Fix fixCombinedObjectRadius = fixObjectARadius + fixObjectBRadius;
             Fix fixDoubleObjectRadiusInverse = Fix.One / fixCombinedObjectRadius;
 
             for (int i = 0; i < fixObjectAX.Length; i++)
             {
-                if (fncFilter(fdaFrameData, i))
+                if (fncFilterA(fdaFrameData, i))
                 {
                     for (int j = 0; j < fixObjectBX.Length; j++)
                     {
-                        if (fncFilter(fdaFrameData, j))
+                        if (fncFilterB(fdaFrameData, j))
                         {
                             Fix fixDeltaX = (fixObjectBX[j] - fixObjectAX[i]) * fixDoubleObjectRadiusInverse;
                             Fix fixDeltaY = (fixObjectBY[j] - fixObjectAY[i]) * fixDoubleObjectRadiusInverse;
@@ -85,7 +96,6 @@ namespace Sim
                         }
                     }
                 }
-
             }
         }
 

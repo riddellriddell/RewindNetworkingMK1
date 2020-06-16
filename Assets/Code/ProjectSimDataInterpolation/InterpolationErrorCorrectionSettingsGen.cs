@@ -28,5 +28,17 @@ namespace SimDataInterpolation
 		public ErrorCorrectionSetting m_fixShipVelocityYErrorCorrectionSetting; 
 		
 		public ErrorCorrectionSetting m_fixShipBaseAngleErrorCorrectionSetting; 
+		
+		public ErrorCorrectionSetting m_fixTimeUntilNextFireErrorCorrectionSetting; 
+		
+		public ErrorCorrectionSetting m_fixLazerLifeRemainingErrorCorrectionSetting; 
+		
+		public ErrorCorrectionSetting m_fixLazerPositionXErrorCorrectionSetting; 
+		
+		public ErrorCorrectionSetting m_fixLazerPositionYErrorCorrectionSetting; 
+		
+		public ErrorCorrectionSetting m_fixLazerVelocityXErrorCorrectionSetting; 
+		
+		public ErrorCorrectionSetting m_fixLazerVelocityYErrorCorrectionSetting; 
 	}
 }
