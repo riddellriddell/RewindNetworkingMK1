@@ -46,9 +46,11 @@ namespace Sim
 
         //list of all the ship Healths 
         [FrameDataInterpilationTypeAttribute(typeof(byte))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData,"m_fixShipHealth[i]","<=",FrameDataInterpolationBreakAttribute.DataSource.CustomData,"Fix.Zero",true)]
         public Fix[] m_fixShipHealth;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixShipHealth[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixShipHealDelayTimeOut;
 
         [FrameDataInterpilationTypeAttribute(typeof(byte), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
@@ -63,6 +65,7 @@ namespace Sim
 
         #region ShipSpawn
         [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixShipHealth[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixTimeUntilRespawn;
         public Fix[] TimeUntilRespawn { get => m_fixTimeUntilRespawn; set => m_fixTimeUntilRespawn = value; }
         #endregion
@@ -72,18 +75,23 @@ namespace Sim
         #region ShipMovement 
         //list of all the player positions 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixShipHealth[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixShipPosX;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixShipHealth[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixShipPosY;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixShipHealth[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixShipVelocityX;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixShipHealth[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixShipVelocityY;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixShipHealth[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixShipBaseAngle;
 
         #region IShipPositions
@@ -103,6 +111,7 @@ namespace Sim
         public byte[] m_bLazerFireIndex;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixShipHealth[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixTimeUntilNextFire;
 
         public byte[] LazerFireIndex { get => m_bLazerFireIndex; set => m_bLazerFireIndex = value; }
@@ -116,18 +125,23 @@ namespace Sim
         public byte[] m_bLazerOwner;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixLazerLifeRemaining;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixLazerPositionX;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixLazerPositionY;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixLazerVelocityX;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixLazerVelocityY;
 
         public byte[] LazerOwner { get => m_bLazerOwner; set => m_bLazerOwner = value; }

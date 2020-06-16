@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using SimDataInterpolation;
+using FixedPointy;
 using Sim;
 
 <#
@@ -262,7 +263,8 @@ namespace SimDataInterpolation
 	{
 		//try and get atttributes of target
 		FrameDataInterpilationTypeAttribute fiaAttribute = fldField.GetCustomAttribute<FrameDataInterpilationTypeAttribute>();
-	
+		FrameDataInterpolationBreakAttribute fibAttribute = fldField.GetCustomAttribute<FrameDataInterpolationBreakAttribute>();
+
 		//check if this is to be interpolated / tracked
 		if(fiaAttribute != null)
 	    {
@@ -279,10 +281,29 @@ namespace SimDataInterpolation
 <#						
 						break;
 						
-					case FrameDataInterpilationTypeAttribute.InterpolationType.Linear:#>
+					case FrameDataInterpilationTypeAttribute.InterpolationType.Linear:
+					
+					if(fibAttribute != null)
+                    {
+						string strBreakArgument = fibAttribute.GenerateArgumentString("fdaFromFrame","fdaToFrame");#>
+			if(<#=strBreakArgument #>)
+			{
+				ifdInterpolatedFrameData.<#=fldField.Name#> = (<#=fiaAttribute.m_tType.ToString()#>) fdaToFrame.<#=fldField.Name#>;
+			}
+			else
+			{<#
+
+                    }
+					#>	
+					
 			ifdInterpolatedFrameData.<#=fldField.Name#> = (<#=fiaAttribute.m_tType.ToString()#>)( ((<#=fiaAttribute.m_tType.ToString()#>)(fdaFromFrame.<#=fldField.Name#>) * (1 - fInterpolation)) +  ((<#=fiaAttribute.m_tType.ToString()#>)(fdaToFrame.<#=fldField.Name#>) * fInterpolation));
 						
 <#						
+					if(fibAttribute != null)
+                    {#>
+			}
+			<#		}
+
 						break;
 				}	
 	            
@@ -302,11 +323,25 @@ namespace SimDataInterpolation
 
 <#						
 							break;
-						case FrameDataInterpilationTypeAttribute.InterpolationType.Linear:#>
+						case FrameDataInterpilationTypeAttribute.InterpolationType.Linear:
+						if(fibAttribute != null)
+						{
+							string strBreakArgument = fibAttribute.GenerateArgumentString("fdaFromFrame","fdaToFrame");#>
+				if(<#=strBreakArgument #>)
+				{
+					ifdInterpolatedFrameData.<#=fldField.Name#>[i] = (<#=fiaAttribute.m_tType.ToString()#>) fdaToFrame.<#=fldField.Name#>[i];
+				}
+				else
+				{<#
+
+                    }#>
 
 					ifdInterpolatedFrameData.<#=fldField.Name#>[i] = (<#=fiaAttribute.m_tType.ToString()#>)( ((<#=fiaAttribute.m_tType.ToString()#>)(fdaFromFrame.<#=fldField.Name#>[i]) * (1 - fInterpolation)) +  ((<#=fiaAttribute.m_tType.ToString()#>)(fdaToFrame.<#=fldField.Name#>[i]) * fInterpolation));
 						
-<#						
+<#						if(fibAttribute != null)
+						{#>
+				}
+<#						}
 							break;
                     }#>
 			}

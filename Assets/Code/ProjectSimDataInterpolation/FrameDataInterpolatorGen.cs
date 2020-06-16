@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using SimDataInterpolation;
+using FixedPointy;
 using Sim;
 
 //Generated Code do not edit!!!!
@@ -306,15 +307,27 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipHealth.Length ; i++)
 			{
-
+				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixShipHealth[i] = (System.Byte) fdaToFrame.m_fixShipHealth[i];
+				}
+				else
+				{
 					ifdInterpolatedFrameData.m_fixShipHealth[i] = (System.Byte)( ((System.Byte)(fdaFromFrame.m_fixShipHealth[i]) * (1 - fInterpolation)) +  ((System.Byte)(fdaToFrame.m_fixShipHealth[i]) * fInterpolation));
 						
+				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipHealDelayTimeOut.Length ; i++)
 			{
-
+				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixShipHealDelayTimeOut[i] = (System.Single) fdaToFrame.m_fixShipHealDelayTimeOut[i];
+				}
+				else
+				{
 					ifdInterpolatedFrameData.m_fixShipHealDelayTimeOut[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixShipHealDelayTimeOut[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixShipHealDelayTimeOut[i]) * fInterpolation));
 						
+				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_bShipLastDamagedBy.Length ; i++)
 			{
@@ -324,39 +337,75 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixTimeUntilRespawn.Length ; i++)
 			{
-
+				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixTimeUntilRespawn[i] = (System.Single) fdaToFrame.m_fixTimeUntilRespawn[i];
+				}
+				else
+				{
 					ifdInterpolatedFrameData.m_fixTimeUntilRespawn[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixTimeUntilRespawn[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixTimeUntilRespawn[i]) * fInterpolation));
 						
+				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipPosX.Length ; i++)
 			{
-
+				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixShipPosX[i] = (System.Single) fdaToFrame.m_fixShipPosX[i];
+				}
+				else
+				{
 					ifdInterpolatedFrameData.m_fixShipPosX[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixShipPosX[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixShipPosX[i]) * fInterpolation));
 						
+				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipPosY.Length ; i++)
 			{
-
+				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixShipPosY[i] = (System.Single) fdaToFrame.m_fixShipPosY[i];
+				}
+				else
+				{
 					ifdInterpolatedFrameData.m_fixShipPosY[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixShipPosY[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixShipPosY[i]) * fInterpolation));
 						
+				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipVelocityX.Length ; i++)
 			{
-
+				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixShipVelocityX[i] = (System.Single) fdaToFrame.m_fixShipVelocityX[i];
+				}
+				else
+				{
 					ifdInterpolatedFrameData.m_fixShipVelocityX[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixShipVelocityX[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixShipVelocityX[i]) * fInterpolation));
 						
+				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipVelocityY.Length ; i++)
 			{
-
+				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixShipVelocityY[i] = (System.Single) fdaToFrame.m_fixShipVelocityY[i];
+				}
+				else
+				{
 					ifdInterpolatedFrameData.m_fixShipVelocityY[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixShipVelocityY[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixShipVelocityY[i]) * fInterpolation));
 						
+				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipBaseAngle.Length ; i++)
 			{
-
+				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixShipBaseAngle[i] = (System.Single) fdaToFrame.m_fixShipBaseAngle[i];
+				}
+				else
+				{
 					ifdInterpolatedFrameData.m_fixShipBaseAngle[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixShipBaseAngle[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixShipBaseAngle[i]) * fInterpolation));
 						
+				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_bLazerFireIndex.Length ; i++)
 			{
@@ -366,9 +415,15 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixTimeUntilNextFire.Length ; i++)
 			{
-
+				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixTimeUntilNextFire[i] = (System.Single) fdaToFrame.m_fixTimeUntilNextFire[i];
+				}
+				else
+				{
 					ifdInterpolatedFrameData.m_fixTimeUntilNextFire[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixTimeUntilNextFire[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixTimeUntilNextFire[i]) * fInterpolation));
 						
+				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_bLazerOwner.Length ; i++)
 			{
@@ -378,33 +433,63 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerLifeRemaining.Length ; i++)
 			{
-
+				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixLazerLifeRemaining[i] = (System.Single) fdaToFrame.m_fixLazerLifeRemaining[i];
+				}
+				else
+				{
 					ifdInterpolatedFrameData.m_fixLazerLifeRemaining[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixLazerLifeRemaining[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixLazerLifeRemaining[i]) * fInterpolation));
 						
+				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerPositionX.Length ; i++)
 			{
-
+				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixLazerPositionX[i] = (System.Single) fdaToFrame.m_fixLazerPositionX[i];
+				}
+				else
+				{
 					ifdInterpolatedFrameData.m_fixLazerPositionX[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixLazerPositionX[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixLazerPositionX[i]) * fInterpolation));
 						
+				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerPositionY.Length ; i++)
 			{
-
+				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixLazerPositionY[i] = (System.Single) fdaToFrame.m_fixLazerPositionY[i];
+				}
+				else
+				{
 					ifdInterpolatedFrameData.m_fixLazerPositionY[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixLazerPositionY[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixLazerPositionY[i]) * fInterpolation));
 						
+				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerVelocityX.Length ; i++)
 			{
-
+				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixLazerVelocityX[i] = (System.Single) fdaToFrame.m_fixLazerVelocityX[i];
+				}
+				else
+				{
 					ifdInterpolatedFrameData.m_fixLazerVelocityX[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixLazerVelocityX[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixLazerVelocityX[i]) * fInterpolation));
 						
+				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerVelocityY.Length ; i++)
 			{
-
+				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixLazerVelocityY[i] = (System.Single) fdaToFrame.m_fixLazerVelocityY[i];
+				}
+				else
+				{
 					ifdInterpolatedFrameData.m_fixLazerVelocityY[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixLazerVelocityY[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixLazerVelocityY[i]) * fInterpolation));
 						
+				}
 			}
         }
 	}
