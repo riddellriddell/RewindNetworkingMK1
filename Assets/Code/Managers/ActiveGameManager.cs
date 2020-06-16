@@ -323,9 +323,11 @@ namespace GameManagers
                     GetSimDataFromPeers();
                 }
             }
-            else
+
+            //check if a full state has been fetched 
+            if (m_ndbDataBridge.m_bHasSimDataBeenProcessedBySim == true)
             {
-                Debug.Log("Sim State Fetched From peer");
+                bHasFetchedSimState = false;
             }
                        
 
