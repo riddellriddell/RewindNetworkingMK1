@@ -32,34 +32,34 @@ MonoBehaviour:
     m_fMaxLinearInterpSpeed: 1
     m_fQuadraticInterpRate: 1
   m_fixShipPosXErrorCorrectionSetting:
-    m_fSnapDistance: 4
+    m_fSnapDistance: 2
     m_fMinInterpDistance: 0
     m_fMinLinearInterpSpeed: 0
-    m_fMaxLinearInterpSpeed: 1
-    m_fQuadraticInterpRate: 1
+    m_fMaxLinearInterpSpeed: 2
+    m_fQuadraticInterpRate: 2
   m_fixShipPosYErrorCorrectionSetting:
-    m_fSnapDistance: 4
+    m_fSnapDistance: 2
     m_fMinInterpDistance: 0
     m_fMinLinearInterpSpeed: 0
-    m_fMaxLinearInterpSpeed: 1
-    m_fQuadraticInterpRate: 1
+    m_fMaxLinearInterpSpeed: 2
+    m_fQuadraticInterpRate: 2
   m_fixShipVelocityXErrorCorrectionSetting:
-    m_fSnapDistance: 4
+    m_fSnapDistance: 2
     m_fMinInterpDistance: 0
     m_fMinLinearInterpSpeed: 0
-    m_fMaxLinearInterpSpeed: 1
-    m_fQuadraticInterpRate: 1
+    m_fMaxLinearInterpSpeed: 2
+    m_fQuadraticInterpRate: 2
   m_fixShipVelocityYErrorCorrectionSetting:
     m_fSnapDistance: 4
     m_fMinInterpDistance: 0
     m_fMinLinearInterpSpeed: 0
-    m_fMaxLinearInterpSpeed: 1
-    m_fQuadraticInterpRate: 1
+    m_fMaxLinearInterpSpeed: 2
+    m_fQuadraticInterpRate: 2
   m_fixShipBaseAngleErrorCorrectionSetting:
-    m_fSnapDistance: 20
+    m_fSnapDistance: 10
     m_fMinInterpDistance: 0
-    m_fMinLinearInterpSpeed: 5
-    m_fMaxLinearInterpSpeed: 10
+    m_fMinLinearInterpSpeed: 15
+    m_fMaxLinearInterpSpeed: 20
     m_fQuadraticInterpRate: 10
   m_fixTimeUntilNextFireErrorCorrectionSetting:
     m_fSnapDistance: 1
@@ -74,25 +74,25 @@ MonoBehaviour:
     m_fMaxLinearInterpSpeed: 5
     m_fQuadraticInterpRate: 5
   m_fixLazerPositionXErrorCorrectionSetting:
-    m_fSnapDistance: 0.5
+    m_fSnapDistance: 3
     m_fMinInterpDistance: 0
     m_fMinLinearInterpSpeed: 2
     m_fMaxLinearInterpSpeed: 5
     m_fQuadraticInterpRate: 5
   m_fixLazerPositionYErrorCorrectionSetting:
-    m_fSnapDistance: 0.5
+    m_fSnapDistance: 3
     m_fMinInterpDistance: 0
     m_fMinLinearInterpSpeed: 2
     m_fMaxLinearInterpSpeed: 5
     m_fQuadraticInterpRate: 5
   m_fixLazerVelocityXErrorCorrectionSetting:
-    m_fSnapDistance: 0.5
+    m_fSnapDistance: 0.2
     m_fMinInterpDistance: 0
     m_fMinLinearInterpSpeed: 2
     m_fMaxLinearInterpSpeed: 5
     m_fQuadraticInterpRate: 5
   m_fixLazerVelocityYErrorCorrectionSetting:
-    m_fSnapDistance: 0.5
+    m_fSnapDistance: 0.2
     m_fMinInterpDistance: 0
     m_fMinLinearInterpSpeed: 2
     m_fMaxLinearInterpSpeed: 5

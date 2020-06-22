@@ -1,4 +1,5 @@
-﻿using Networking;
+﻿using GameStateView;
+using Networking;
 using Sim;
 using SimDataInterpolation;
 using System;
@@ -69,6 +70,8 @@ namespace GameManagers
         public float[] m_fShipPosY;
         public float[] m_fShipVelocityX;
         public float[] m_fShipVelocityY;
+        public float[] m_fShipRotation;
+        public float[] m_fShipWeaponCoolDown;
 
         public float[] m_fLazerPosX;
         public float[] m_fLazerPosY;
@@ -93,6 +96,8 @@ namespace GameManagers
 
         public ConstData m_cdaConstSimData;
 
+        public GameStateViewSpawner m_gsvGameStateView;
+
         [SerializeField]
         public SimProcessorSettingsInterface m_sdiSettingsDataInderface;
 
@@ -104,6 +109,9 @@ namespace GameManagers
 
         [SerializeField]
         public NetworkGlobalMessengerProcessor.State m_staGlobalMessagingState;
+
+        [SerializeField]
+        public int m_iChainStartCandidates;
 
         [SerializeField]
         public int m_iTotalChainLinks;
@@ -137,6 +145,11 @@ namespace GameManagers
             else
             {
                 m_ptfTransmitterFactory = new FakeWebRTCFactory();
+            }
+
+            if(m_gsvGameStateView == null)
+            {
+                m_gsvGameStateView = GetComponent<GameStateViewSpawner>();
             }
         }
 
@@ -221,7 +234,13 @@ namespace GameManagers
 
             m_cdaConstSimData = new ConstData();
 
-            m_agmActiveGameManager = new ActiveGameManager(m_sdiSettingsDataInderface.ConvertToSettingsData(), m_ecsErrorCorrectionSettings, m_cdaConstSimData, m_wbiWebInterface, m_ptfTransmitterFactory);
+            m_agmActiveGameManager = new ActiveGameManager(
+                m_sdiSettingsDataInderface.ConvertToSettingsData(), 
+                m_ecsErrorCorrectionSettings, 
+                m_cdaConstSimData, 
+                m_wbiWebInterface, 
+                m_ptfTransmitterFactory,
+                m_gsvGameStateView);
 
             while (m_bAlive)
             {
@@ -250,6 +269,20 @@ namespace GameManagers
             TestingSimManager<FrameData, ConstData, SimProcessorSettings> tsmTestSimManager = m_agmActiveGameManager.m_tsmSimManager;
 
             m_staGlobalMessagingState = gmpGlobalMessagingProcessor.m_staState;
+
+            if(m_staGlobalMessagingState == NetworkGlobalMessengerProcessor.State.ConnectAsAdditionalPeer)
+            {
+                //get the nuber of start candidates 
+                m_iChainStartCandidates = gmpGlobalMessagingProcessor.m_chmChainManager.StartStateCandidates.Count;
+
+                //the number of links in chain manager
+                m_iTotalChainLinks = gmpGlobalMessagingProcessor.m_chmChainManager.ChainLinks.Count;
+
+            }
+            else
+            {
+                m_iChainStartCandidates = 0;
+            }
 
             if (m_staGlobalMessagingState == NetworkGlobalMessengerProcessor.State.Connected ||
                 m_staGlobalMessagingState == NetworkGlobalMessengerProcessor.State.Active)
@@ -360,17 +393,21 @@ namespace GameManagers
                         m_sstSimState.m_fShipPosY = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
                         m_sstSimState.m_fShipVelocityX = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
                         m_sstSimState.m_fShipVelocityY = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
+                        m_sstSimState.m_fShipRotation = new float[ifdInterpolatedFrameData.m_fixShipBaseAngleErrorAdjusted.Length];
+                        m_sstSimState.m_fShipWeaponCoolDown = new float[ifdInterpolatedFrameData.m_fixTimeUntilNextFireErrorAdjusted.Length];
                     }
 
                     for (int i = 0; i < ifdInterpolatedFrameData.m_fixShipHealthErrorOffset.Length; i++)
                     {
                         m_sstSimState.m_lPeersAssignedToSlot[i] = ifdInterpolatedFrameData.m_lPeersAssignedToSlot[i];
-                        m_sstSimState.m_fShipHealth[i] = ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted[i];
+                        m_sstSimState.m_fShipHealth[i] = ifdInterpolatedFrameData.m_fixShipHealth[i];
                         m_sstSimState.m_fShipSpawnCountdown[i] = ifdInterpolatedFrameData.m_fixTimeUntilRespawnErrorAdjusted[i];
                         m_sstSimState.m_fShipPosX[i] = ifdInterpolatedFrameData.m_fixShipPosXErrorAdjusted[i];
                         m_sstSimState.m_fShipPosY[i] = ifdInterpolatedFrameData.m_fixShipPosYErrorAdjusted[i];
                         m_sstSimState.m_fShipVelocityX[i] = ifdInterpolatedFrameData.m_fixShipVelocityXErrorAdjusted[i];
                         m_sstSimState.m_fShipVelocityY[i] = ifdInterpolatedFrameData.m_fixShipVelocityYErrorAdjusted[i];
+                        m_sstSimState.m_fShipRotation[i] = Mathf.Deg2Rad * ifdInterpolatedFrameData.m_fixShipBaseAngle[i];
+                        m_sstSimState.m_fShipWeaponCoolDown[i] = ifdInterpolatedFrameData.m_fixTimeUntilNextFireErrorAdjusted[i];
                     }
 
                     if (m_sstSimState.m_fLazerLife.Length != ifdInterpolatedFrameData.m_fixLazerLifeRemaining.Length)
@@ -426,7 +463,7 @@ namespace GameManagers
                         Gizmos.DrawSphere(new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]), (float)m_sdiSettingsDataInderface.m_fixShipSize.Value);
                         Gizmos.DrawLine(new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]),
                             new Vector3(m_sstSimState.m_fShipPosX[i], 0, m_sstSimState.m_fShipPosY[i]) +
-                            (new Vector3(m_sstSimState.m_fShipVelocityX[i], 0, m_sstSimState.m_fShipVelocityY[i]) * 4));
+                            (new Vector3(Mathf.Cos(m_sstSimState.m_fShipRotation[i]), 0, Mathf.Sin(m_sstSimState.m_fShipRotation[i])) * 4));
                     }
                 }
 
@@ -450,9 +487,7 @@ namespace GameManagers
 
                     Gizmos.DrawSphere(new Vector3((float)m_cdaConstSimData.m_fixAsteroidPositionX[i], 0, (float)m_cdaConstSimData.m_fixAsteroidPositionY[i]), (float)m_cdaConstSimData.m_fixAsteroidSize[i]);
                 }
-            }
-            
-
+            }    
         }
     }
 }

@@ -68,7 +68,7 @@ namespace Sim
                     //check if ship is dead
                     if (fdaOutFrameData.ShipHealth[i] <= Fix.Zero)
                     {
-
+                        fdaOutFrameData.ShipHealDelayTimeOut[i] = Fix.Zero;
                     }
                     //check if healing is still timed out 
                     else if (fdaOutFrameData.ShipHealDelayTimeOut[i] > Fix.Zero)

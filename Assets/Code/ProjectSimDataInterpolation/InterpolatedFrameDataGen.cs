@@ -11,11 +11,11 @@ namespace SimDataInterpolation
 	{
 		public System.Int64[] m_lPeersAssignedToSlot;
 		public System.Int32[] m_bInput;
-		public System.Byte[] m_fixShipHealth;
+		public System.Single[] m_fixShipHealth;
 																																									
 		public System.Single[] m_fixShipHealthErrorOffset; 
 
-		public System.Byte[] m_fixShipHealthErrorAdjusted;
+		public System.Single[] m_fixShipHealthErrorAdjusted;
 
 		public System.Single[] m_fixShipHealDelayTimeOut;
 																																									
@@ -118,12 +118,12 @@ namespace SimDataInterpolation
 			
 			if(m_fixShipHealth == null || m_fixShipHealth.Length != fdaFrameData.m_fixShipHealth.Length)
 			{
-				m_fixShipHealth = new System.Byte[fdaFrameData.m_fixShipHealth.Length] ;
+				m_fixShipHealth = new System.Single[fdaFrameData.m_fixShipHealth.Length] ;
 
 																																									
 				m_fixShipHealthErrorOffset = new System.Single[fdaFrameData.m_fixShipHealth.Length] ;
 
-				m_fixShipHealthErrorAdjusted = new System.Byte[fdaFrameData.m_fixShipHealth.Length] ;
+				m_fixShipHealthErrorAdjusted = new System.Single[fdaFrameData.m_fixShipHealth.Length] ;
 			
 			}
 

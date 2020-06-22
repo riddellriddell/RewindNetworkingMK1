@@ -45,7 +45,7 @@ namespace Sim
         #region Health
 
         //list of all the ship Healths 
-        [FrameDataInterpilationTypeAttribute(typeof(byte))]
+        [FrameDataInterpilationTypeAttribute(typeof(float), FrameDataInterpilationTypeAttribute.InterpolationType.Linear)]
         [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData,"m_fixShipHealth[i]","<=",FrameDataInterpolationBreakAttribute.DataSource.CustomData,"Fix.Zero",true)]
         public Fix[] m_fixShipHealth;
 
@@ -90,7 +90,7 @@ namespace Sim
         [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixShipHealth[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixShipVelocityY;
 
-        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpilationTypeAttribute(typeof(float), FrameDataInterpilationTypeAttribute.InterpolationType.Circular)]
         [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixShipHealth[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixShipBaseAngle;
 
@@ -125,23 +125,23 @@ namespace Sim
         public byte[] m_bLazerOwner;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
-        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.NewFrameData, "m_fixLazerLifeRemaining[i]", true)]
         public Fix[] m_fixLazerLifeRemaining;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
-        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.NewFrameData, "m_fixLazerLifeRemaining[i]", true)]
         public Fix[] m_fixLazerPositionX;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
-        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.NewFrameData, "m_fixLazerLifeRemaining[i]", true)]
         public Fix[] m_fixLazerPositionY;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
-        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.NewFrameData, "m_fixLazerLifeRemaining[i]", true)]
         public Fix[] m_fixLazerVelocityX;
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
-        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixLazerLifeRemaining[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.NewFrameData, "m_fixLazerLifeRemaining[i]", true)]
         public Fix[] m_fixLazerVelocityY;
 
         public byte[] LazerOwner { get => m_bLazerOwner; set => m_bLazerOwner = value; }

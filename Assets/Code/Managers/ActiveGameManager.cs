@@ -1,4 +1,5 @@
-﻿using Networking;
+﻿using GameStateView;
+using Networking;
 using Sim;
 using SimDataInterpolation;
 using System;
@@ -82,6 +83,7 @@ namespace GameManagers
             NetworkingDataBridge>
             m_fimFrameDataInterpolationManager;
 
+        public GameStateViewSpawner m_gsvGameStateView;
 
         public IPeerTransmitterFactory m_ptfTransmitterFactory;
 
@@ -95,19 +97,26 @@ namespace GameManagers
         protected DateTime m_dtmConnectThroughGateStart;
 
         //the timeout time for getting sim state from cluster
-        protected float m_fGettingSimStateTimeOut = 20f;
+        protected float m_fGettingSimStateTimeOut = 30f;
         protected DateTime m_dtmGettingSimStateStart;
 
         //the amount of time ahead of the current network time to schedule a fetch for the game state 
         protected TimeSpan m_fSimStateLeadTime = TimeSpan.FromSeconds(0.1f);
 
-        public ActiveGameManager(SimProcessorSettings sdaSimSettingsData, InterpolationErrorCorrectionSettingsGen ecsInterpolationErrorCorrectionSettings, ConstData cdaConstantSimData, WebInterface winWebInterface, IPeerTransmitterFactory ptfTransmitterFactory)
+        public ActiveGameManager(
+            SimProcessorSettings sdaSimSettingsData, 
+            InterpolationErrorCorrectionSettingsGen ecsInterpolationErrorCorrectionSettings, 
+            ConstData cdaConstantSimData, 
+            WebInterface winWebInterface, 
+            IPeerTransmitterFactory ptfTransmitterFactory,
+            GameStateViewSpawner gsvGameStateViewSpawner)
         {
             m_ptfTransmitterFactory = ptfTransmitterFactory;
             m_winWebInterface = winWebInterface;
             m_sdaSimSettingsData = sdaSimSettingsData;
             m_ecsInterpolationErrorCorrectionSettings = ecsInterpolationErrorCorrectionSettings;
             m_cdaConstData = cdaConstantSimData;
+            m_gsvGameStateView = gsvGameStateViewSpawner;
 
             //start the connection process
             EnterGettingGateway();
@@ -251,6 +260,9 @@ namespace GameManagers
 
             //tell the connection propegator who to try to connect to
             m_ncpConnectionPropegator.StartRequest(lConnectionID);
+
+            //start setting up the visuals 
+            m_gsvGameStateView?.SetupConstDataViewEntities(m_cdaConstData);
         }
 
         protected void UpdateConnectingThroughGateway()
@@ -347,6 +359,8 @@ namespace GameManagers
 
             if (tspTimeSinceGetSimStateStarted.TotalSeconds > m_fGettingSimStateTimeOut)
             {
+                Debug.Log($"Getting sim state timed out before game state was fetched, Global Messaging status:{m_ngpGlobalMessagingProcessor.m_staState}, Sim Data Fetch Status:{m_ngpGlobalMessagingProcessor.m_staState}, has a full state bben synced:{m_sssStateSyncProcessor.m_bIsFullStateSynced}");
+
                 //restart the connection process
                 Reset();
                 return;
@@ -367,8 +381,9 @@ namespace GameManagers
             // sim manager setup sim
             m_tsmSimManager.InitalizeAsFirstPeer(m_ncnNetworkConnection.m_lPeerID);
 
+            //start setting up the visuals 
+            m_gsvGameStateView?.SetupConstDataViewEntities(m_cdaConstData);
 
-            
         }
 
         protected void UpdateSetUpNewSim()
@@ -416,6 +431,8 @@ namespace GameManagers
             {
                 if((DateTime.UtcNow - m_dtmGettingSimStateStart).TotalSeconds > m_fGettingSimStateTimeOut)
                 {
+                    Debug.Log("Error getting sim state, get sim state timed out, forced to reset get game process");
+
                     //getting sim state ultamatly failed, need to reset get process
                     Reset();
                     return;
@@ -451,6 +468,9 @@ namespace GameManagers
             m_ncnNetworkConnection.UpdateConnectionsAndProcessors();
 
             //update Web Interface(may be external? )
+
+            //update visuals 
+            m_gsvGameStateView?.UpdateView(m_fimFrameDataInterpolationManager.m_ifdSmoothedInterpolatedFrameData, m_sdaSimSettingsData);
 
             //------------ check for game state changes ------
 

@@ -203,7 +203,7 @@ namespace Networking
             {
                 Debug.Log("Finalize WebRTC");
                 s_bWebRTCSetup = false;
-                WebRTC.Finalize();
+                WebRTC.Dispose();
             }
         }
 
@@ -355,19 +355,19 @@ namespace Networking
             yield return sdoAsyncOpperation;
 
             //check if there was an error creating offer
-            if (sdoAsyncOpperation.isError == false)
+            if (sdoAsyncOpperation.IsError == false)
             {
                 //check still trying to connect 
                 if (State == PeerTransmitterState.Negotiating)
                 {
                     //set the offer description
-                    m_sdcLocalSessionDescription = sdoAsyncOpperation.desc;
+                    m_sdcLocalSessionDescription = sdoAsyncOpperation.Desc;
                     yield return m_monCoroutineExecutionObject.StartCoroutine(SetLocalDescriptionCoroutine());
                 }
             }
             else
             {
-                Debug.LogError($"Error occured during WebRTC Create Offer. Error:{sdoAsyncOpperation.error}");
+                Debug.LogError($"Error occured during WebRTC Create Offer. Error:{sdoAsyncOpperation.Error}");
 
                 //change state 
                 State = PeerTransmitterState.Disconnected;
@@ -402,19 +402,19 @@ namespace Networking
             yield return sdoAsyncOpperation;
 
             //check if there was an error creating offer
-            if (sdoAsyncOpperation.isError == false)
+            if (sdoAsyncOpperation.IsError == false)
             {
                 //check still trying to connect 
                 if (State == PeerTransmitterState.Negotiating)
                 {
                     //set the offer description
-                    m_sdcLocalSessionDescription = sdoAsyncOpperation.desc;
+                    m_sdcLocalSessionDescription = sdoAsyncOpperation.Desc;
                     yield return m_monCoroutineExecutionObject.StartCoroutine(SetLocalDescriptionCoroutine());
                 }
             }
             else
             {
-                Debug.LogError($"Error occured during WebRTC Create Answer. Error:{sdoAsyncOpperation.error}");
+                Debug.LogError($"Error occured during WebRTC Create Answer. Error:{sdoAsyncOpperation.Error}");
 
                 //change state 
                 State = PeerTransmitterState.Disconnected;
@@ -443,17 +443,17 @@ namespace Networking
 
         protected IEnumerator SetLocalDescriptionCoroutine()
         {
-            RTCSessionDescriptionAsyncOperation sdoAsyncOpperation = m_pcnPeerConnection.SetLocalDescription(ref m_sdcLocalSessionDescription);
+            RTCSetSessionDescriptionAsyncOperation ssdAsyncOpperation = m_pcnPeerConnection.SetLocalDescription(ref m_sdcLocalSessionDescription);
 
-            yield return sdoAsyncOpperation;
+            yield return ssdAsyncOpperation;
 
-            if (sdoAsyncOpperation.isError == false)
+            if (ssdAsyncOpperation.IsError == false)
             {
                 Debug.Log($"Set local description Succeded for {m_pcnPeerConnection}");
             }
             else
             {
-                Debug.Log($"Failed to set local description {m_sdcLocalSessionDescription.sdp}. Error {sdoAsyncOpperation.error} ");
+                Debug.Log($"Failed to set local description {m_sdcLocalSessionDescription.sdp}. Error {ssdAsyncOpperation.Error} ");
 
                 //change state 
                 State = PeerTransmitterState.Disconnected;
@@ -469,17 +469,17 @@ namespace Networking
 
         protected IEnumerator SetRemoteDescriptionCoroutine()
         {
-            RTCSessionDescriptionAsyncOperation sdoAsyncOpperation = m_pcnPeerConnection.SetRemoteDescription(ref m_sdcRemoteSessionDescription);
+            RTCSetSessionDescriptionAsyncOperation ssdAsyncOpperation = m_pcnPeerConnection.SetRemoteDescription(ref m_sdcRemoteSessionDescription);
 
-            yield return sdoAsyncOpperation;
+            yield return ssdAsyncOpperation;
 
-            if (sdoAsyncOpperation.isError == false)
+            if (ssdAsyncOpperation.IsError == false)
             {
                 Debug.Log($"Set Remote description Succeded for {m_pcnPeerConnection}");
             }
             else
             {
-                Debug.Log($"Failed to set Remote description {m_sdcRemoteSessionDescription.sdp}. Error {sdoAsyncOpperation.error} ");
+                Debug.Log($"Failed to set Remote description {m_sdcRemoteSessionDescription.sdp}. Error {ssdAsyncOpperation.Error} ");
 
                 //change state 
                 State = PeerTransmitterState.Disconnected;

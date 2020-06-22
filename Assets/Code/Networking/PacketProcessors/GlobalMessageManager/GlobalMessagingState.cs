@@ -156,6 +156,21 @@ namespace Networking
             m_svaLastMessageSortValue = gmsState.m_svaLastMessageSortValue;
         }
 
+        public int AssignedChannelCount()
+        {
+            int iActiveChannels = 0;
+
+            for (int i = 0; i < m_gmcMessageChannels.Count; i++)
+            {
+                if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Assigned)
+                {
+                    iActiveChannels++;
+                }
+            }
+
+            return iActiveChannels;
+        }
+
         //TODO: track chanel activation and store in an int
         //instead of recalculating every time
         public int ActiveChannelCount()
@@ -164,7 +179,8 @@ namespace Networking
 
             for(int i = 0; i < m_gmcMessageChannels.Count;i++)
             {
-                if(m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Assigned)
+                if(m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Assigned &&
+                   m_gmcMessageChannels[i].m_iLastMessageIndexProcessed != 0)
                 {
                     iActiveChannels++;
                 }

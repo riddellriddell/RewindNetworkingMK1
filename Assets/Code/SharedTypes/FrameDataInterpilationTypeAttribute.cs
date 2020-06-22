@@ -8,6 +8,7 @@ namespace Sim
         {
             None,
             Linear,
+            Circular,
             Bilinear,
         }
 

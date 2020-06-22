@@ -49,10 +49,10 @@ namespace Sim
                 if(fdaOutFrameData.PeerSlotAssignment[i] != long.MinValue && fdaOutFrameData.ShipHealth[i] > Fix.Zero)
                 {
                     //apply weapon cooldown
-                    fdaOutFrameData.TimeUntilNextFire[i] = FixMath.Max(0, fdaOutFrameData.TimeUntilNextFire[i] - sdaSettingsData.SecondsPerTick);
+                    fdaOutFrameData.TimeUntilNextFire[i] =  fdaOutFrameData.TimeUntilNextFire[i] - sdaSettingsData.SecondsPerTick;
 
                     //check if target in range to hit
-                    if(fdaOutFrameData.TimeUntilNextFire[i] <=  Fix.Zero)
+                    if(fdaOutFrameData.TimeUntilNextFire[i] <  Fix.Zero)
                     {
                         bool bShouldFire = false;
 
@@ -67,23 +67,23 @@ namespace Sim
                                 //get dist sqr to target
                                 Fix fixDeltaX = fdaOutFrameData.ShipPositionX[iIndex] - fdaOutFrameData.ShipPositionX[i];
                                 Fix fixDeltaY = fdaOutFrameData.ShipPositionY[iIndex] - fdaOutFrameData.ShipPositionY[i];
-
+                        
                                 Fix fixDistSqr = (fixDeltaX * fixDeltaX) + (fixDeltaY * fixDeltaY);
-
+                        
                                 //check if target is in range 
                                 if (fixDistSqr < sdaSettingsData.AutoFireConeRangeSqr && fixDistSqr > 0)
                                 {
                                     //get direction to target
                                     Fix fixDirectionToTarget = FixMath.Atan2(fixDeltaY, fixDeltaX);
-
+                        
                                     //get difference in direction
                                     Fix fixAngleDifference = (((fixDirectionToTarget - fdaOutFrameData.ShipBaseAngle[i]) + 180) % 360) - 180;
-
+                        
                                     //check if target is in fire cone 
                                     if (FixMath.Abs(fixAngleDifference) < sdaSettingsData.AutofireCone)
                                     {
                                         bShouldFire = true;
-
+                        
                                         //exit fire loop 
                                         break;
                                     }
@@ -95,7 +95,7 @@ namespace Sim
                         {
                             //Fire Lazer
                             //increment fire index 
-                            fdaOutFrameData.LazerFireIndex[i] = (byte)((fdaOutFrameData.LazerFireIndex[i] + i) % 256);
+                            fdaOutFrameData.LazerFireIndex[i] = (byte)((fdaOutFrameData.LazerFireIndex[i] + 1) % ProcessLazers<TFrameData, TConstData, TSettingsData>.LazersPerPeer(sdaSettingsData));
 
                             //fire lazer 
                             ProcessLazers<TFrameData, TConstData, TSettingsData>.FireLazer(

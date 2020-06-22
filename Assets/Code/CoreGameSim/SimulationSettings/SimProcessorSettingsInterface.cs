@@ -181,7 +181,7 @@ namespace Sim
 
                 m_fixLazerDamage = m_fixLazerDamage.Value,
 
-                m_fixLazerSize = m_fixLazerSpeed.Value,
+                m_fixLazerSize = m_fixLazerSize.Value,
                 #endregion
             };
 

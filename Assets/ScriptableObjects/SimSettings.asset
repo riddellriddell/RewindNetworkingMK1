@@ -20,17 +20,17 @@ MonoBehaviour:
     Int: 100
     Dec_To_3_Places: 0
   m_fixShipHealRate:
-    Int: 20
+    Int: 5
     Dec_To_3_Places: 0
   m_fixHealDelayTime:
-    Int: 3
+    Int: 5
     Dec_To_3_Places: 0
   m_fixShipSpeed:
-    Int: 0
-    Dec_To_3_Places: 100
+    Int: 3
+    Dec_To_3_Places: 0
   m_fixShipAcceleration:
     Int: 0
-    Dec_To_3_Places: 50
+    Dec_To_3_Places: 500
   m_fixShipTurnRate:
     Int: 90
     Dec_To_3_Places: 0
@@ -60,14 +60,14 @@ MonoBehaviour:
     Int: 1
     Dec_To_3_Places: 0
   m_fixLazerLife:
-    Int: 10
+    Int: 5
     Dec_To_3_Places: 0
   m_fixLazerSpeed:
-    Int: 0
-    Dec_To_3_Places: 500
+    Int: 9
+    Dec_To_3_Places: 0
   m_fixLazerDamage:
-    Int: 25
+    Int: 50
     Dec_To_3_Places: 0
   m_fixLazerSize:
     Int: 0
-    Dec_To_3_Places: 100
+    Dec_To_3_Places: 300

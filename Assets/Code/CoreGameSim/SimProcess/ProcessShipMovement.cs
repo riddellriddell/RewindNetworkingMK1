@@ -75,8 +75,8 @@ namespace Sim
                         fdaOutFrameData.ShipVelocityY[i] = FixMath.Sin(fdaOutFrameData.ShipBaseAngle[i]) * fixShipSpeed;
 
                         //move ship to new position
-                        fdaOutFrameData.ShipPositionX[i] = fdaOutFrameData.ShipPositionX[i] + fdaOutFrameData.ShipVelocityX[i];
-                        fdaOutFrameData.ShipPositionY[i] = fdaOutFrameData.ShipPositionY[i] + fdaOutFrameData.ShipVelocityY[i];
+                        fdaOutFrameData.ShipPositionX[i] = fdaOutFrameData.ShipPositionX[i] + (fdaOutFrameData.ShipVelocityX[i] * sdaSettingsData.SecondsPerTick);
+                        fdaOutFrameData.ShipPositionY[i] = fdaOutFrameData.ShipPositionY[i] + (fdaOutFrameData.ShipVelocityY[i] * sdaSettingsData.SecondsPerTick);
                     }
                 }
             }

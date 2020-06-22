@@ -46,6 +46,9 @@ namespace Networking
         //the min percent of states from peers to collect before initalising 
         public static float MinPercentOfStartStatesFromPeers { get; } = 0.75f;
 
+        //for debug reasons 
+        public float m_fPercentOfStartStatesRecieved;
+
         #endregion
 
         //when a peer initaly conencted wait this time before deciding to kick a peer for
@@ -425,6 +428,9 @@ namespace Networking
             //check if enough states have been recieved 
             float fPercentOfStatesRecieved = m_chmChainManager.m_iStartStatesRecieved / (float)iConnectedPeers;
 
+            //TODO: Remove this debug code when startup problem fixed 
+            m_fPercentOfStartStatesRecieved = fPercentOfStatesRecieved;
+
             //should a connection be forced
             //this occurs in anomilus conditions 
             bool bForceConnection = false;
@@ -560,7 +566,7 @@ namespace Networking
         public void UpdateAddingPeersToSystem()
         {
             //get number of players playing
-            int iPlayerCount = m_gmbMessageBuffer.LatestState.ActiveChannelCount();
+            int iPlayerCount = m_gmbMessageBuffer.LatestState.AssignedChannelCount();
 
             //check if all possible candidates have already been joined 
             //TODO: finter out kicked or otherwise excluded candidates? 

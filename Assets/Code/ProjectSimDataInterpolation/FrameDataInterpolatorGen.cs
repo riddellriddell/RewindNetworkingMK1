@@ -143,7 +143,7 @@ namespace SimDataInterpolation
 					//loop throuhg all variables and calculate the difference 
 			for(int i = 0 ; i < ifdFrameData.m_fixShipHealth.Length; i++)
 			{
-				ifdFrameData.m_fixShipHealthErrorAdjusted[i] = (System.Byte)(ifdFrameData.m_fixShipHealth[i] - ifdFrameData.m_fixShipHealthErrorOffset[i]);
+				ifdFrameData.m_fixShipHealthErrorAdjusted[i] = (System.Single)(ifdFrameData.m_fixShipHealth[i] - ifdFrameData.m_fixShipHealthErrorOffset[i]);
 			}
 
 			for(int i = 0 ; i < ifdFrameData.m_fixShipHealDelayTimeOut.Length; i++)
@@ -307,18 +307,20 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipHealth.Length ; i++)
 			{
+
 				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
 				{
-					ifdInterpolatedFrameData.m_fixShipHealth[i] = (System.Byte) fdaToFrame.m_fixShipHealth[i];
+					ifdInterpolatedFrameData.m_fixShipHealth[i] = (System.Single) fdaToFrame.m_fixShipHealth[i];
 				}
 				else
 				{
-					ifdInterpolatedFrameData.m_fixShipHealth[i] = (System.Byte)( ((System.Byte)(fdaFromFrame.m_fixShipHealth[i]) * (1 - fInterpolation)) +  ((System.Byte)(fdaToFrame.m_fixShipHealth[i]) * fInterpolation));
+					ifdInterpolatedFrameData.m_fixShipHealth[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixShipHealth[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixShipHealth[i]) * fInterpolation));
 						
 				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipHealDelayTimeOut.Length ; i++)
 			{
+
 				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
 				{
 					ifdInterpolatedFrameData.m_fixShipHealDelayTimeOut[i] = (System.Single) fdaToFrame.m_fixShipHealDelayTimeOut[i];
@@ -337,6 +339,7 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixTimeUntilRespawn.Length ; i++)
 			{
+
 				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
 				{
 					ifdInterpolatedFrameData.m_fixTimeUntilRespawn[i] = (System.Single) fdaToFrame.m_fixTimeUntilRespawn[i];
@@ -349,6 +352,7 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipPosX.Length ; i++)
 			{
+
 				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
 				{
 					ifdInterpolatedFrameData.m_fixShipPosX[i] = (System.Single) fdaToFrame.m_fixShipPosX[i];
@@ -361,6 +365,7 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipPosY.Length ; i++)
 			{
+
 				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
 				{
 					ifdInterpolatedFrameData.m_fixShipPosY[i] = (System.Single) fdaToFrame.m_fixShipPosY[i];
@@ -373,6 +378,7 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipVelocityX.Length ; i++)
 			{
+
 				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
 				{
 					ifdInterpolatedFrameData.m_fixShipVelocityX[i] = (System.Single) fdaToFrame.m_fixShipVelocityX[i];
@@ -385,6 +391,7 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipVelocityY.Length ; i++)
 			{
+
 				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
 				{
 					ifdInterpolatedFrameData.m_fixShipVelocityY[i] = (System.Single) fdaToFrame.m_fixShipVelocityY[i];
@@ -402,9 +409,16 @@ namespace SimDataInterpolation
 					ifdInterpolatedFrameData.m_fixShipBaseAngle[i] = (System.Single) fdaToFrame.m_fixShipBaseAngle[i];
 				}
 				else
+				{					
+				System.Single m_fixShipBaseAngleDifference = (System.Single)(fdaToFrame.m_fixShipBaseAngle[i]) - (System.Single)(fdaFromFrame.m_fixShipBaseAngle[i]);
+
+				if(Mathf.Abs(m_fixShipBaseAngleDifference) > 180)
 				{
-					ifdInterpolatedFrameData.m_fixShipBaseAngle[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixShipBaseAngle[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixShipBaseAngle[i]) * fInterpolation));
-						
+					m_fixShipBaseAngleDifference = m_fixShipBaseAngleDifference - ((System.Single)(360) * Mathf.Sign(m_fixShipBaseAngleDifference));
+				}
+
+				ifdInterpolatedFrameData.m_fixShipBaseAngle[i] = (((System.Single)(((System.Single) fdaFromFrame.m_fixShipBaseAngle[i]) + (m_fixShipBaseAngleDifference * fInterpolation)) + (System.Single)360)) % (System.Single)360;
+
 				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_bLazerFireIndex.Length ; i++)
@@ -415,6 +429,7 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixTimeUntilNextFire.Length ; i++)
 			{
+
 				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
 				{
 					ifdInterpolatedFrameData.m_fixTimeUntilNextFire[i] = (System.Single) fdaToFrame.m_fixTimeUntilNextFire[i];
@@ -433,7 +448,8 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerLifeRemaining.Length ; i++)
 			{
-				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= Fix.Zero) == true)
+
+				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= fdaToFrame.m_fixLazerLifeRemaining[i]) == true)
 				{
 					ifdInterpolatedFrameData.m_fixLazerLifeRemaining[i] = (System.Single) fdaToFrame.m_fixLazerLifeRemaining[i];
 				}
@@ -445,7 +461,8 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerPositionX.Length ; i++)
 			{
-				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= Fix.Zero) == true)
+
+				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= fdaToFrame.m_fixLazerLifeRemaining[i]) == true)
 				{
 					ifdInterpolatedFrameData.m_fixLazerPositionX[i] = (System.Single) fdaToFrame.m_fixLazerPositionX[i];
 				}
@@ -457,7 +474,8 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerPositionY.Length ; i++)
 			{
-				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= Fix.Zero) == true)
+
+				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= fdaToFrame.m_fixLazerLifeRemaining[i]) == true)
 				{
 					ifdInterpolatedFrameData.m_fixLazerPositionY[i] = (System.Single) fdaToFrame.m_fixLazerPositionY[i];
 				}
@@ -469,7 +487,8 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerVelocityX.Length ; i++)
 			{
-				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= Fix.Zero) == true)
+
+				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= fdaToFrame.m_fixLazerLifeRemaining[i]) == true)
 				{
 					ifdInterpolatedFrameData.m_fixLazerVelocityX[i] = (System.Single) fdaToFrame.m_fixLazerVelocityX[i];
 				}
@@ -481,7 +500,8 @@ namespace SimDataInterpolation
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixLazerVelocityY.Length ; i++)
 			{
-				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= Fix.Zero) == true)
+
+				if((fdaFromFrame.m_fixLazerLifeRemaining[i] <= fdaToFrame.m_fixLazerLifeRemaining[i]) == true)
 				{
 					ifdInterpolatedFrameData.m_fixLazerVelocityY[i] = (System.Single) fdaToFrame.m_fixLazerVelocityY[i];
 				}

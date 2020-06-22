@@ -1,6 +1,4 @@
 ﻿using FixedPointy;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Sim
@@ -17,7 +15,7 @@ namespace Sim
 
         Fix[] LazerVelocityX { get; set; }
 
-        Fix[] LazerVelocityY { get; set;}
+        Fix[] LazerVelocityY { get; set; }
     }
 
     public interface ILazerSettingsData
@@ -39,19 +37,24 @@ namespace Sim
             where TSettingsData : IPeerSlotAssignmentSettingsData, IShipWeaponsSettingsData, IShipHealthSettingsData, IShipCollisionSettingsData, ISimTickRateSettings, ILazerSettingsData
             where TConstData : IAsteroidCollisionConstData
     {
+        public static int LazersPerPeer(TSettingsData sdaSettingsData)
+        {
+            return Mathf.Max((int)((Fix.One / sdaSettingsData.TimeBetweenShots) * sdaSettingsData.LazerLife), 1);
+        }
+
         public static void FireLazer(
-            TFrameData fdaFrameData, 
-            TSettingsData sdaSettingsData, 
-            int bPeerIndex, 
-            int bLazerSubIndex, 
-            Fix fixFirePosX, 
-            Fix fixFirePosY, 
+            TFrameData fdaFrameData,
+            TSettingsData sdaSettingsData,
+            int iPeerIndex,
+            int iLazerSubIndex,
+            Fix fixFirePosX,
+            Fix fixFirePosY,
             Fix fixFireAngle
             )
         {
-            int iLazersPerPeer = Mathf.Max((int)((Fix.One / sdaSettingsData.TimeBetweenShots) * sdaSettingsData.LazerLife), 1);
+            int iLazersPerPeer = LazersPerPeer(sdaSettingsData);
 
-            int iLazerIndex = (iLazersPerPeer * bPeerIndex) + (bLazerSubIndex % iLazersPerPeer);
+            int iLazerIndex = (iLazersPerPeer * iPeerIndex) + iLazerSubIndex;
 
             fdaFrameData.LazerLifeRemaining[iLazerIndex] = sdaSettingsData.LazerLife;
 
@@ -70,7 +73,7 @@ namespace Sim
 
         public bool ApplySetupProcess(uint iTick, in TSettingsData sdaSettingsData, long lFirstPeerID, ref TFrameData fdaFrameData)
         {
-            int iTotalLazersNeededNeededPerPlayer =  Mathf.Max((int)((Fix.One / sdaSettingsData.TimeBetweenShots) * sdaSettingsData.LazerLife), 1);
+            int iTotalLazersNeededNeededPerPlayer = LazersPerPeer(sdaSettingsData);
 
             fdaFrameData.LazerOwner = new byte[iTotalLazersNeededNeededPerPlayer * sdaSettingsData.MaxPlayers];
 
@@ -107,12 +110,12 @@ namespace Sim
             //move all projectiles along their travel paths
             for (int i = 0; i < fdaOutFrameData.LazerPositionX.Length; i++)
             {
-                fdaOutFrameData.LazerPositionX[i] = fdaOutFrameData.LazerPositionX[i] + fdaOutFrameData.LazerVelocityX[i];
+                fdaOutFrameData.LazerPositionX[i] = fdaOutFrameData.LazerPositionX[i] + (fdaOutFrameData.LazerVelocityX[i] * sdaSettingsData.SecondsPerTick);
             }
 
             for (int i = 0; i < fdaOutFrameData.LazerPositionY.Length; i++)
             {
-                fdaOutFrameData.LazerPositionY[i] = fdaOutFrameData.LazerPositionY[i] + fdaOutFrameData.LazerVelocityY[i];
+                fdaOutFrameData.LazerPositionY[i] = fdaOutFrameData.LazerPositionY[i] + (fdaOutFrameData.LazerVelocityY[i] * sdaSettingsData.SecondsPerTick);
             }
 
             //perform collision detection between lazers and asteroids 
@@ -142,13 +145,12 @@ namespace Sim
                 ActiveLazerFilter,
                 OnLazerCollideWithShip);
 
-
             return true;
         }
 
         public bool ActiveLazerFilter(TFrameData fdaFrameData, int iLazerIndex)
         {
-            if(fdaFrameData.LazerLifeRemaining[iLazerIndex] > Fix.Zero)
+            if (fdaFrameData.LazerLifeRemaining[iLazerIndex] > Fix.Zero)
             {
                 return true;
             }
@@ -158,7 +160,7 @@ namespace Sim
 
         public bool DeadShipFilter(TFrameData fdaFrameData, int iShipIndex)
         {
-            if(fdaFrameData.ShipHealth[iShipIndex] > Fix.Zero)
+            if (fdaFrameData.ShipHealth[iShipIndex] > Fix.Zero)
             {
                 return true;
             }
@@ -168,13 +170,13 @@ namespace Sim
 
 
         public void OnLazerCollideWithAsteroid(
-            TFrameData fdaFrameData, 
+            TFrameData fdaFrameData,
             TSettingsData sdaSettingsData,
             int iAsteroidIndex,
             int jLazerIndex,
-            Fix fixCombinedObjectRadius, 
-            Fix fixDistSqr, 
-            Fix fixDeltaX, 
+            Fix fixCombinedObjectRadius,
+            Fix fixDistSqr,
+            Fix fixDeltaX,
             Fix fixDeltaY)
         {
             fdaFrameData.LazerLifeRemaining[jLazerIndex] = Fix.Zero;
@@ -191,7 +193,7 @@ namespace Sim
             Fix fixDeltaY)
         {
             //check if ship is lazer owner
-            if(fdaFrameData.LazerOwner[jLazerIndex] == iShipIndex)
+            if (fdaFrameData.LazerOwner[jLazerIndex] == iShipIndex)
             {
                 //dont collide with own bullets
                 return;

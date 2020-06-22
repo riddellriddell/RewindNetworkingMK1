@@ -1,0 +1,24 @@
+{
+    "name": "ProjectGameStateView",
+    "references": [
+        "GUID:734d92eba21c94caba915361bd5ac177",
+        "GUID:8819f35a0fc84499b990e90a4ca1911f",
+        "GUID:d8b63aba1907145bea998dd612889d6b",
+        "GUID:e04e6c86a9f3947eb95fded39f9e60cc",
+        "GUID:7a450cf7ca9694b5a8bfa3fd83ec635a",
+        "GUID:a5baed0c9693541a5bd947d336ec7659",
+        "GUID:b5793fa1138ae80418f70655af94a62b",
+        "GUID:c305cedec0373d040a50b32efe39ad0d",
+        "GUID:780f5b4b5d6549748a70526b117a388f",
+        "GUID:b268e4ad85465bc4186068a2a3dcd6fa"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

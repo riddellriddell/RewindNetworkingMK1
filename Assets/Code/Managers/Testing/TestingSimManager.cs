@@ -655,8 +655,8 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
         {
             //get lock on buffer
 
-            fdaOutFrom.ResetToState(m_fdaSimStateBuffer[0]);
-            fdaOutToo.ResetToState(m_fdaSimStateBuffer[0]);
+            fdaOutFrom.ResetToState(m_fdaSimStateBuffer[m_fdaSimStateBuffer.BaseIndex]);
+            fdaOutToo.ResetToState(m_fdaSimStateBuffer[m_fdaSimStateBuffer.BaseIndex]);
 
             //release llock on buffer
             fOutLerp = 0;

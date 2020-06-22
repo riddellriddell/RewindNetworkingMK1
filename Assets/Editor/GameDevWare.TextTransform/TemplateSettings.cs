@@ -114,8 +114,8 @@ namespace Assets.Editor.GameDevWare.TextTransform
 		{
 			var allTemplates = (from id in AssetDatabase.FindAssets("t:DefaultAsset").Union(AssetDatabase.FindAssets("t:TextAsset"))
 								let path = FileUtils.MakeProjectRelative(AssetDatabase.GUIDToAssetPath(id))
-								where path != null && IsTemplateAsset(path)
-								select path).ToList();
+                                where path != null && IsTemplateAsset(path) && IsAsset(path)
+                                select path).ToList();
 			return allTemplates;
 		}
 
@@ -125,11 +125,19 @@ namespace Assets.Editor.GameDevWare.TextTransform
 
 			return IsTemplateAsset(AssetDatabase.GetAssetPath(asset));
 		}
+
 		public static bool IsTemplateAsset(string path)
 		{
 			if (path == null) throw new ArgumentNullException("path");
 
 			return path.EndsWith(".tt", StringComparison.OrdinalIgnoreCase);
 		}
+
+        public static bool IsAsset(string path)
+        {
+            if (path == null) throw new ArgumentNullException("path");
+
+            return path.Contains("Assets");
+        }
 	}
 }

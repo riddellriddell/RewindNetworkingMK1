@@ -14,12 +14,12 @@ namespace Assets.Editor.GameDevWare.TextTranform.Examples
 {
 	public static class BuildParameters
 	{
-		public static readonly DateTime Time = new DateTime(637266642770443983, DateTimeKind.Utc);
-		public static readonly string UnityVersion = "2020.1.0b9";
+		public static readonly DateTime Time = new DateTime(636276048768793215, DateTimeKind.Utc);
+		public static readonly string UnityVersion = "4.7.0f1";
 		public static readonly string UnityPlatform = "WindowsEditor";
-		public static readonly string OSVersion = "Microsoft Windows NT 10.0.18362.0";
-		public static readonly string CurrentDirectory = "C:/Users/Jack The Ripper/Documents/GameDev/Rewind Networking/RewindNetworkingMK1";
-		public static readonly string UserName = "Jack The Ripper";
-		public static readonly bool Is64BitProcess = true;
+		public static readonly string OSVersion = "Microsoft Windows NT 10.0.14393.0";
+		public static readonly string CurrentDirectory = "D:/dev/unity/t4-templates/GameDevWare.TextTranform.Unity";
+		public static readonly string UserName = "denis";
+		public static readonly bool Is64BitProcess = false;
 	}
 }
