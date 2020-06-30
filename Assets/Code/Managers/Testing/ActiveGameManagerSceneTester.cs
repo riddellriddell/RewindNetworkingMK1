@@ -1,4 +1,5 @@
 ﻿using GameStateView;
+using GameViewUI;
 using Networking;
 using Sim;
 using SimDataInterpolation;
@@ -96,7 +97,14 @@ namespace GameManagers
 
         public ConstData m_cdaConstSimData;
 
+        [SerializeField]
         public GameStateViewSpawner m_gsvGameStateView;
+
+        [SerializeField]
+        public UIStateManager m_usmGameUIStateManager;
+
+        [SerializeField]
+        public GameStateViewCamera m_gvcGameViewCamera;
 
         [SerializeField]
         public SimProcessorSettingsInterface m_sdiSettingsDataInderface;
@@ -134,6 +142,7 @@ namespace GameManagers
         [SerializeField]
         public ActiveGameManagerSceneTesterSimState m_sstSimState;
 
+        public IInputApplyer m_iapInputApplyer;
 
         // Start is called before the first frame update
         void Start()
@@ -150,6 +159,11 @@ namespace GameManagers
             if(m_gsvGameStateView == null)
             {
                 m_gsvGameStateView = GetComponent<GameStateViewSpawner>();
+            }
+
+            if(m_iapInputApplyer == null)
+            {
+                m_iapInputApplyer = GetComponent<IInputApplyer>();
             }
         }
 
@@ -240,11 +254,15 @@ namespace GameManagers
                 m_cdaConstSimData, 
                 m_wbiWebInterface, 
                 m_ptfTransmitterFactory,
-                m_gsvGameStateView);
+                m_gsvGameStateView,
+                m_usmGameUIStateManager,
+                m_gvcGameViewCamera);
 
             while (m_bAlive)
             {
                 m_wbiWebInterface.UpdateCommunication();
+
+                m_iapInputApplyer?.ApplyInputs(m_agmActiveGameManager.m_lpiLocalPeerInputManager);
 
                 m_agmActiveGameManager.UpdateGame(Time.deltaTime);
 

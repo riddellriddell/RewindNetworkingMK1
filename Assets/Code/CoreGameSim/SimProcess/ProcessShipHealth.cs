@@ -27,9 +27,11 @@ namespace Sim
 
         public string ProcessName { get; } = "Ship Health Process";
 
-        public static void DamageShip(TFrameData fdaFrameData, int iIndex, Fix fixDamage, byte bAttackingPeerIndex = byte.MaxValue)
+        public static void DamageShip(TFrameData fdaFrameData,TSettingsData sdaSettingsData, int iIndex, Fix fixDamage, byte bAttackingPeerIndex = byte.MaxValue)
         {
             fdaFrameData.ShipHealth[iIndex] = fdaFrameData.ShipHealth[iIndex] - fixDamage;
+            fdaFrameData.ShipHealDelayTimeOut[iIndex] = sdaSettingsData.ShipHealDelayTime;
+
             if (bAttackingPeerIndex != byte.MaxValue)
             {
                 fdaFrameData.ShipLastDamagedBy[iIndex] = bAttackingPeerIndex;

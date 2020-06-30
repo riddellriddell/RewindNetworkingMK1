@@ -203,7 +203,7 @@ namespace Sim
             fdaFrameData.LazerLifeRemaining[jLazerIndex] = Fix.Zero;
 
             //apply damage
-            ProcessShipHealth<TFrameData, TConstData, TSettingsData>.DamageShip(fdaFrameData, iShipIndex, sdaSettingsData.LazerDamage, fdaFrameData.LazerOwner[jLazerIndex]);
+            ProcessShipHealth<TFrameData, TConstData, TSettingsData>.DamageShip(fdaFrameData, sdaSettingsData, iShipIndex, sdaSettingsData.LazerDamage, fdaFrameData.LazerOwner[jLazerIndex]);
         }
 
 

@@ -1,7 +1,4 @@
 ﻿using FixedPointy;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 
 namespace Sim
 {
@@ -46,7 +43,7 @@ namespace Sim
             // get untangle dist 
             CollisionDetectionHelper<TFrameData, TSettingsData>.CalcCollisionNormal(fixPosDeltaSqr, fixPosDeltaX, fixPosDeltaY, out Fix fixNormalX, out Fix fixNormalY);
 
-            Fix fixSepperationRatio = (Fix.Ratio(1, 2) * fixObjectRadius) + Fix.Ratio(1,100);
+            Fix fixSepperationRatio = (Fix.Ratio(1, 2) * fixObjectRadius) + Fix.Ratio(1, 100);
 
             Fix fixSepX = (fixNormalX - fixPosDeltaX) * fixSepperationRatio;
             Fix fixSepY = (fixNormalY - fixPosDeltaY) * fixSepperationRatio;
@@ -54,14 +51,14 @@ namespace Sim
             //move ships appart
             fdaFrameData.ShipPositionX[iObjectA] = fdaFrameData.ShipPositionX[iObjectA] - fixSepX;
             fdaFrameData.ShipPositionY[iObjectA] = fdaFrameData.ShipPositionY[iObjectA] - fixSepY;
-            
+
             fdaFrameData.ShipPositionX[iObjectB] = fdaFrameData.ShipPositionX[iObjectB] + fixSepX;
             fdaFrameData.ShipPositionY[iObjectB] = fdaFrameData.ShipPositionY[iObjectB] + fixSepY;
 
             //calculate velocity delta
             Fix fixVelocityDeltaX = fdaFrameData.ShipVelocityX[iObjectA] - fdaFrameData.ShipVelocityX[iObjectB];
             Fix fixVelocityDeltaY = fdaFrameData.ShipVelocityY[iObjectA] - fdaFrameData.ShipVelocityY[iObjectB];
-            
+
             bool bCollisionResolutionNeeded = CollisionDetectionHelper<TFrameData, TSettingsData>.CollisionResolutionVelocities(
                 fixNormalX,
                 fixNormalY,
@@ -75,35 +72,35 @@ namespace Sim
                 out Fix fixOutImpulseAY,
                 out Fix fixOutImpulseBX,
                 out Fix fixOutImpulseBY);
-            
+
             // if collision has already been handled and the objects are headed away from each other dont 
             // apply impulse
             if (bCollisionResolutionNeeded)
             {
                 fdaFrameData.ShipVelocityX[iObjectA] = fdaFrameData.ShipVelocityX[iObjectA] - fixOutImpulseAX;
                 fdaFrameData.ShipVelocityY[iObjectA] = fdaFrameData.ShipVelocityY[iObjectA] - fixOutImpulseAY;
-            
+
                 fdaFrameData.ShipVelocityX[iObjectB] = fdaFrameData.ShipVelocityX[iObjectB] + fixOutImpulseBX;
                 fdaFrameData.ShipVelocityY[iObjectB] = fdaFrameData.ShipVelocityY[iObjectB] + fixOutImpulseBY;
-                        
+
                 //point ships in correct direction
-            
+
                 //check for null travel vectors 
                 if (fdaFrameData.ShipVelocityX[iObjectA] != 0 || fdaFrameData.ShipVelocityY[iObjectA] != 0)
                 {
                     //point ship in new travel direction 
                     fdaFrameData.ShipBaseAngle[iObjectA] = FixMath.Atan2(fdaFrameData.ShipVelocityY[iObjectA], fdaFrameData.ShipVelocityX[iObjectA]);
                 }
-            
+
                 if (fdaFrameData.ShipVelocityX[iObjectB] != 0 || fdaFrameData.ShipVelocityY[iObjectB] != 0)
                 {
                     //point ship in new travel direction 
                     fdaFrameData.ShipBaseAngle[iObjectB] = FixMath.Atan2(fdaFrameData.ShipVelocityY[iObjectB], fdaFrameData.ShipVelocityX[iObjectB]);
                 }
-            
+
                 //deal damage to both ships
-                ProcessShipHealth<TFrameData, TConstData, TSettingsData>.DamageShip(fdaFrameData, iObjectA, sdaSettingsData.ShipImpactDamage, (byte)iObjectB);
-                ProcessShipHealth<TFrameData, TConstData, TSettingsData>.DamageShip(fdaFrameData, iObjectB, sdaSettingsData.ShipImpactDamage, (byte)iObjectA);
+                ProcessShipHealth<TFrameData, TConstData, TSettingsData>.DamageShip(fdaFrameData, sdaSettingsData, iObjectA, sdaSettingsData.ShipImpactDamage, (byte)iObjectB);
+                ProcessShipHealth<TFrameData, TConstData, TSettingsData>.DamageShip(fdaFrameData, sdaSettingsData, iObjectB, sdaSettingsData.ShipImpactDamage, (byte)iObjectA);
             }
         }
     }

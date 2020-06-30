@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e21baabe7438a324fbd77eeb423c276d, type: 3}
+  m_Name: SmallFlame1
+  m_EditorClassIdentifier: 
+  _bDescription: 0
+  _bHelp1: 0
+  _bBuildButton: 0
+  _bHelp2: 0
+  _texNormalMap: {fileID: 2800000, guid: d1a0483c76d092a4f8dae283b83b4d2a, type: 3}
+  _bHelp3: 0
+  _bAlreadyRadiosityFormat: 0
+  _bHelp4: 0
+  _texOpacityMap: {fileID: 2800000, guid: 0953a64adb0adb94d925caf34564e333, type: 3}
+  _bHelp5: 0
+  _texEmissiveMap: {fileID: 0}
+  _bHelp6: 0
+  _bRemapNormalRange: 1
+  _bHelp7: 0
+  _fSourceMinLength: 0.25
+  _bHelp8: 0
+  _fSourceMaxLenght: 0.8
+  _bHelp9: 0
+  _fDestMinLength: 0.4
+  _bHelp10: 0
+  _fDestMaxLength: 1
+  _bHelp11: 0
+  _bBlurNormal: 0
+  _bHelp12: 0
+  _iNormalBlurWidth: 1
+  _bHelp13: 0
+  _bBlurTransparency: 1
+  _bHelp14: 0
+  _iTransparencyBlurWidth: 2
+  _strSaveDirectory: Assets/Textures/ConvertedTextures/SmallFlame
+  _strFileName: SmallFlame1

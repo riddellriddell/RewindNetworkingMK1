@@ -11,9 +11,7 @@ namespace GameManagers
 {
     public class LocalPeerInputManager
     {
-        #region UserInputGlobalMessage
-        
-
+        #region UserInputGlobalMessage     
         public class TestingUserInput : GlobalMessageBase, ISimMessagePayload
         {
             public static int TypeID { get; set; } = int.MinValue;
@@ -155,116 +153,4 @@ namespace GameManagers
         }
         #endregion
     }
-
-    public class LoclaPeerInputManagerTester
-    {
-        public LocalPeerInputManager m_lpiLocalPeerInputManager;
-
-        public float m_fChanceOfDirectionChange = 1f;
-
-        public float m_fChanceOfSpecial = 4f;
-
-        public float m_fCanceSpecialIsMissile = 0.5f;
-
-        public float m_fMaxMissileHoldTime = 3f;
-
-        protected DateTime m_dtmTimeOfLastUpdate = DateTime.MinValue;
-
-        public LoclaPeerInputManagerTester(LocalPeerInputManager lpiTargetLocalPeerInputManager)
-        {
-            m_lpiLocalPeerInputManager = lpiTargetLocalPeerInputManager;
-        }
-
-        public void Update()
-        {
-            if(m_dtmTimeOfLastUpdate == DateTime.MinValue)
-            {
-                m_dtmTimeOfLastUpdate = DateTime.UtcNow;
-            }
-
-            float fDeltaTime = (float)(DateTime.UtcNow - m_dtmTimeOfLastUpdate).TotalSeconds;
-            
-            m_dtmTimeOfLastUpdate = DateTime.UtcNow;
-            
-            //check for direction change 
-            if (UnityEngine.Random.Range(0.0f, 1.0f ) < m_fChanceOfDirectionChange * fDeltaTime)
-            {
-                int iMoveType = UnityEngine.Random.Range(0, 4);
-            
-                switch(iMoveType)
-                {
-                    case 0:
-                        if(SimInputManager.GetTurnLeft(m_lpiLocalPeerInputManager.m_bInputState) == true)
-                        {
-                            m_lpiLocalPeerInputManager.OnLeftReleased();
-                        }
-            
-                        if (SimInputManager.GetTurnRight(m_lpiLocalPeerInputManager.m_bInputState) == true)
-                        {
-                            m_lpiLocalPeerInputManager.OnRightReleased();
-                        }
-            
-                        if (SimInputManager.GetBoost(m_lpiLocalPeerInputManager.m_bInputState) == true)
-                        {
-                            m_lpiLocalPeerInputManager.OnLeftReleased();
-                            m_lpiLocalPeerInputManager.OnRightReleased();
-                        }
-            
-                        break;
-            
-                    case 1:
-            
-                        if (SimInputManager.GetBoost(m_lpiLocalPeerInputManager.m_bInputState) == false)
-                        {
-                            m_lpiLocalPeerInputManager.OnRightPressed();
-                            m_lpiLocalPeerInputManager.OnLeftPressed();
-                        }
-            
-                        break;
-            
-                    case 2:
-            
-                        if (SimInputManager.GetBoost(m_lpiLocalPeerInputManager.m_bInputState) == true)
-                        {
-                            m_lpiLocalPeerInputManager.OnRightReleased();
-                        }
-            
-                        if (SimInputManager.GetTurnLeft(m_lpiLocalPeerInputManager.m_bInputState) == false)
-                        {
-                            m_lpiLocalPeerInputManager.OnLeftPressed();
-                        }
-            
-                        if (SimInputManager.GetTurnRight(m_lpiLocalPeerInputManager.m_bInputState) == true)
-                        {
-                            m_lpiLocalPeerInputManager.OnRightReleased();
-                        }
-            
-                        break;
-            
-            
-                    case 3:
-            
-                        if (SimInputManager.GetBoost(m_lpiLocalPeerInputManager.m_bInputState) == true)
-                        {
-                            m_lpiLocalPeerInputManager.OnLeftReleased();
-                        }
-            
-                        if (SimInputManager.GetTurnLeft(m_lpiLocalPeerInputManager.m_bInputState) == true)
-                        {
-                            m_lpiLocalPeerInputManager.OnLeftReleased();
-                        }
-            
-                        if (SimInputManager.GetTurnRight(m_lpiLocalPeerInputManager.m_bInputState) == false)
-                        {
-                            m_lpiLocalPeerInputManager.OnRightPressed();
-                        }
-            
-                        break;
-                }                
-            }
-            //TODO: add code to test disruptor and missile firing 
-
-        }
-    }
-    
 }

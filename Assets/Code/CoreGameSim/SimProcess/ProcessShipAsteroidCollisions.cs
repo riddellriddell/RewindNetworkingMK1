@@ -95,7 +95,7 @@ namespace Sim
                 }
 
                 //deal damage to ships
-                ProcessShipHealth<TFrameData, TConstData, TSettingsData>.DamageShip(fdaFrameData, iObjectB, sdaSettingsData.ShipImpactDamage);
+                ProcessShipHealth<TFrameData, TConstData, TSettingsData>.DamageShip(fdaFrameData,sdaSettingsData, iObjectB, sdaSettingsData.ShipImpactDamage);
             }
         }
     }

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b53b30490c3b50428db8d3ded514cbe, type: 3}
+  m_Name: SmallFlameEmissive_Sparks
+  m_EditorClassIdentifier: 
+  _bDescription: 0
+  _bTextureBuildButton: 0
+  _bHelp1: 0
+  _bConvertToGreyScale: 1
+  _strSaveDirectory: Assets/Textures/ConvertedTextures/SmallFlame
+  _strFileName: SmallFlameEmissive_Sparks
+  EmissiveTextures:
+  - EmissiveTexture: {fileID: 2800000, guid: a800eef520b061e46b5e1bd24a357834, type: 3}
+    EmissiveBlendPercent: 1

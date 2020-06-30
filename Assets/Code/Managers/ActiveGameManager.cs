@@ -1,4 +1,5 @@
 ﻿using GameStateView;
+using GameViewUI;
 using Networking;
 using Sim;
 using SimDataInterpolation;
@@ -72,7 +73,8 @@ namespace GameManagers
 
         public LocalPeerInputManager m_lpiLocalPeerInputManager;
 
-        public LoclaPeerInputManagerTester m_pitLocalPeerInputTester;
+        public RandomInputGenerator m_pitLocalPeerInputTester;
+
 
         public FrameDataInterpolatorManager<
             FrameData,
@@ -84,6 +86,10 @@ namespace GameManagers
             m_fimFrameDataInterpolationManager;
 
         public GameStateViewSpawner m_gsvGameStateView;
+
+        public UIStateManager m_usmUIStateManager;
+
+        public GameStateViewCamera m_gvcGameCamera;
 
         public IPeerTransmitterFactory m_ptfTransmitterFactory;
 
@@ -109,7 +115,9 @@ namespace GameManagers
             ConstData cdaConstantSimData, 
             WebInterface winWebInterface, 
             IPeerTransmitterFactory ptfTransmitterFactory,
-            GameStateViewSpawner gsvGameStateViewSpawner)
+            GameStateViewSpawner gsvGameStateViewSpawner,
+            UIStateManager usmUIManager,
+            GameStateViewCamera gvcGameViewCamera)
         {
             m_ptfTransmitterFactory = ptfTransmitterFactory;
             m_winWebInterface = winWebInterface;
@@ -117,6 +125,8 @@ namespace GameManagers
             m_ecsInterpolationErrorCorrectionSettings = ecsInterpolationErrorCorrectionSettings;
             m_cdaConstData = cdaConstantSimData;
             m_gsvGameStateView = gsvGameStateViewSpawner;
+            m_usmUIStateManager = usmUIManager;
+            m_gvcGameCamera = gvcGameViewCamera;
 
             //start the connection process
             EnterGettingGateway();
@@ -207,6 +217,8 @@ namespace GameManagers
         protected void EnterGettingGateway()
         {
             Debug.Log($"Enter {ActiveGameState.GettingGateway.ToString()} state");
+            m_usmUIStateManager?.SetStateSetup();
+            m_usmUIStateManager?.LogStartupEvent("Searching For Game");
 
             //set state to getting gateway
             State = ActiveGameState.GettingGateway;
@@ -246,6 +258,8 @@ namespace GameManagers
         protected void EnterConnectingThroughGateway()
         {
             Debug.Log($"Enter {ActiveGameState.ConnectingThroughGateway.ToString()} state");
+
+            m_usmUIStateManager?.LogStartupEvent("Game found connecting to lead peer");
 
             State = ActiveGameState.ConnectingThroughGateway;
             m_dtmConnectThroughGateStart = DateTime.UtcNow;
@@ -287,8 +301,9 @@ namespace GameManagers
 
             if (tspTimeSinceConnectionStart.TotalSeconds > m_fGatewayConnectionTimeout)
             {
-
                 Debug.Log("Connection attempt timed out");
+
+                m_usmUIStateManager?.LogStartupEvent("Failed to connect to lead peer restarting connection process");
 
                 //connection attempt timed out restarting active game connection process
                 Reset();
@@ -299,6 +314,8 @@ namespace GameManagers
         protected void EnterGettingSimStateFromCluster()
         {
             Debug.Log($"Enter {ActiveGameState.GettingSimStateFromCluster.ToString()} state");
+
+            m_usmUIStateManager?.LogStartupEvent("Getting game state from peers");
 
             State = ActiveGameState.GettingSimStateFromCluster;
             m_dtmGettingSimStateStart = DateTime.UtcNow;
@@ -332,6 +349,8 @@ namespace GameManagers
                 if (m_ngpGlobalMessagingProcessor.m_staState == NetworkGlobalMessengerProcessor.State.Connected || m_ngpGlobalMessagingProcessor.m_staState == NetworkGlobalMessengerProcessor.State.Active)
                 {
                     Debug.Log("Fetching Sim State From peers");
+                    m_usmUIStateManager?.LogStartupEvent("Getting world state from peers");
+
                     GetSimDataFromPeers();
                 }
             }
@@ -361,6 +380,8 @@ namespace GameManagers
             {
                 Debug.Log($"Getting sim state timed out before game state was fetched, Global Messaging status:{m_ngpGlobalMessagingProcessor.m_staState}, Sim Data Fetch Status:{m_ngpGlobalMessagingProcessor.m_staState}, has a full state bben synced:{m_sssStateSyncProcessor.m_bIsFullStateSynced}");
 
+                m_usmUIStateManager?.LogStartupEvent("Unable to get game state from peers, restarting connection process");
+
                 //restart the connection process
                 Reset();
                 return;
@@ -370,6 +391,8 @@ namespace GameManagers
         protected void EnterSetUpNewSim()
         {
             Debug.Log($"Enter {ActiveGameState.SetUpNewSim.ToString()} state");
+
+            m_usmUIStateManager?.LogStartupEvent("No active games found starting up new game");
 
             State = ActiveGameState.SetUpNewSim;
 
@@ -410,11 +433,13 @@ namespace GameManagers
         {
             Debug.Log($"Enter {ActiveGameState.RunningStandardGame.ToString()} state");
 
+            m_usmUIStateManager?.LogStartupEvent("Starting Game");
+
             State = ActiveGameState.RunningStandardGame;
 
             //initalize frame data interpolator 
             m_fimFrameDataInterpolationManager.Initalize();
-
+           
         }
 
         protected void UpdateRunningGame()
@@ -433,6 +458,8 @@ namespace GameManagers
                 {
                     Debug.Log("Error getting sim state, get sim state timed out, forced to reset get game process");
 
+                    m_usmUIStateManager?.LogStartupEvent("World state recieved from peers was not valid and not able to get a replacement valid world state from peers, restarting connection process");
+
                     //getting sim state ultamatly failed, need to reset get process
                     Reset();
                     return;
@@ -449,9 +476,6 @@ namespace GameManagers
             //------------- update inputs --------------------
 
             //get inputs from sim and apply them to the network global message manager
-
-            //run test code to generate random inputs
-            m_pitLocalPeerInputTester.Update();
 
             //get inputs from local peer and apply them to networking 
             m_lpiLocalPeerInputManager.Update();
@@ -471,6 +495,12 @@ namespace GameManagers
 
             //update visuals 
             m_gsvGameStateView?.UpdateView(m_fimFrameDataInterpolationManager.m_ifdSmoothedInterpolatedFrameData, m_sdaSimSettingsData);
+
+            //update UI
+            m_usmUIStateManager?.UpdateGameView(m_fimFrameDataInterpolationManager.m_ifdSmoothedInterpolatedFrameData, m_ncnNetworkConnection.m_lPeerID);
+
+            //update camera 
+            m_gvcGameCamera?.OnViewUpdate(m_fimFrameDataInterpolationManager.m_ifdSmoothedInterpolatedFrameData, m_ncnNetworkConnection.m_lPeerID);
 
             //------------ check for game state changes ------
 
@@ -689,7 +719,6 @@ namespace GameManagers
             m_ncnNetworkConnection.AddPacketProcessor(m_sssStateSyncProcessor);
 
             m_lpiLocalPeerInputManager = new LocalPeerInputManager(m_ndbDataBridge, m_ngpGlobalMessagingProcessor);
-            m_pitLocalPeerInputTester = new LoclaPeerInputManagerTester(m_lpiLocalPeerInputManager);
 
             m_fimFrameDataInterpolationManager = new FrameDataInterpolatorManager<
                 FrameData,

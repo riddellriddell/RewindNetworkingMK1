@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b53b30490c3b50428db8d3ded514cbe, type: 3}
+  m_Name: LargeFlame1Emissive3
+  m_EditorClassIdentifier: 
+  _bDescription: 0
+  _bTextureBuildButton: 0
+  _bHelp1: 0
+  _bConvertToGreyScale: 1
+  _strSaveDirectory: Assets/Textures/ConvertedTextures/LargeFlame1
+  _strFileName: LargeFlame1Emissive3
+  EmissiveTextures:
+  - EmissiveTexture: {fileID: 2800000, guid: e276840b6164f574bbfc66b6fe6444e7, type: 3}
+    EmissiveBlendPercent: 1
+  - EmissiveTexture: {fileID: 2800000, guid: 4aae41124596ceb4e829142f0eac5a56, type: 3}
+    EmissiveBlendPercent: 1
+  - EmissiveTexture: {fileID: 2800000, guid: 97be40938d294474ab57f4e5bb912d0f, type: 3}
+    EmissiveBlendPercent: 1
+  - EmissiveTexture: {fileID: 2800000, guid: 9a31e4a54971e4b479a0098ae016cf0f, type: 3}
+    EmissiveBlendPercent: 1
