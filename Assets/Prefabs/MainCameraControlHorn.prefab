@@ -141,8 +141,8 @@ MonoBehaviour:
   m_fLeadAmount: 3
   m_fLeadMinSpeed: 0
   m_fLeadMaxSpeed: 3
-  m_fCameraAcceleration: 30
-  m_fCameraFriction: 6.5
+  m_fCameraAcceleration: 35
+  m_fCameraFriction: 6
   m_fMaxCameraDistanceFromTarget: 3
   m_amcShakeFrequencyAtForce:
     serializedVersion: 2
@@ -203,7 +203,7 @@ MonoBehaviour:
     m_RotationOrder: 4
   m_fShakeProcession: 1
   m_fShakeFoceForDamage: 1
-  m_fShakeForceMultiplyer: 0.06
+  m_fShakeForceMultiplyer: 0.05
   m_fShakeRestitution: 6
 --- !u!1001 &2281292369742368019
 PrefabInstance:

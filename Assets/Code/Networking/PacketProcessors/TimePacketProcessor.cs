@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace Networking
 {
     public class TimeNetworkProcessor : ManagedNetworkPacketProcessor<TimeConnectionProcessor>
     {
+        public static float s_fTimeOffset = 0;
+
         public static DateTime StaticBaseTime
         {
             get
@@ -42,7 +45,9 @@ namespace Networking
                 //
                 //return new DateTime(lTicks, DateTimeKind.Utc);
 
-                return StaticBaseTime;
+                return DateTime.UtcNow + TimeSpan.FromSeconds(m_fTimeOffset);
+
+                //return StaticBaseTime;
             }
         }
 
@@ -88,7 +93,9 @@ namespace Networking
         private TimeSpan m_tspUpdateRate = TimeSpan.FromSeconds(1);
         private TimeSpan m_tspMaxLatencyUsedInCalculations = TimeSpan.FromSeconds(2);
         private List<TimeSpan> m_dtoTempTimeOffsets = new List<TimeSpan>();
-        
+
+        //TODO: remove this code once testing is done
+        private float m_fTimeOffset = (++s_fTimeOffset) * 0.25f;
 
         protected override TimeConnectionProcessor NewConnectionProcessor()
         {

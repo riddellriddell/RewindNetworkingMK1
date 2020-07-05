@@ -251,8 +251,10 @@ namespace GameStateView
                         }
                         );
 
-                        float fRotation = Mathf.Atan2(ifdInterpolatedFrameData.m_fixShipVelocityXErrorAdjusted[i], ifdInterpolatedFrameData.m_fixShipVelocityYErrorAdjusted[i]);
-                        
+                        //float fRotation = Mathf.Atan2(ifdInterpolatedFrameData.m_fixShipVelocityXErrorAdjusted[i], ifdInterpolatedFrameData.m_fixShipVelocityYErrorAdjusted[i]);
+
+                        float fRotation = Mathf.Deg2Rad * (-ifdInterpolatedFrameData.m_fixShipBaseAngleErrorAdjusted[i] + 90);
+
                         //rotate to angle 
                         m_emaEntityManager.SetComponentData(m_entShips[i], new Rotation() { Value = quaternion.Euler(0, fRotation, 0) });
 
@@ -274,8 +276,9 @@ namespace GameStateView
                         }
                         );
 
-                        float fRotation = Mathf.Atan2(ifdInterpolatedFrameData.m_fixShipVelocityXErrorAdjusted[i], ifdInterpolatedFrameData.m_fixShipVelocityYErrorAdjusted[i]);
+                        //float fRotation = Mathf.Atan2(ifdInterpolatedFrameData.m_fixShipVelocityXErrorAdjusted[i], ifdInterpolatedFrameData.m_fixShipVelocityYErrorAdjusted[i]);
 
+                        float fRotation = Mathf.Deg2Rad * (-ifdInterpolatedFrameData.m_fixShipBaseAngleErrorAdjusted[i] + 90);
 
                         //rotate to angle 
                         m_emaEntityManager.SetComponentData(m_entShips[i], new Rotation() { Value = quaternion.Euler(0, fRotation, 0) });

@@ -56,7 +56,7 @@ MonoBehaviour:
     m_fMaxLinearInterpSpeed: 2
     m_fQuadraticInterpRate: 2
   m_fixShipBaseAngleErrorCorrectionSetting:
-    m_fSnapDistance: 10
+    m_fSnapDistance: 20
     m_fMinInterpDistance: 0
     m_fMinLinearInterpSpeed: 15
     m_fMaxLinearInterpSpeed: 20
@@ -74,13 +74,13 @@ MonoBehaviour:
     m_fMaxLinearInterpSpeed: 5
     m_fQuadraticInterpRate: 5
   m_fixLazerPositionXErrorCorrectionSetting:
-    m_fSnapDistance: 3
+    m_fSnapDistance: 0.8
     m_fMinInterpDistance: 0
     m_fMinLinearInterpSpeed: 2
     m_fMaxLinearInterpSpeed: 5
     m_fQuadraticInterpRate: 5
   m_fixLazerPositionYErrorCorrectionSetting:
-    m_fSnapDistance: 3
+    m_fSnapDistance: 0.8
     m_fMinInterpDistance: 0
     m_fMinLinearInterpSpeed: 2
     m_fMaxLinearInterpSpeed: 5

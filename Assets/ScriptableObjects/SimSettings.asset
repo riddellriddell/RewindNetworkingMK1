@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_iMaxPlayers: 6
   m_fixShipRespawnTime:
-    Int: 4
+    Int: 6
     Dec_To_3_Places: 0
   m_iShipMaxHealth:
     Int: 100
@@ -23,14 +23,14 @@ MonoBehaviour:
     Int: 10
     Dec_To_3_Places: 0
   m_fixHealDelayTime:
-    Int: 5
-    Dec_To_3_Places: 0
-  m_fixShipSpeed:
     Int: 3
     Dec_To_3_Places: 0
+  m_fixShipSpeed:
+    Int: 4
+    Dec_To_3_Places: 0
   m_fixShipAcceleration:
-    Int: 0
-    Dec_To_3_Places: 500
+    Int: 1
+    Dec_To_3_Places: 0
   m_fixShipTurnRate:
     Int: 90
     Dec_To_3_Places: 0
@@ -48,13 +48,13 @@ MonoBehaviour:
     Int: 1
     Dec_To_3_Places: 0
   m_fixShipImpactDamage:
-    Int: 10
+    Int: 20
     Dec_To_3_Places: 0
   m_fixAutofireCone:
-    Int: 10
+    Int: 15
     Dec_To_3_Places: 0
   m_fixAutoFireConeRange:
-    Int: 10
+    Int: 7
     Dec_To_3_Places: 0
   m_fixTimeBetweenShots:
     Int: 1
@@ -63,10 +63,10 @@ MonoBehaviour:
     Int: 2
     Dec_To_3_Places: 0
   m_fixLazerSpeed:
-    Int: 9
+    Int: 8
     Dec_To_3_Places: 0
   m_fixLazerDamage:
-    Int: 50
+    Int: 25
     Dec_To_3_Places: 0
   m_fixLazerSize:
     Int: 0

@@ -680,6 +680,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
 
         TimeSpan tspTimeDif = dtmSimTime - dtmFromDataTime;
 
+        //fOutLerp = Mathf.Clamp01(tspTimeDif.Ticks / (float)m_sdaSettingsData.SimTickLength);
         fOutLerp = tspTimeDif.Ticks / (float)m_sdaSettingsData.SimTickLength;
     }
 }
