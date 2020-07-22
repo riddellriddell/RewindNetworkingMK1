@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 namespace Networking
 {
     public class TimeNetworkProcessor : ManagedNetworkPacketProcessor<TimeConnectionProcessor>
     {
-        public static float s_fTimeOffset = 0;
+        public static float s_iTimeOffsetIndex = 0;
 
         public static DateTime StaticBaseTime
         {
@@ -17,10 +16,14 @@ namespace Networking
             }
         }
 
-        public static DateTime CalculateNetworkTime(in TimeSpan tspCurrentOffset, ref DateTime dtmOldestTime)
+        public static DateTime CalculateNetworkTime(in TimeSpan tspCurrentOffset, ref DateTime dtmOldestTime, float fTestingPeerTimeOffset)
         {
             //calcualte network time
-            DateTime dtmNetworkTime = StaticBaseTime - tspCurrentOffset;
+            DateTime dtmNetworkTime = (StaticBaseTime + TimeSpan.FromSeconds(fTestingPeerTimeOffset)) + tspCurrentOffset;
+
+            //for testing remove any time offseting 
+            //TODO remove this after test
+            //DateTime dtmNetworkTime = (StaticBaseTime + TimeSpan.FromSeconds(fTestingPeerTimeOffset));
 
             //make sure never to run time backwards 
             if (dtmNetworkTime < dtmOldestTime)
@@ -31,6 +34,16 @@ namespace Networking
             dtmOldestTime = dtmNetworkTime;
 
             return dtmNetworkTime;
+        }
+
+        public static DateTime ConvertFromBaseToNetworkTime(DateTime dtmBaseTime , TimeSpan tspNetworkTimeOffset)
+        {
+            return dtmBaseTime + tspNetworkTimeOffset;
+
+
+            //for testing remove any time offseting 
+            //TODO remove this after test
+            //return (dtmBaseTime + TimeSpan.FromSeconds(fTestingPeerTimeOffset));
         }
 
         private NetworkingDataBridge NetworkDataBridge { get; set; }
@@ -45,7 +58,7 @@ namespace Networking
                 //
                 //return new DateTime(lTicks, DateTimeKind.Utc);
 
-                return DateTime.UtcNow + TimeSpan.FromSeconds(m_fTimeOffset);
+                return DateTime.UtcNow + TimeSpan.FromSeconds(m_fTestingTimeOffset);
 
                 //return StaticBaseTime;
             }
@@ -56,12 +69,12 @@ namespace Networking
         {
             get
             {
-                return CalculateNetworkTime(m_tspCurrentTimeOffset, ref m_dtmOldestTime);
+                return CalculateNetworkTime(m_tspCurrentTimeOffset, ref m_dtmOldestTime, m_fTestingTimeOffset);
             }
 
         }
 
-        //the time offset
+        //the time offset smoothed to not cause jerky game play
         public TimeSpan TimeOffset
         {
             get
@@ -88,14 +101,24 @@ namespace Networking
         private TimeSpan m_tspTargetTimeOffset;
         private TimeSpan m_tspCurrentTimeOffset;
         private TimeSpan m_tspOffsetChangeRate;
-        private TimeSpan m_tspTimeLerpSpeed = TimeSpan.FromSeconds(1);
-        private TimeSpan m_tspMaxLerpDistance = TimeSpan.FromSeconds(1);
+        private TimeSpan m_tspTimeLerpSpeed = TimeSpan.FromSeconds(0.2f);
+        private TimeSpan m_tspMaxLerpDistance = TimeSpan.FromSeconds(10);
         private TimeSpan m_tspUpdateRate = TimeSpan.FromSeconds(1);
         private TimeSpan m_tspMaxLatencyUsedInCalculations = TimeSpan.FromSeconds(2);
-        private List<TimeSpan> m_dtoTempTimeOffsets = new List<TimeSpan>();
+        private List<TimeSpan> m_tspTempTimeOffsets = new List<TimeSpan>();
 
         //TODO: remove this code once testing is done
-        private float m_fTimeOffset = (++s_fTimeOffset) * 0.25f;
+        public float m_fTestingTimeOffset = Mathf.Min(25, (s_iTimeOffsetIndex++ * 20));
+
+        public TimeNetworkProcessor():base()
+        {
+
+        }
+
+        public TimeNetworkProcessor(NetworkingDataBridge ndbNetworkDataBridge):base()
+        {
+            NetworkDataBridge = ndbNetworkDataBridge;
+        }
 
         protected override TimeConnectionProcessor NewConnectionProcessor()
         {
@@ -105,13 +128,37 @@ namespace Networking
         public override void Update()
         {
             LerpToTargetTime(Time.deltaTime);
+
+            UpdateNetworkDataBridge();
+        }
+
+        //this function calculates the network synced time if the local peers time is excluded from the calculation
+        //this is used when the peer is initally connecting and times before the peer has connected need to be compared 
+        public TimeSpan CalculateTimeOffsetExcludingLocalPeer()
+        {
+            List<TimeSpan> tspPeerTimeList = new List<TimeSpan>(ChildConnectionProcessors.Count);
+
+            // generate an array of all the offsets for all conenctions 
+            //loop through all the conenctions 
+            foreach (TimeConnectionProcessor tcpConnectionTime in ChildConnectionProcessors.Values)
+            {
+                if (tcpConnectionTime.ParentConnection.Status == Connection.ConnectionStatus.Connected)
+                {
+                    //add offset to list
+                    tspPeerTimeList.Add(tcpConnectionTime.Offset);;
+
+                }
+            }
+
+            return CalculateTimeOffsetFromArrayOfPeerOffsets(tspPeerTimeList);
+
         }
 
         //gets the average time offset across all connections  while correcting for lag and
         //maliciouse packets 
         public void RecalculateTimeOffset()
         {
-            m_dtoTempTimeOffsets.Clear();
+            m_tspTempTimeOffsets.Clear();
 
             LargetsRTT = TimeSpan.Zero;
 
@@ -124,7 +171,7 @@ namespace Networking
                 if (tcpConnectionTime.ParentConnection.Status == Connection.ConnectionStatus.Connected)
                 {
                     //add offset to list
-                    m_dtoTempTimeOffsets.Add(tcpConnectionTime.Offset);
+                    m_tspTempTimeOffsets.Add(tcpConnectionTime.Offset);
 
                     TimeSpan tspLatency = TimeSpan.FromTicks(Math.Min(m_tspMaxLatencyUsedInCalculations.Ticks, tcpConnectionTime.RTT.Ticks));
 
@@ -136,36 +183,55 @@ namespace Networking
             }
 
             //add local offset
-            m_dtoTempTimeOffsets.Add(TimeSpan.FromSeconds(0));
+            m_tspTempTimeOffsets.Add(TimeSpan.FromSeconds(0));
 
             //calculate average rtt
-            AverageRTT = TimeSpan.FromTicks(AverageRTT.Ticks / m_dtoTempTimeOffsets.Count);
+            AverageRTT = TimeSpan.FromTicks(AverageRTT.Ticks / m_tspTempTimeOffsets.Count);
+
+            //TODO: fix code for sub sampling 
+
+            m_tspTargetTimeOffset = CalculateTimeOffsetFromArrayOfPeerOffsets(m_tspTempTimeOffsets);
+
+            //m_tspTargetTimeOffset = TimeSpan.Zero;
+            //
+            //for (int i = 0; i < m_dtoTempTimeOffsets.Count; i++)
+            //{
+            //    m_tspTargetTimeOffset += m_dtoTempTimeOffsets[i];
+            //}
+
+            ////calc final target offset
+            //m_tspTargetTimeOffset = TimeSpan.FromTicks(m_tspTargetTimeOffset.Ticks / m_dtoTempTimeOffsets.Count);
+        }
+
+        private TimeSpan CalculateTimeOffsetFromArrayOfPeerOffsets(List<TimeSpan> tspTimeOffsetList)
+        {
+            TimeSpan tspOutOffset = TimeSpan.Zero;
 
             //sort list from big to small 
-            m_dtoTempTimeOffsets.Sort((x, y) => (int)(x.Ticks - y.Ticks));
+            tspTimeOffsetList.Sort((x, y) => (int)(x.Ticks - y.Ticks));
 
-            int iNumberOfConnectionToAverage = 3;
+            int iNumberOfConnectionToAverage = 4;
 
-            int iOffset = ((iNumberOfConnectionToAverage - 1) / 2);
-
-            //calculate the range to take values from
-            int iMin = Math.Max(0, (m_dtoTempTimeOffsets.Count / 2) - (iOffset + 1));
+            int iOffset = ((iNumberOfConnectionToAverage) / 2);
 
             //calculate the range to take values from
-            int iMax = Math.Max(m_dtoTempTimeOffsets.Count, (m_dtoTempTimeOffsets.Count / 2) + (iOffset - 1));
+            int iMin = Math.Max(0, (tspTimeOffsetList.Count / 2) - (iOffset));
 
-            m_tspTargetTimeOffset = TimeSpan.Zero;
+            //calculate the range to take values from
+            int iMax = Math.Min(tspTimeOffsetList.Count, (tspTimeOffsetList.Count / 2) + (iOffset));
 
             //calculate new target offset 
             for (int i = iMin; i < iMax; i++)
             {
-                m_tspTargetTimeOffset += m_dtoTempTimeOffsets[i];
+                tspOutOffset += tspTimeOffsetList[i];
             }
 
             //calc final target offset
-            m_tspTargetTimeOffset = TimeSpan.FromTicks(m_tspTargetTimeOffset.Ticks / Math.Max(1, iMax - iMin));
-        }
+            tspOutOffset = TimeSpan.FromTicks(tspOutOffset.Ticks / Math.Max(1, iMax - iMin));
 
+            return tspOutOffset;
+        }
+        
         private void LerpToTargetTime(float fDeltaTime)
         {
             //get direction to lerp
@@ -190,8 +256,6 @@ namespace Networking
             {
                 m_tspCurrentTimeOffset = m_tspTargetTimeOffset;
             }
-
-            UpdateNetworkDataBridge();
         }
 
         private void UpdateNetworkDataBridge()
@@ -200,6 +264,7 @@ namespace Networking
             if (NetworkDataBridge != null)
             {
                 NetworkDataBridge.m_tspNetworkTimeOffset = m_tspCurrentTimeOffset;
+                NetworkDataBridge.m_fTestingTimeOffset = m_fTestingTimeOffset;
             }
 
             //drop lock
@@ -246,7 +311,7 @@ namespace Networking
         //the maximum rtt of a message before it is discarded 
         protected TimeSpan m_tspMaxRTT = TimeSpan.FromSeconds(2);
 
-        protected TimeSpan m_tspMaxRTTChange = TimeSpan.FromSeconds(0.500);
+        protected TimeSpan m_tspMaxRTTChange = TimeSpan.FromSeconds(2);
 
         //time since last update
         protected DateTime m_dtmTimeOfLastUpdate;
@@ -340,6 +405,9 @@ namespace Networking
 
                     //time adjusted for transmittion time
                     DateTime dtmPredictedTime = dtmTimeOfReplySend + (TimeSpan.FromTicks(RTT.Ticks / 2));
+
+                    //get difference to current time 
+                    Offset = dtmPredictedTime - m_tParentPacketProcessor.BaseTime;
 
                     //reset echo value
                     m_bEchoSent = byte.MinValue;

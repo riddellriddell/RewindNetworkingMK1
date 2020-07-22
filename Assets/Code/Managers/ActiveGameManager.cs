@@ -633,8 +633,11 @@ namespace GameManagers
             //create network
             m_ncnNetworkConnection = new NetworkConnection(m_winWebInterface.UserID, m_ptfTransmitterFactory);
 
+            //create network data bridge
+            m_ndbDataBridge = new NetworkingDataBridge();
+
             //add network processors
-            m_tnpTimeManager = new TimeNetworkProcessor();
+            m_tnpTimeManager = new TimeNetworkProcessor(m_ndbDataBridge);
             m_ncnNetworkConnection.AddPacketProcessor(m_tnpTimeManager);
 
             m_ncnNetworkConnection.AddPacketProcessor(new NetworkLargePacketTransferManager());
@@ -646,7 +649,6 @@ namespace GameManagers
             m_ncpConnectionPropegator = new NetworkConnectionPropagatorProcessor();
             m_ncnNetworkConnection.AddPacketProcessor(m_ncpConnectionPropegator);
 
-            m_ndbDataBridge = new NetworkingDataBridge();
 
             //manager for all the processes that calculate new game stated
             m_spmSimProcessManager = new SimProcessManager<FrameData, ConstData, SimProcessorSettings>();

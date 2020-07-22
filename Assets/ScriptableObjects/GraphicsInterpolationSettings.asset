@@ -32,19 +32,19 @@ MonoBehaviour:
     m_fMaxLinearInterpSpeed: 1
     m_fQuadraticInterpRate: 1
   m_fixShipPosXErrorCorrectionSetting:
-    m_fSnapDistance: 2
+    m_fSnapDistance: 4
     m_fMinInterpDistance: 0
     m_fMinLinearInterpSpeed: 0
     m_fMaxLinearInterpSpeed: 2
     m_fQuadraticInterpRate: 2
   m_fixShipPosYErrorCorrectionSetting:
-    m_fSnapDistance: 2
+    m_fSnapDistance: 4
     m_fMinInterpDistance: 0
     m_fMinLinearInterpSpeed: 0
     m_fMaxLinearInterpSpeed: 2
     m_fQuadraticInterpRate: 2
   m_fixShipVelocityXErrorCorrectionSetting:
-    m_fSnapDistance: 2
+    m_fSnapDistance: 4
     m_fMinInterpDistance: 0
     m_fMinLinearInterpSpeed: 0
     m_fMaxLinearInterpSpeed: 2

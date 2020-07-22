@@ -350,7 +350,9 @@ namespace Networking
         {
             get
             {
-                return m_dtmBaseTimeOfConnection + m_tnpNetworkTime.TimeOffset;
+                return TimeNetworkProcessor.ConvertFromBaseToNetworkTime(
+                            m_dtmBaseTimeOfConnection,
+                            m_tnpNetworkTime.TimeOffset);
             }
         }
 

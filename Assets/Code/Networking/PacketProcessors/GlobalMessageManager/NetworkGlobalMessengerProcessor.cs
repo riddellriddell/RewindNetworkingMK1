@@ -59,7 +59,7 @@ namespace Networking
         //to stop a connecting peer thinking its in the global messaging system too early by mistaking an old connection
         //with the same user id that is still in the process of being kicked as a new one voting in reconnecting peer connections are filtered 
         //by connection start time, this is not garanteed to be 100% accurate so this padding is added just in case
-        public static TimeSpan OldConnectionFilterPadding { get; } = TimeSpan.FromSeconds(1);
+        public static TimeSpan OldConnectionFilterPadding { get; } = TimeSpan.FromSeconds(4);
 
         //fixed max player count but in future will be dynamic? 
         public static int MaxPlayerCount { get; private set; } = 6;
@@ -84,6 +84,9 @@ namespace Networking
 
         //the local time this peer started connecting  / syncronizing with the global message system 
         protected DateTime m_dtmTimeOfStateCollectionStart = DateTime.MinValue;
+
+        //the local time the connection process was started by the game manager 
+        protected DateTime m_dtmConnectionStartTime = DateTime.MinValue;
 
         //should the best start state be reevaluated 
         protected bool m_bStartStateCandidatesDirty = true;
@@ -131,6 +134,8 @@ namespace Networking
 
             m_tnpNetworkTime = ParentNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
 
+            m_dtmConnectionStartTime = m_tnpNetworkTime.BaseTime;
+
             //add all the data packet classes this processor relies on to the main class factory 
             GlobalMessagePacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalMessagePacket>(GlobalMessagePacket.TypeID);
 
@@ -174,14 +179,18 @@ namespace Networking
                     //check if peer has been assigned to a channel
                     if (gmsState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iIndex))
                     {
+                        //convert the date time of the connection to synced network time 
+                        DateTime NetworkTimeOfConnectionEst = TimeNetworkProcessor.ConvertFromBaseToNetworkTime(
+                            m_dtmConnectionStartTime, 
+                            m_tnpNetworkTime.CalculateTimeOffsetExcludingLocalPeer());
+
                         //check if peer was assigned that channel recently 
-                        if (gmsState.m_gmcMessageChannels[iIndex].m_dtmVoteTime > (ParentNetworkConnection.m_dtmConnectionTime - m_tnpNetworkTime.TimeOffset) - OldConnectionFilterPadding)
+                        if (gmsState.m_gmcMessageChannels[iIndex].m_dtmVoteTime > (NetworkTimeOfConnectionEst - OldConnectionFilterPadding))
                         {
                             m_staState = State.Active;
 
                             SetTimeOfNextPeerChainLink(m_tnpNetworkTime.NetworkTime);
                         }
-
                     }
                     break;
 
@@ -437,8 +446,7 @@ namespace Networking
 
             if (m_tnpNetworkTime.BaseTime - m_dtmTimeOfStateCollectionStart > StateCollectionTimeOutTime)
             {
-                //TODO:: This is only false for testing reasons 
-                bForceConnection = false;
+                bForceConnection = true;
             }
 
             //check if enough states have been recieved
