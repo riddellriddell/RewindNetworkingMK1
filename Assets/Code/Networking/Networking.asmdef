@@ -2,8 +2,11 @@
     "name": "Networking",
     "references": [
         "Unity.WebRTC",
+        "Html5WebRTC5",
         "Utility",
-        "SharedTypes"
+        "SharedTypes",
+        "NetworkingSharedTypes",
+        "Html5Transmitter"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

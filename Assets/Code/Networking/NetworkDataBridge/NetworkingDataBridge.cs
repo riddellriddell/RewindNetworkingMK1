@@ -40,9 +40,6 @@ namespace Networking
 
         public TimeSpan m_tspNetworkTimeOffset = TimeSpan.Zero;
 
-        //TODO: remove time testing code
-        public float m_fTestingTimeOffset = 0;
-
         //time that all messages have been confirmed up to 
         public SortingValue m_svaConfirmedMessageTime = SortingValue.MinValue;
 
@@ -104,7 +101,7 @@ namespace Networking
         {
             //lock network time values
 
-            return TimeNetworkProcessor.CalculateNetworkTime(m_tspNetworkTimeOffset, ref m_dtmNetworkOldestTime, m_fTestingTimeOffset);
+            return TimeNetworkProcessor.CalculateNetworkTime(m_tspNetworkTimeOffset, ref m_dtmNetworkOldestTime);
             
             //unlock network time values
         }

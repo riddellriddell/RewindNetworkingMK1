@@ -98,7 +98,7 @@ namespace GameManagers
         public ConstData m_cdaConstSimData;
 
         [SerializeField]
-        public GameStateViewSpawner m_gsvGameStateView;
+        public IGameStateView m_gsvGameStateView;
 
         [SerializeField]
         public UIStateManager m_usmGameUIStateManager;
@@ -158,7 +158,7 @@ namespace GameManagers
 
             if(m_gsvGameStateView == null)
             {
-                m_gsvGameStateView = GetComponent<GameStateViewSpawner>();
+                m_gsvGameStateView = GetComponent<IGameStateView>();
             }
 
             if(m_iapInputApplyer == null)
@@ -266,7 +266,9 @@ namespace GameManagers
 
                 m_agmActiveGameManager.UpdateGame(Time.deltaTime);
 
+#if UNITY_EDITOR
                 UpdateNetworkDebug();
+#endif
 
                 yield return null;
             }

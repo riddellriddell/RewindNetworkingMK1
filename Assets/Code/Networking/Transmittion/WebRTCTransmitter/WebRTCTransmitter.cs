@@ -1,4 +1,7 @@
-﻿using System;
+﻿#if !UNITY_WEBGL || UNITY_EDITOR_WIN
+
+
+using System;
 using System.Collections;
 using Unity.WebRTC;
 using UnityEngine;
@@ -77,7 +80,7 @@ namespace Networking
             m_pcnPeerConnection.OnIceCandidate = OnIceCandidate;
         }
                
-        #region IPeerTransmitterInterface
+#region IPeerTransmitterInterface
 
         public void Disconnect()
         {
@@ -207,7 +210,7 @@ namespace Networking
             }
         }
 
-        #endregion
+#endregion
 
         protected void ProcessIceCandidate(string strIceCandidate)
         {
@@ -339,7 +342,7 @@ namespace Networking
         {
             if (State != PeerTransmitterState.Connected)
             {
-                Debug.LogError($"Cand recieve data when not in the connected state Data: {bytes}");
+                Debug.LogError($"Can not recieve data in state {State} can only recieve in the connected state. Data: {bytes.ToString()}");
 
                 return;
             }
@@ -504,3 +507,5 @@ namespace Networking
         }
     }
 }
+
+#endif

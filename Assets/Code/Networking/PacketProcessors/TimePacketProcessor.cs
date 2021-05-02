@@ -16,10 +16,10 @@ namespace Networking
             }
         }
 
-        public static DateTime CalculateNetworkTime(in TimeSpan tspCurrentOffset, ref DateTime dtmOldestTime, float fTestingPeerTimeOffset)
+        public static DateTime CalculateNetworkTime(in TimeSpan tspCurrentOffset, ref DateTime dtmOldestTime)
         {
             //calcualte network time
-            DateTime dtmNetworkTime = (StaticBaseTime + TimeSpan.FromSeconds(fTestingPeerTimeOffset)) + tspCurrentOffset;
+            DateTime dtmNetworkTime = StaticBaseTime + tspCurrentOffset;
 
             //for testing remove any time offseting 
             //TODO remove this after test
@@ -58,9 +58,9 @@ namespace Networking
                 //
                 //return new DateTime(lTicks, DateTimeKind.Utc);
 
-                return DateTime.UtcNow + TimeSpan.FromSeconds(m_fTestingTimeOffset);
+                //return DateTime.UtcNow + TimeSpan.FromSeconds(m_fTestingTimeOffset);
 
-                //return StaticBaseTime;
+                return StaticBaseTime;
             }
         }
 
@@ -69,7 +69,7 @@ namespace Networking
         {
             get
             {
-                return CalculateNetworkTime(m_tspCurrentTimeOffset, ref m_dtmOldestTime, m_fTestingTimeOffset);
+                return CalculateNetworkTime(m_tspCurrentTimeOffset, ref m_dtmOldestTime);
             }
 
         }
@@ -106,9 +106,6 @@ namespace Networking
         private TimeSpan m_tspUpdateRate = TimeSpan.FromSeconds(1);
         private TimeSpan m_tspMaxLatencyUsedInCalculations = TimeSpan.FromSeconds(2);
         private List<TimeSpan> m_tspTempTimeOffsets = new List<TimeSpan>();
-
-        //TODO: remove this code once testing is done
-        public float m_fTestingTimeOffset = Mathf.Min(25, (s_iTimeOffsetIndex++ * 20));
 
         public TimeNetworkProcessor():base()
         {
@@ -264,7 +261,6 @@ namespace Networking
             if (NetworkDataBridge != null)
             {
                 NetworkDataBridge.m_tspNetworkTimeOffset = m_tspCurrentTimeOffset;
-                NetworkDataBridge.m_fTestingTimeOffset = m_fTestingTimeOffset;
             }
 
             //drop lock

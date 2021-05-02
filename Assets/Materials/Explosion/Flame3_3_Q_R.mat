@@ -81,7 +81,7 @@ Material:
     - _DISSOLVE_ALPHAToggle: 1
     - _DISTANCEFADEToggle: 0
     - _DetailNormalMapScale: 1
-    - _DirectLightMultiplier: 0.585
+    - _DirectLightMultiplier: 0.5
     - _DstBlend: 10
     - _EmissiveLighting: 1
     - _EmissiveLightingToggle: 1

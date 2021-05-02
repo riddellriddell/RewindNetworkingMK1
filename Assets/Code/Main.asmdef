@@ -9,7 +9,8 @@
         "ProjectSharedTypes",
         "SimDataInterpolation",
         "ProjectSimDataInterpolation",
-        "ProjectGameStateView"
+        "ProjectGameStateView",
+        "NetworkingSharedTypes"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

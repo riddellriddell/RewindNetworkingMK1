@@ -85,7 +85,7 @@ namespace GameManagers
             NetworkingDataBridge>
             m_fimFrameDataInterpolationManager;
 
-        public GameStateViewSpawner m_gsvGameStateView;
+        public IGameStateView m_gsvGameStateView;
 
         public UIStateManager m_usmUIStateManager;
 
@@ -115,7 +115,7 @@ namespace GameManagers
             ConstData cdaConstantSimData, 
             WebInterface winWebInterface, 
             IPeerTransmitterFactory ptfTransmitterFactory,
-            GameStateViewSpawner gsvGameStateViewSpawner,
+            IGameStateView gsvGameStateViewSpawner,
             UIStateManager usmUIManager,
             GameStateViewCamera gvcGameViewCamera)
         {
@@ -392,12 +392,10 @@ namespace GameManagers
         {
             Debug.Log($"Enter {ActiveGameState.SetUpNewSim.ToString()} state");
 
-            m_usmUIStateManager?.LogStartupEvent("No active games found starting up new game");
-
             State = ActiveGameState.SetUpNewSim;
 
             //setup the peer to peer network settings 
-            m_ngpGlobalMessagingProcessor.Initalize(m_sdaSimSettingsData.MaxPlayers);
+           m_ngpGlobalMessagingProcessor.Initalize(m_sdaSimSettingsData.MaxPlayers);
 
             //use passed in target sim settings to setup inital sim
 
@@ -411,15 +409,20 @@ namespace GameManagers
 
         protected void UpdateSetUpNewSim()
         {
+            Debug.Log("Update Setup State");
+
             //wait for sim setup to finish
 
             bool bIsSimSetup = true;
 
             if (bIsSimSetup)
             {
+                Debug.Log("Indicate First in swarm");
+
                 //tell network layer global messaging system that it is the first peer in the 
                 m_ncnNetworkConnection.OnFirstPeerInSwarm();
 
+                Debug.Log("Run on connect to swarm");
                 //activate network layer to start looking for new connections
                 m_ncnNetworkConnection.OnConnectToSwarm();
 

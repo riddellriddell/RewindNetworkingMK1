@@ -1,0 +1,16 @@
+{
+    "name": "Html5WebRtcTester",
+    "references": [
+        "GUID:be83ce122b9236d47865a32ef968de70",
+        "GUID:2bafac87e7f4b9b418d9448d219b01ab"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

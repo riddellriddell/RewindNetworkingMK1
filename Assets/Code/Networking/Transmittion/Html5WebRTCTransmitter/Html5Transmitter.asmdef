@@ -1,0 +1,16 @@
+{
+    "name": "Html5Transmitter",
+    "references": [
+        "GUID:e772fefeeb414cd41a4fc89ee342fdb7",
+        "GUID:be83ce122b9236d47865a32ef968de70"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

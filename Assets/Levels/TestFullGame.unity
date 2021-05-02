@@ -870,8 +870,8 @@ GameObject:
   m_Component:
   - component: {fileID: 721654649}
   - component: {fileID: 721654648}
-  - component: {fileID: 721654647}
   - component: {fileID: 721654646}
+  - component: {fileID: 721654647}
   m_Layer: 0
   m_Name: ActiveGameManagerManager
   m_TagString: Untagged
@@ -900,7 +900,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 721654645}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dd2948fe081376045bd1ceb9688f54c6, type: 3}
+  m_Script: {fileID: 11500000, guid: 2e926019780a6b444a6d4ef5921bf41c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   m_iAsteroidRenderLayer: 1
@@ -938,7 +938,6 @@ MonoBehaviour:
   m_bUseWebRTCTransmitter: 1
   m_strUniqueDeviceID: 
   m_bAlive: 1
-  m_gsvGameStateView: {fileID: 721654647}
   m_usmGameUIStateManager: {fileID: 29200161}
   m_gvcGameViewCamera: {fileID: 17435918}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,

@@ -299,10 +299,16 @@ namespace GameStateView
 
         protected Entity SpawnPrefabAtLocation(Entity entEntity, float3 fl3Location, float fl3Scale, quaternion qutRotation)
         {
+            Debug.Log("instantiate entity");
             Entity entNewEnt = m_emaEntityManager.Instantiate(entEntity);
 
+            Debug.Log("Set location");
             m_emaEntityManager.SetComponentData(entNewEnt, new Translation() { Value = fl3Location });
+
+            Debug.Log("Add Scale");
             m_emaEntityManager.AddComponentData(entNewEnt, new Scale() { Value = fl3Scale });
+
+            Debug.Log("Set Rotation");
             m_emaEntityManager.SetComponentData(entNewEnt, new Rotation() { Value = qutRotation });
 
             return entNewEnt;
@@ -315,16 +321,21 @@ namespace GameStateView
                 m_entAsteroids.Dispose();
             }
 
+            Debug.Log("Create native array for prefabs");
+
             NativeArray<Entity> entAsteroidPrefab = new NativeArray<Entity>(m_objAsteroidPrefab.Count, Allocator.Temp);
 
+            Debug.Log("Fill native array with prefabs");
             //setup asteroids
             for (int i = 0; i < m_objAsteroidPrefab.Count; i++)
             {
                 entAsteroidPrefab[i] = SetupPrefab(m_objAsteroidPrefab[i]);
             }
 
+            Debug.Log("create Asteroids array");
             m_entAsteroids = new NativeArray<Entity>(cdaConstData.m_fixAsteroidSize.Length, Allocator.Persistent);
 
+            Debug.Log("setup asteroids");
             for (int i = 0; i < cdaConstData.m_fixAsteroidSize.Length; i++)
             {
                 //set the position plus an offset and rotation value
@@ -339,16 +350,18 @@ namespace GameStateView
 
                 int iAsteroidIndex = i % m_objAsteroidPrefab.Count;
 
+
+                Debug.Log("spawn at location");
                 //spawn object and add it to entity array 
                 m_entAsteroids[i] = SpawnPrefabAtLocation(entAsteroidPrefab[iAsteroidIndex], fl3Pos, fScale, qtrRotation);
             }
 
+            Debug.Log("Destroy prefabs");
             //clean up asteroids
             m_emaEntityManager.DestroyEntity(entAsteroidPrefab);
 
+            Debug.Log("Clean up prefab array");
             entAsteroidPrefab.Dispose();
-
-
         }
 
         protected void MatchInterpolatedDataFormat(InterpolatedFrameDataGen ifdInterpolatedFrameData, SimProcessorSettings sdaSettings)

@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿#if !UNITY_WEBGL || UNITY_EDITOR_WIN
+
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -141,3 +143,4 @@ namespace Networking
         }
     }
 }
+#endif

@@ -444,6 +444,7 @@ namespace Networking
                 www.downloadHandler = new DownloadHandlerBuffer();
                 www.SetRequestHeader("Content-Type", "application/json");
                 www.SetRequestHeader("cache-control", "no-cache");
+                www.method = UnityWebRequest.kHttpVerbPOST;
 
                 yield return www.SendWebRequest();
 
