@@ -61,6 +61,9 @@ namespace Unity.Html5WebRTC
                 {
                     RTCIceCandidate iceCandidate = JsonUtility.FromJson<RTCIceCandidate>(icdIceCandidates.strCandidates[i]);
 
+                    //log ice candidate
+                    Debug.Log("Connection On ice candidate");
+
                     OnIceCandidate?.Invoke(iceCandidate);
                 }
             }
@@ -97,6 +100,8 @@ namespace Unity.Html5WebRTC
         public RTCSetSessionDescriptionAsyncOperation SetLocalDescription(string strSessionDescriptionJson)
         {
             int iAsyncPtr = NativeFunctions.SetLocalDescription(m_iConnectionPtr, strSessionDescriptionJson);
+
+            m_bLocalDescriptionSet = true;
 
             return new RTCSetSessionDescriptionAsyncOperation(iAsyncPtr);
         }

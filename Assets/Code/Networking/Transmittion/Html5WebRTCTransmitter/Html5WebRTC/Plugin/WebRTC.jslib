@@ -35,12 +35,8 @@ mergeInto(LibraryManager.library, {
   NewConnection:function(strIceServerURL)
   {
     //connection settings 
-    const iceConfig = { 
-      iceServers: [{
-        urls: "stun:stun.l.google.com:19302"
-      }]
-    };    
-
+    const config = {iceServers: [{urls: "stun:stun.1.google.com:19302"}]};
+    
     var conConnection = new RTCPeerConnection();
 
     var iDataPtr = _MapDataNew(conConnection);
@@ -60,16 +56,27 @@ mergeInto(LibraryManager.library, {
     // setup function to handle ice candidates 
     function OnIceCandidate(iceCandidate)
     {
+      
+
       if(iceCandidate.candidate != undefined && iceCandidate.candidate != null && iceCandidate.candidate != "")
       {
         var jsnIceCandidate = JSON.stringify( iceCandidate.candidate);
+
+        console.log("RTC_Lib on ice candidate" + jsnIceCandidate);
+
         conConnection.objIceCandidates.strCandidates.push(jsnIceCandidate);
         conConnection.objEvents.bOnIceCandidate = true;
+      }
+      else
+      {
+        console.log("RTC_Lib on ice candidate EMPTY");
+        //conConnection.objIceCandidates.strCandidates.push("");
       }
     };
 
     function OnDataChannel(evtEvent)
     {
+      console.log("RTC_Lib OnDataChannel");
       var dchDataChannel = evtEvent.channel;
       conConnection.objEvents.iDataChannelPtr = _MapDataNew(dchDataChannel);
       _SetupDataChannel(dchDataChannel); 
@@ -143,6 +150,8 @@ mergeInto(LibraryManager.library, {
   CreateDataChannel__deps: ['HandleSendChannelStatusChange'],
   CreateDataChannel:function(iPeerConnectionPtr, strLabel, bIsReliable)
   {
+    console.log("RTC_Lib CreateDataChannel")
+
     var ObjectCreationSettings = {};
 
     ObjectCreationSettings.ordered = bIsReliable;
@@ -178,6 +187,8 @@ mergeInto(LibraryManager.library, {
       objAsync.bIsError = false; 
       objAsync.strDescription = JSON.stringify(offer);
       objAsync.bIsFinished = true;
+
+      console.log(offer)
     };
 
     function ProcessError(error)
@@ -209,6 +220,8 @@ mergeInto(LibraryManager.library, {
       objAsync.bIsError = false; 
       objAsync.strDescription = JSON.stringify(offer);
       objAsync.bIsFinished = true;
+
+      console.log(offer)
     };
 
     function ProcessError(error)
@@ -216,7 +229,7 @@ mergeInto(LibraryManager.library, {
       objAsync.bIsError = true; 
       objAsync.strDescription = "Error" + JSON.stringify(error);  
       objAsync.bIsFinished = true;
-    }
+    };
 
     conConnection.createAnswer().then(ProcessOffer).catch(ProcessError);
         
@@ -349,8 +362,6 @@ mergeInto(LibraryManager.library, {
 
     function OnMessage(bMessage)
     {
-      console.log("Recieved Message " + bMessage + "Through WebRTC");
-
       //make sure channel is marked as open
       //before sending a message 
       if(dchDataChannel.bIsOpen = false)

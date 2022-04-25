@@ -45,16 +45,16 @@ namespace Networking
         private RTCSessionDescription m_sdcLocalSessionDescription;
         private RTCSessionDescription m_sdcRemoteSessionDescription;
 
-        private RTCOfferOptions m_ofoOfferOptions = new RTCOfferOptions
+        private RTCOfferAnswerOptions m_ofoOfferOptions = new RTCOfferAnswerOptions
         {
             iceRestart = false,
-            offerToReceiveAudio = true,
-            offerToReceiveVideo = false
+            voiceActivityDetection = false
         };
 
-        private RTCAnswerOptions m_afoAnswerOptions = new RTCAnswerOptions
+        private RTCOfferAnswerOptions m_afoAnswerOptions = new RTCOfferAnswerOptions
         {
             iceRestart = false,
+            voiceActivityDetection = false
         };
 
         public WebRTCTransmitter(MonoBehaviour monCoroutineExecutionObject)
@@ -184,14 +184,14 @@ namespace Networking
             State = PeerTransmitterState.Negotiating;
 
             //setup unreliable data channel
-            RTCDataChannelInit dciDataChannelInit = new RTCDataChannelInit(false);
+            //RTCDataChannelInit dciDataChannelInit = new RTCDataChannelInit();
             //dciDataChannelInit.maxRetransmits = 0;
             //dciDataChannelInit.maxRetransmitTime = 0;
             //dciDataChannelInit.ordered = false;
             //dciDataChannelInit.reliable = false;
 
             //create data channel and link all callbacks 
-            OnDataChannelCreated(m_pcnPeerConnection.CreateDataChannel("data", ref dciDataChannelInit));
+            OnDataChannelCreated(m_pcnPeerConnection.CreateDataChannel("data"));
 
             //start negotiation process 
             m_monCoroutineExecutionObject.StartCoroutine(CreateOfferCoroutine());
@@ -216,14 +216,16 @@ namespace Networking
         {
             //deserialize ice candedate 
             RTCIceCandidateWrapper icwWrapper = JsonUtility.FromJson<RTCIceCandidateWrapper>(strIceCandidate);
-            RTCIceCandidate iceIceCandidate = new RTCIceCandidate()
+            RTCIceCandidateInit iceIceCandidateInit = new RTCIceCandidateInit()
             {
                 candidate = icwWrapper.candidate,
                 sdpMid = icwWrapper.sdpMid,
                 sdpMLineIndex = icwWrapper.sdpMLineIndex
             };
 
-            m_pcnPeerConnection.AddIceCandidate(ref iceIceCandidate);
+            RTCIceCandidate iceIceCandidate = new RTCIceCandidate(iceIceCandidateInit);
+
+            m_pcnPeerConnection.AddIceCandidate(iceIceCandidate);
         }
 
         protected IEnumerator ProcessOffer(string strOffer)
@@ -330,9 +332,9 @@ namespace Networking
         {
             RTCIceCandidateWrapper icwIceCandidateWrapper = new RTCIceCandidateWrapper()
             {
-                candidate = icdIceCandidate.candidate,
-                sdpMid = icdIceCandidate.sdpMid,
-                sdpMLineIndex = icdIceCandidate.sdpMLineIndex
+                candidate = icdIceCandidate.Candidate,
+                sdpMid = icdIceCandidate.SdpMid,
+                sdpMLineIndex = icdIceCandidate.SdpMLineIndex ?? 0
             };
 
             OnNegotiationMessageCreated?.Invoke(JsonUtility.ToJson(icwIceCandidateWrapper) + s_strIceID);

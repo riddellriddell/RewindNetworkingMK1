@@ -152,6 +152,8 @@ public class NativeFunctionsTest : MonoBehaviour
 
         yield return sdaOfferAsyncOpperation;
 
+        yield return new WaitForSeconds(1.0f);
+
         Debug.Log($"OfferResult {sdaOfferAsyncOpperation.m_strSessionDescription} Was Error: {sdaOfferAsyncOpperation.IsError} ");
 
         string strOffer = JsonUtility.ToJson(sdaOfferAsyncOpperation.m_strSessionDescription);
@@ -160,11 +162,15 @@ public class NativeFunctionsTest : MonoBehaviour
 
         yield return conSendConnection.SetLocalDescription(sdaOfferAsyncOpperation.m_strSessionDescription);
 
+        yield return new WaitForSeconds(1.0f);
+
         Debug.Log($"Setting Remote Description {strOffer} of recieve Connection");
 
         RTCSetSessionDescriptionAsyncOperation ssdSetRecieveRemoteDesc = conReplyConnection.SetRemoteDescription(sdaOfferAsyncOpperation.m_strSessionDescription);
 
         yield return ssdSetRecieveRemoteDesc;
+
+        yield return new WaitForSeconds(1.0f);
 
         Debug.Log($"Set Remote Description Result is error:{ssdSetRecieveRemoteDesc.IsError}");
 
@@ -174,21 +180,31 @@ public class NativeFunctionsTest : MonoBehaviour
 
         yield return sdaAnswerAsyncOpperation;
 
+        yield return new WaitForSeconds(1.0f);
+
         Debug.Log($" AnswerResult: {sdaAnswerAsyncOpperation.m_strSessionDescription} Was Error: {sdaAnswerAsyncOpperation.IsError} ");
 
         Debug.Log("Setting local description of recieve channel");
 
         yield return conReplyConnection.SetLocalDescription(sdaAnswerAsyncOpperation.m_strSessionDescription);
 
+        yield return new WaitForSeconds(1.0f);
+
         Debug.Log("Setting remote description of send channel");
 
-        yield return conSendConnection.SetRemoteDescription(sdaAnswerAsyncOpperation.m_strSessionDescription);
+        RTCSetSessionDescriptionAsyncOperation ssdSetSendRemoteDesc = conSendConnection.SetRemoteDescription(sdaAnswerAsyncOpperation.m_strSessionDescription);
+
+        yield return ssdSetSendRemoteDesc;
+
+        Debug.Log($"Set Remote Description Result is error:{ssdSetSendRemoteDesc.IsError}");
+
+        yield return new WaitForSeconds(1f);
 
         for (int i = 0; i < 60; i++)
         {
             Debug.Log("Updating to deect Ice Candidates");
 
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(0.25f);
 
             conSendConnection.Update();
             conReplyConnection.Update();
@@ -197,7 +213,15 @@ public class NativeFunctionsTest : MonoBehaviour
             dchRecieverDataChannel?.Update();
         }
 
-        
+        yield return new WaitForSeconds(0.5f);
+
+        Debug.Log($"Data channel status:{((dchSendDataChannel != null && dchRecieverDataChannel != null) ? "setup" : "broken")} , Sending Data");
+
+        byte[] testData = {0,1,69,255};
+
+        dchSendDataChannel?.Send(testData);
+
+        yield return new WaitForSeconds(5);
 
         Debug.Log("Disposing");
 
