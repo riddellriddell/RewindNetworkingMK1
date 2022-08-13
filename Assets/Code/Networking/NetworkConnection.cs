@@ -102,6 +102,7 @@ namespace Networking
 
         public Connection CreateOrResetConnection(DateTime dtmNegotiationStart, long lPeerID)
         {
+            //check if connection to peer already exists
             if (ConnectionList.TryGetValue(lPeerID, out Connection conConnection))
             {
                 ResetConnection(dtmNegotiationStart, lPeerID);
@@ -110,6 +111,7 @@ namespace Networking
             }
             else
             {
+                //no connection to a peer exists so try and make a new one
                 return CreateNewConnection(dtmNegotiationStart, lPeerID);
             }
         }
@@ -169,11 +171,15 @@ namespace Networking
             ConnectionList.Add(conNewConnection.m_lUserUniqueID, conNewConnection);
 
             //set connection values 
+
+            //max amount of data to try and send in a single packet
             conNewConnection.m_iMaxBytesToSend = 1000;
 
-            conNewConnection.m_tspConnectionTimeOutTime = TimeSpan.FromSeconds(4);
+            conNewConnection.m_iMaxPackestInFlight = 100;
 
-            conNewConnection.m_tspConnectionEstablishTimeOut = TimeSpan.FromSeconds(30);
+            conNewConnection.m_tspConnectionTimeOutTime = TimeSpan.FromSeconds(20);
+
+            conNewConnection.m_tspConnectionEstablishTimeOut = TimeSpan.FromSeconds(60);
 
             conNewConnection.m_tspMaxTimeBetweenMessages = TimeSpan.FromSeconds(0.5f);
 
@@ -228,6 +234,8 @@ namespace Networking
             {
                 m_bIsFirstPeer = true;
                 nppProcessor.OnFirstPeerInSwarm();
+
+                m_dtmConnectionTime = GetPacketProcessor<TimeNetworkProcessor>().BaseTime;
             }
         }
 

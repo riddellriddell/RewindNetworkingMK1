@@ -164,7 +164,11 @@ namespace Networking
         //all the messages fetched from the server
         public Queue<UserMessage> MessagesFromServer { get; } = new Queue<UserMessage>();
         public WebAPICommunicationTracker MessageFetchStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
-        public float TimeBetweenMessageUpdates { get; } = 3;
+        public float MaxTimeBetweenMessageUpdates { get; } = 3;
+        public float MinTimeBetweenMessageUpdates { get; } = 0.1f;
+        public float TimeBetweenMessageUpdatesCooldownTime { get; } = 6.0f;
+
+        public DateTime TimeOfLastMessage { get; private set; } = DateTime.MinValue;
 
         protected Queue<SendMessageCommand> MessagesToSend { get; } = new Queue<SendMessageCommand>();
         public int MessageSendQueueCount
@@ -208,12 +212,17 @@ namespace Networking
                 MessageFetchStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.NotStarted &&
                 MessageFetchStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled)
             {
+                //work out what the cooldown time should be 
+                float fTimeSinceLastMessage = (float)(DateTime.Now - TimeOfLastMessage).TotalSeconds;
+                float fMessageGetCooldown = Math.Min(1.0f, fTimeSinceLastMessage / TimeBetweenMessageUpdatesCooldownTime);
+                float fScaledMaxTimeBetweenUpdates = Mathf.Lerp(MinTimeBetweenMessageUpdates, MaxTimeBetweenMessageUpdates, fMessageGetCooldown);
+
                 //check if it should be restarted
                 if (MessageFetchStatus.ShouldRestart())
                 {
                     InternalStartGettingMessagesFromServer();
                 }
-                else if (MessageFetchStatus.TimeSinceLastCommunication() > TimeBetweenMessageUpdates)
+                else if (MessageFetchStatus.TimeSinceLastCommunication() > fScaledMaxTimeBetweenUpdates)
                 {
                     MessageFetchStatus = MessageFetchStatus.Reset();
 
@@ -355,7 +364,7 @@ namespace Networking
                 //dont have a local player id and cant send messages 
                 return false;
             }
-
+             
             //add to message queue
             MessagesToSend.Enqueue(smcMessageCommand);
 
@@ -587,6 +596,12 @@ namespace Networking
                 foreach (UserMessage mesMessage in mesMessages)
                 {
                     MessagesFromServer.Enqueue(mesMessage);
+                }
+
+                //update the time since last message recieved 
+                if(mesMessages.Count > 0)
+                {
+                    TimeOfLastMessage = DateTime.Now;
                 }
 
             }

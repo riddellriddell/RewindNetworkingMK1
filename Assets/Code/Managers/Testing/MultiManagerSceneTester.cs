@@ -8,24 +8,43 @@ namespace GameManagers
 {
     public class MultiManagerSceneTester : MonoBehaviour
     {
+        public enum TestMode
+        {
+            RANDOM_CONNECT_AND_DISCONENCT,
+            FIXED_HOST_RANDOM_CONNECT_AND_DISCONNECT,
+            TIMED_ADDITION
+        }
+
         public List<ActiveGameManagerSceneTester> m_amgTesters;
 
         protected List<DateTime> m_dtmTimeOfActivation;
 
+        //leaves on peer active for this time to setup iniaial game without adding or removing people
         public float m_fInitalTesterDelayTime;
 
-        public float m_fMinAliveTime;
+        //the min time a peer should be alive before killing the connection
+        public float m_fMinAliveTime = 5;
 
-        public float m_fMinDeadTime;
+        //the min time a connection should be dead before reviving it
+        public float m_fMinDeadTime = 1;
 
-        public int m_iMinActivePlayers;
+        //the target min number of players to be active at once
+        public int m_iMinActivePlayers = 2;
         
         //the minimum time at least one peer has been alive for 
-        public float m_fMinSwarmAliveTime;
+        public float m_fMinSwarmAliveTime = 5;
 
-        public float m_fChanceOfConenct;
+        public TestMode m_tsmTestMode = TestMode.RANDOM_CONNECT_AND_DISCONENCT;
 
-        public float m_fChanceOfDisconnect;
+        //the random chance of a peer connection
+        public float m_fChanceOfConenct = 0.05f; // default to once every 20 seconds
+
+        //the random chance of a peer disconnecting
+        public float m_fChanceOfDisconnect = 0.05f; // default to once every 20 seconds
+
+        public float m_fTimeBetweenAdditions = 5.0f;
+
+        public float m_fTimeSinceLastConnect = 0;
 
         public void Start()
         {
@@ -46,32 +65,83 @@ namespace GameManagers
                 return;
             }
             
-
-            // check if should add new peer 
-            float fChanceToEnablePeer = m_fChanceOfConenct * Time.deltaTime;
-            if (fChanceToEnablePeer > Random.Range(0.0f, 1.0f))
+            switch(m_tsmTestMode)
             {
-                //get index to connect
-                if(IndexOfValidPeerToActivate(out int iIndex))
+                case TestMode.RANDOM_CONNECT_AND_DISCONENCT:
                 {
-                    EnableIndex(iIndex);
-                }
-            }
-
-            //check if should disconnect peer
-            if(iEnabledPeers > m_iMinActivePlayers)
-            {
-                float fChanceToDisablePeer = m_fChanceOfDisconnect * Time.deltaTime;
-                if (fChanceToDisablePeer > Random.Range(0.0f, 1.0f))
-                {
-                    //get index to connect
-                    if (IndexOfValidPeerToDeactivate(out int iIndex))
+                    // check if should add new peer 
+                    float fChanceToEnablePeer = m_fChanceOfConenct * Time.deltaTime;
+                    if (fChanceToEnablePeer > Random.Range(0.0f, 1.0f))
                     {
-                        DisableIndex(iIndex);
+                        //get index to connect
+                        if (IndexOfValidPeerToActivate(out int iIndex))
+                        {
+                            EnableIndex(iIndex);
+                        }
                     }
+
+                    //check if should disconnect peer
+                    if (iEnabledPeers > m_iMinActivePlayers)
+                    {
+                        float fChanceToDisablePeer = m_fChanceOfDisconnect * Time.deltaTime;
+                        if (fChanceToDisablePeer > Random.Range(0.0f, 1.0f))
+                        {
+                            //get index to connect
+                            if (IndexOfValidPeerToDeactivate(out int iIndex))
+                            {
+                                DisableIndex(iIndex);
+                            }
+                        }
+                    }
+                    break;
                 }
+                case TestMode.FIXED_HOST_RANDOM_CONNECT_AND_DISCONNECT:
+                    {
+
+                        // check if should add new peer 
+                        float fChanceToEnablePeer = m_fChanceOfConenct * Time.deltaTime;
+                        if (fChanceToEnablePeer > Random.Range(0.0f, 1.0f))
+                        {
+                            //get index to connect
+                            if (IndexOfValidPeerToActivate(out int iIndex , 0))
+                            {
+                                EnableIndex(iIndex);
+                            }
+                        }
+
+                        //check if should disconnect peer
+                        if (iEnabledPeers > m_iMinActivePlayers)
+                        {
+                            float fChanceToDisablePeer = m_fChanceOfDisconnect * Time.deltaTime;
+                            if (fChanceToDisablePeer > Random.Range(0.0f, 1.0f))
+                            {
+                                //get index to connect
+                                if (IndexOfValidPeerToDeactivate(out int iIndex, 0))
+                                {
+                                    DisableIndex(iIndex);
+                                }
+                            }
+                        }
+                        break;
+                    }
+                case TestMode.TIMED_ADDITION:
+                    {
+                        m_fTimeSinceLastConnect += Time.deltaTime;
+
+                        if (m_fTimeSinceLastConnect > m_fTimeBetweenAdditions)
+                        {
+                            //get index to connect
+                            if (IndexOfValidPeerToActivate(out int iIndex))
+                            {
+                                m_fTimeSinceLastConnect = 0;
+                                EnableIndex(iIndex);
+                            }
+                        }
+                        break;
+                    }
             }
 
+            
         }
 
         protected int EnabledPeers()
@@ -99,13 +169,19 @@ namespace GameManagers
             }
         }
 
-        protected bool IndexOfValidPeerToDeactivate(out int iValidIndex)
+        protected bool IndexOfValidPeerToDeactivate(out int iValidIndex, int iExcludeIndex = -1)
         {
             int iStartIndex = Random.Range(0, m_amgTesters.Count);
 
             for(int i = 0; i < m_amgTesters.Count; i++)
             {
                 int iIndex = (i + iStartIndex) % m_amgTesters.Count;
+
+                //check if index should be excludeed
+                if(iIndex == iExcludeIndex)
+                {
+                    continue;
+                }
 
                 //check if index is enabled 
                 if(m_amgTesters[iIndex].gameObject.activeSelf == false)
@@ -136,13 +212,19 @@ namespace GameManagers
             return false;
         }
 
-        protected bool IndexOfValidPeerToActivate(out int iValidIndex)
+        protected bool IndexOfValidPeerToActivate(out int iValidIndex, int iExcludeIndex = -1)
         {
             int iStartIndex = Random.Range(0, m_amgTesters.Count);
 
             for (int i = 0; i < m_amgTesters.Count; i++)
             {
                 int iIndex = (i + iStartIndex) % m_amgTesters.Count;
+
+                //check if index should be excludeed
+                if (iIndex == iExcludeIndex)
+                {
+                    continue;
+                }
 
                 if (m_amgTesters[iIndex].gameObject.activeSelf == true)
                 {

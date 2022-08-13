@@ -7,7 +7,6 @@ namespace Networking
 {
     public class NetworkConnectionPropagatorProcessor : ManagedNetworkPacketProcessor<ConnectionPropagatorProcessor>
     {
-
         public override int Priority
         {
             get
@@ -22,6 +21,9 @@ namespace Networking
 
         //due to cross dependency gateway cant be set on class creation 
         protected NetworkGatewayManager m_ngmGatewayManager;
+
+        //who to send messages through for a peer
+        protected Dictionary<long, long> m_dicIntermediaryForPeer;
 
         public override void OnAddToNetwork(NetworkConnection ncnNetwork)
         {
@@ -62,6 +64,18 @@ namespace Networking
             ConnectToMissingConnections();
         }
 
+        public override void OnConnectionDisconnect(Connection conConnection)
+        {
+            base.OnConnectionDisconnect(conConnection);
+
+            RemoveAnyIntermeiarisForConnection(conConnection.m_lUserUniqueID);
+        }
+
+        public override void OnNewConnection(Connection conConnection)
+        {
+            base.OnNewConnection(conConnection);
+        }
+
         public void StartRequest(long lUserID)
         {
             DateTime dtmStartTime = m_tnpNetworkTime.BaseTime;
@@ -72,6 +86,18 @@ namespace Networking
             //start making connection offer 
             conConnection.StartConnectionNegotiation();
         }
+
+        public void RemoveAnyIntermeiarisForConnection(long lTargetID)
+        {
+            foreach (var processor in ChildConnectionProcessors)
+            {
+                if (processor.Value.m_lIntermidiaryForConnectionToPeer == lTargetID)
+                {
+                    processor.Value.m_lIntermidiaryForConnectionToPeer = long.MaxValue;
+                }
+            }
+        }
+
 
         /// <summary>
         /// find any peers that are not connected to this peer but are connected through a mutural peer and start the connection process
@@ -85,8 +111,6 @@ namespace Networking
 
                 foreach (long lMissingUserID in lMissingConnections)
                 {
-                    //check if connecting to this peer is blockd for some reason
-
                     //check if this is the correct peer to be making the connection attempt
                     if (ShouldPeerStartConnection(ParentNetworkConnection.m_lPeerID, lMissingUserID) == false)
                     {
@@ -94,9 +118,32 @@ namespace Networking
                         continue;
                     }
 
+                    List<long> lPeersWithConnection = m_nlpNetworkLayout.PeersWithConnection(lMissingUserID);
+
+                    //check if there is a peer not currently being used to transfer the message 
+                    for (int i = lPeersWithConnection.Count -1; i < -1;i--)
+                    {
+                        if(ChildConnectionProcessors[lPeersWithConnection[i]].IsActingAsIntermediary())
+                        {
+                            lPeersWithConnection.RemoveAt(i);
+                        }
+                    }
+
+                    if(lPeersWithConnection.Count == 0)
+                    {
+                        Debug.Log($"no peer available to act as intermediary from: {ParentNetworkConnection.m_lPeerID} to {lMissingUserID}");
+                        continue;
+                    }
+
+                    //pick a random open peer to send message through 
+                    long lRelayConnection = lPeersWithConnection[Random.Range(0, lPeersWithConnection.Count)];
+
+                    //flag child as intermediary 
+                    ChildConnectionProcessors[lRelayConnection].m_lIntermidiaryForConnectionToPeer = lMissingUserID;
+
                     //start connection proccess by making new connection object and generating 
                     //connection offer negotiation message
-                    Debug.Log($"Starting connection request from: {ParentNetworkConnection.m_lPeerID} to {lMissingUserID}");
+                    Debug.Log($"Starting connection request from: {ParentNetworkConnection.m_lPeerID} to {lMissingUserID} through {lRelayConnection}");
                     StartRequest(lMissingUserID);
                 }
             }
@@ -108,8 +155,54 @@ namespace Networking
         /// </summary>
         protected bool ShouldPeerStartConnection(long lPeerDecidingToConnect, long lTargetPeer)
         {
+            //get the oldest time for this peer vs other peer
+            DateTime dtmThisPeerConnectionTime =  m_nlpNetworkLayout.GetOldestConnectionOfID(lPeerDecidingToConnect);
+
+            DateTime dtmTargetPeerConnectionTime = m_nlpNetworkLayout.GetOldestConnectionOfID(lTargetPeer);
+
+            //check if we should have conencted by now
+            //TODO:: put this in a setting somewhere 
+            TimeSpan forceConnection = TimeSpan.FromSeconds(20);
+            if(dtmThisPeerConnectionTime < m_tnpNetworkTime.NetworkTime - forceConnection &&
+               dtmTargetPeerConnectionTime < m_tnpNetworkTime.NetworkTime - forceConnection)
+            {
+                return true;
+
+            }
+
             //this may need to be changed in the future 
             return lPeerDecidingToConnect > lTargetPeer;
+        }
+
+        protected long FindCurrentIntermediaryForConnectionToTarget(long lTargetPeer)
+        {
+            foreach(var processor in ChildConnectionProcessors)
+            {
+                if (processor.Value.m_lIntermidiaryForConnectionToPeer == lTargetPeer)
+                {
+                    return processor.Key;
+                }
+            }
+
+            return long.MaxValue;
+        }
+
+        protected List<long> FindFreeIntermidariesForConnection(long lTargetID)
+        {
+            List<long> lstOut = new List<long>();
+
+            //check for client that messages can be sent through
+            List<long> lMutualPeers = m_nlpNetworkLayout.PeersWithConnection(lTargetID);
+
+            for(int i = 0; i < lMutualPeers.Count; i++)
+            {
+                if (ChildConnectionProcessors[lMutualPeers[i]].m_lIntermidiaryForConnectionToPeer == long.MaxValue)
+                {
+                    lstOut.Add(lMutualPeers[i]);
+                }
+            }
+
+            return lstOut;
         }
 
         //check active connection negotiations to see if a message needs sending 
@@ -129,9 +222,40 @@ namespace Networking
                     //no messages continue to next connection negotiation
                     continue;
                 }
+               
+                //check for mutural peer that is not currently handling a connection
+                long lIntermediary = FindCurrentIntermediaryForConnectionToTarget(cppProcessor.ParentConnection.m_lUserUniqueID);
 
-                //check for client that messages can be sent through
-                List<long> lMutualPeers = m_nlpNetworkLayout.PeersWithConnection(cppProcessor.ParentConnection.m_lUserUniqueID);
+                if(lIntermediary == long.MaxValue)
+                {
+                    //find an intermediary not currently connecting through
+                    List<long> lstOptions = FindFreeIntermidariesForConnection(cppProcessor.ParentConnection.m_lUserUniqueID);
+
+                    if (lstOptions.Count > 0)
+                    {
+                        lIntermediary = lstOptions[Random.Range(0, lstOptions.Count)];
+                    }
+                }
+
+                //if there are no free intermediaries pick one that is not currently at capacity 
+                if (lIntermediary == long.MaxValue)
+                {
+                    List<long> lPeersWithConnection = m_nlpNetworkLayout.PeersWithConnection(cppProcessor.ParentConnection.m_lUserUniqueID);
+
+                    int iOffset =Random.Range(0, lPeersWithConnection.Count);
+
+                    for (int i = 0; i < lPeersWithConnection.Count; i++)
+                    {
+                        int iIndex = (i + iOffset) % lPeersWithConnection.Count;
+
+                        ConnectionPropagatorProcessor cppChild = ChildConnectionProcessors[lPeersWithConnection[iIndex]];
+
+                        if(cppChild.ParentConnection.IsChannelOverCapacity() == false || lIntermediary == long.MaxValue)
+                        {
+                            lIntermediary = lPeersWithConnection[iIndex];
+                        }
+                    }
+                }
 
                 //loop through packets to send 
                 while (cppProcessor.NegotiationPacketsToSend.Count > 0)
@@ -140,26 +264,24 @@ namespace Networking
                     ConnectionNegotiationBasePacket cnpPacket = cppProcessor.NegotiationPacketsToSend.Dequeue();
 
                     //check if message can be sent through a mutural peer 
-                    if (lMutualPeers.Count != 0)
+                    if (lIntermediary != long.MaxValue)
                     {
-                        //pick a random open peer to send message through 
-                        long lRelayConnection = lMutualPeers[Random.Range(0, lMutualPeers.Count)];
-
-
-                        Debug.Log($"Sending conneciton negotiation packet: {cnpPacket.m_iIndex} from peer {cnpPacket.m_lFrom} through peer {lRelayConnection} to peer {cnpPacket.m_lTo}");
+                        Debug.Log($"Sending conneciton negotiation packet: {cnpPacket.m_iIndex} from peer {cnpPacket.m_lFrom} through peer {lIntermediary} to peer {cnpPacket.m_lTo}");
 
                         //send packet to peer
-                        ParentNetworkConnection.SendPacket(lRelayConnection, cnpPacket);
+                        ParentNetworkConnection.SendPacket(lIntermediary, cnpPacket);
                     }
+                    
                     //if no client exists check if user has active gateway or this is the first connection to the swarm
                     else if (m_ngmGatewayManager.NeedsOpenGateway == true || ParentNetworkConnection.m_bIsConnectedToSwarm == false)
                     {
                         //check if peer has full peer id for target peer
-
                         m_ngmGatewayManager.ProcessMessageToGateway(cnpPacket.m_lTo, cnpPacket);
                     }
                     else //if there is no way to send message close connection negotiation
                     {
+                        Debug.Log("Tried to send message to peer:"+ cnpPacket.m_lTo + " but had no mutural connections through the swarm so forcing connection closed");
+
                         lConnectionsToRemove.Add(cnpPacket.m_lTo);
                         break;
                     }
@@ -169,6 +291,8 @@ namespace Networking
             //check if there are any connections that should be removed 
             for (int i = 0; i < lConnectionsToRemove.Count; i++)
             {
+                RemoveAnyIntermeiarisForConnection(lConnectionsToRemove[i]);
+
                 ParentNetworkConnection.DestroyConnection(lConnectionsToRemove[i]);
             }
         }
@@ -250,6 +374,9 @@ namespace Networking
         protected int m_iProcessedMessagesHead = 0;
         protected int m_iNextMessageIndex = 0;
 
+        //what peer is connecting through this peer, if there is no intermediary it = long. MaxValue
+        public long m_lIntermidiaryForConnectionToPeer = long.MaxValue;
+
         public override int Priority
         {
             get
@@ -260,6 +387,12 @@ namespace Networking
 
         public ConnectionPropagatorProcessor() : base()
         {
+        }
+
+        //is this connection currently being used as an intermediary between two peers 
+        public bool IsActingAsIntermediary()
+        {
+            return m_lIntermidiaryForConnectionToPeer != long.MaxValue;
         }
 
         /// <summary>
@@ -321,8 +454,8 @@ namespace Networking
 
                 ConnectionNegotiationMessagePacket cnmPacket = ParentConnection.m_cifPacketFactory.CreateType<ConnectionNegotiationMessagePacket>(ConnectionNegotiationMessagePacket.TypeID);
 
-                cnmPacket.m_dtmNegotiationStart = ParentConnection.m_dtmConnectionSetupStart;
-                cnmPacket.m_iIndex = m_iNextMessageIndex;
+                cnmPacket.m_dtmNegotiationStart = ParentConnection.m_dtmConnectionSetupStart; //store the start time so if the connection process is restarted old messages can be filtered
+                cnmPacket.m_iIndex = m_iNextMessageIndex; //store the index of this message so they can be correctly processed in the correct order on the other end
                 cnmPacket.m_lFrom = m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID;
                 cnmPacket.m_lTo = ParentConnection.m_lUserUniqueID;
                 cnmPacket.m_strConnectionNegotiationMessage = strMessage;
@@ -330,7 +463,7 @@ namespace Networking
                 //queue up packet to send
                 NegotiationPacketsToSend.Enqueue(cnmPacket);
 
-                //update message index
+                //update message index,
                 m_iNextMessageIndex++;
             }
         }
@@ -343,6 +476,18 @@ namespace Networking
             m_iNextMessageIndex = 0;
 
             base.OnConnectionReset();
+        }
+
+        public override void OnConnectionStateChange(Connection.ConnectionStatus cstOldState, Connection.ConnectionStatus cstNewState)
+        {
+            base.OnConnectionStateChange(cstOldState, cstNewState);
+
+            //if this conection is nolonger in the getting connected phase remove any intermediaries 
+            if(cstNewState != Connection.ConnectionStatus.New && cstNewState != Connection.ConnectionStatus.Initializing)
+            {
+                //safely connected so we can clear any intermediaris 
+                m_tParentPacketProcessor.RemoveAnyIntermeiarisForConnection(ParentConnection.m_lUserUniqueID);
+            }
         }
 
         /// <summary>

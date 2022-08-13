@@ -4,6 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// this virtual class handles processing a packet for sending and receiving 
+/// this class is attached to a connection and is used to prepare messages for sending and recieving
 /// </summary>
 namespace Networking
 {

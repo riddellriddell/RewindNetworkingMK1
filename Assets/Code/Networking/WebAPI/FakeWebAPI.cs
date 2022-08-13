@@ -284,7 +284,7 @@ namespace Networking
         {
 
             //check for timeout 
-            if (Random.Range(0, 1) < m_fTimeOutChance)
+            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
             {
                 yield return new WaitForSeconds(m_fTimeOutTime);
 
@@ -296,7 +296,7 @@ namespace Networking
             yield return new WaitForSeconds(m_fLatncy);
 
             //check if user could not be created due to conflicts / bad connection or other conflicts
-            if (Random.Range(0, 1) < m_fActionErrorChance)
+            if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
             {
                 //return error result
                 actGetUserCallback?.Invoke(false, m_strServerErrorResponse);
@@ -316,7 +316,7 @@ namespace Networking
         protected IEnumerator InternalGetDeleteUserMessages(string strUserDetails, Action<bool, string> actGetMessagesCallback)
         {
             //check for timeout 
-            if (Random.Range(0, 1) < m_fTimeOutChance)
+            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
             {
                 yield return new WaitForSeconds(m_fTimeOutTime);
 
@@ -328,7 +328,7 @@ namespace Networking
             yield return new WaitForSeconds(m_fLatncy);
 
             //check if user could not be created due to conflicts / bad connection or other conflicts
-            if (Random.Range(0, 1) < m_fActionErrorChance)
+            if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
             {
                 //return error result
                 actGetMessagesCallback?.Invoke(false, m_strServerErrorResponse);
@@ -380,7 +380,7 @@ namespace Networking
         protected IEnumerator InternalAddNewMessage(string strNewMessageDetails, Action<bool, string> actSendMessageCallback)
         {
             //check for timeout 
-            if (Random.Range(0, 1) < m_fTimeOutChance)
+            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
             {
                 yield return new WaitForSeconds(m_fTimeOutTime);
 
@@ -392,7 +392,7 @@ namespace Networking
             yield return new WaitForSeconds(m_fLatncy);
 
             //check if user could not be created due to conflicts / bad connection or other conflicts
-            if (Random.Range(0, 1) < m_fActionErrorChance)
+            if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
             {
                 //return error result
                 actSendMessageCallback?.Invoke(false, m_strServerErrorResponse);
@@ -423,7 +423,7 @@ namespace Networking
         protected IEnumerator InternalSetGateway(string strSetGatewayCommand, Action<bool, string> actSetGateway)
         {
             //check for timeout 
-            if (Random.Range(0, 1) < m_fTimeOutChance)
+            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
             {
                 yield return new WaitForSeconds(m_fTimeOutTime);
 
@@ -435,7 +435,7 @@ namespace Networking
             yield return new WaitForSeconds(m_fLatncy);
 
             //check if user could not be created due to conflicts / bad connection or other conflicts
-            if (Random.Range(0, 1) < m_fActionErrorChance)
+            if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
             {
                 //return error result
                 actSetGateway?.Invoke(false, m_strServerErrorResponse);
@@ -470,7 +470,7 @@ namespace Networking
         protected IEnumerator InternalSearchForGateway(string strGatewayDetails, Action<bool, string> actSearchCallback)
         {
             //check for timeout 
-            if (Random.Range(0, 1) < m_fTimeOutChance)
+            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
             {
                 yield return new WaitForSeconds(m_fTimeOutTime);
 
@@ -482,7 +482,7 @@ namespace Networking
             yield return new WaitForSeconds(m_fLatncy);
 
             //check if user could not be created due to conflicts / bad connection or other conflicts
-            if (Random.Range(0, 1) < m_fActionErrorChance)
+            if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
             {
                 //return error result
                 actSearchCallback?.Invoke(false, m_strServerErrorResponse);

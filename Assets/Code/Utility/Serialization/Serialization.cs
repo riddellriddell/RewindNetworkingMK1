@@ -156,6 +156,12 @@ namespace Utility
             }
 
             Int64 lTick = BitConverter.ToInt64(rbsStream.m_bData, rbsStream.ReadWriteHead);
+
+            if(lTick < DateTime.MinValue.Ticks || lTick > DateTime.MaxValue.Ticks)
+            {
+                
+            }
+
             Output = new DateTime(lTick, DateTimeKind.Utc);
             rbsStream.ReadWriteHead += DataSize(Output);
 

@@ -441,7 +441,7 @@ namespace Networking
                     gmcChangedChannel.m_chvVotes[i].IsActive(dtmTimeOfVote, s_tspVoteTimeout))
                 {
                     //todo remove this code
-                    if(i < 0 || i > 5)
+                    if(i < 0 || i > NetworkGlobalMessengerProcessor.MaxPlayerCount)
                     {
                         Debug.LogError("Attempting to kick peer out of bounds");
                     }
@@ -450,7 +450,7 @@ namespace Networking
                 }
                 else if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Assigned) //get non kick peer list
                 {
-                    if (i < 0 || i > 5)
+                    if (i < 0 || i > NetworkGlobalMessengerProcessor.MaxPlayerCount)
                     {
                         Debug.LogError("Attempting to add peer out of bounds");
                     }

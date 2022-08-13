@@ -95,8 +95,6 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
 
         DateTime dtmSimStartTime = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.GetCurrentSimTime(), m_iSimHeadTick);
 
-
-
         TFrameData fdaStartState = m_fopFrameDataObjectPool.GetFrameData();
 
         //setup the inital state

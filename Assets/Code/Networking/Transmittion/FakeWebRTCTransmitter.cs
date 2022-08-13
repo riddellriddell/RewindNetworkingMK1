@@ -268,6 +268,9 @@ namespace Networking
             }
             else
             {
+                //update the number of ice candidates recieved for th e
+                m_iIceCandidatesRecieved++;
+
                 //make reply ice
                 InternetConnectionSimulator.Instance.StartCoroutine(MakeIce());
             }

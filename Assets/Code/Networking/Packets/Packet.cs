@@ -3,7 +3,6 @@ using Utility;
 
 namespace Networking
 {
-
     public class PacketWrapper
     {
         //the number of packets that are used as header / not payload data 

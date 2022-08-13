@@ -378,6 +378,7 @@ namespace Networking
         }
 
         //evaluate the start state options to select the best one
+        //this process looks for the oldest start state with as many child states linked to it / based off it
         public void EvaluateStartCandidates(long lLocalPeer, bool bActivePeer)
         {
             foreach (GlobalMessageStartStateCandidate sscCandidate in StartStateCandidates.Values)

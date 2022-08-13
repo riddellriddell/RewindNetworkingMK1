@@ -7,6 +7,8 @@ namespace Networking
     /// <summary>
     /// this class and its companion connection class provide the base functionality for creating 
     /// network and connection processors 
+    /// this class creates per connection packet processors of type T which get attached to a connection and processes messages sent and recieved through that connection
+    /// these per connection objects are attached and managed through a the IManagedConnectionPacketProcessor interface
     /// </summary>
     public abstract class ManagedNetworkPacketProcessor<T> : BaseNetworkPacketProcessor where T : BaseConnectionPacketProcessor, IManagedConnectionPacketProcessor, new()
     {

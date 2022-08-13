@@ -47,6 +47,9 @@ namespace Networking
         // the max number of bytes to send at once
         public int m_iMaxBytesToSend;
 
+        //how many un acknowledged packets should be sent before waiting for an acknowledgement
+        public int m_iMaxPackestInFlight;
+
         // the time this connection was initalised
         public DateTime m_dtmConnectionSetupStart;
 
@@ -58,6 +61,8 @@ namespace Networking
 
         //the last time a message was sent 
         public DateTime m_dtmTimeOfLastMessageSent;
+
+        public bool m_bSendConnectionMessage;
 
         // the max time a connected connection can go without recieving 
         //a message before it is considered disconnected
@@ -257,7 +262,6 @@ namespace Networking
             Debug.Log($"Negotiation message:{strMessageJson} created by transmitter on peer {m_ncnParentNetworkConneciton.m_lPeerID}");
             TransmittionNegotiationMessages.Enqueue(strMessageJson);
         }
-
         #endregion
 
         protected void OnConnectionEstablished()
@@ -270,11 +274,15 @@ namespace Networking
 
             m_dtmTimeOfLastActivity = DateTime.UtcNow;
 
+            m_bSendConnectionMessage = true;
+
             //store the time connection was established 
             m_dtmConnectionEstablishTime = m_ncnParentNetworkConneciton.GetPacketProcessor<TimeNetworkProcessor>().BaseTime;
 
             //inform parent that now part of the swarm 
             m_ncnParentNetworkConneciton.OnConnectToSwarm();
+
+            //send a dummy message 
 
         }
         
@@ -346,11 +354,11 @@ namespace Networking
             //convert raw data to packet wrapper 
             PacketWrapper packetWrapper = new PacketWrapper(bData);
 
-            //update the last ack packet sent from this client to the connection target clamped to not be more than the total number of packets sent
-            m_iLastAckPacketNumberSent = Mathf.Min(Mathf.Max(m_iLastAckPacketNumberSent, packetWrapper.LastAckPackageFromPerson), m_iPacketsQueuedToSendCount);
-
             //get the tick of the oldest packet in the packet wrapper 
             int iPacketNumberHead = packetWrapper.StartPacketNumber;
+
+            //update the last ack packet sent from this client to the connection target clamped to not be more than the total number of packets sent
+            m_iLastAckPacketNumberSent = Mathf.Min(Mathf.Max(m_iLastAckPacketNumberSent, packetWrapper.LastAckPackageFromPerson), m_iPacketsQueuedToSendCount);
 
             //decode the remaining packets 
             while (packetWrapper.ReadStream.EndOfStream() == false)
@@ -434,6 +442,25 @@ namespace Networking
             }
         }
         
+        //count the ammount of data that needs to be sent but has not yet 
+        public int BytesQueued()
+        {
+            int iBytesQueued = 0;
+
+            for(int i = 0; i < PacketsInFlight.Count; i++)
+            {
+                iBytesQueued += PacketsInFlight[i].PacketTotalSize;
+            }
+
+            return iBytesQueued;
+        }
+
+        //is there more data queued than can be sent in a single packet
+        public bool IsChannelOverCapacity()
+        {
+            return BytesQueued() > MaxPacketBytesToSend;
+        }
+
         /// <summary>
         /// processes packet for sending and returns null if packet should not be sent
         /// </summary>
@@ -493,8 +520,11 @@ namespace Networking
 
             bool bForceSendMessage = false;
 
+            //send a message if jsut connected 
+            bForceSendMessage = m_bSendConnectionMessage;
+
             //check if max time between packet sends has been reached
-            if(m_tspMaxTimeBetweenMessages < DateTime.UtcNow - m_dtmTimeOfLastMessageSent)
+            if (m_tspMaxTimeBetweenMessages < DateTime.UtcNow - m_dtmTimeOfLastMessageSent)
             {
                 bForceSendMessage = true;
             }
@@ -528,14 +558,18 @@ namespace Networking
                 return;
             }
 
+            int iPacketStart = (m_iPacketsQueuedToSendCount - PacketsInFlight.Count);
+
             //create packet wrapper 
-            PacketWrapper pkwPacketWrappepr = new PacketWrapper(m_iTotalPacketsReceived, m_iPacketsQueuedToSendCount - PacketsInFlight.Count, m_iMaxBytesToSend);
+            PacketWrapper pkwPacketWrappepr = new PacketWrapper(m_iTotalPacketsReceived, iPacketStart, m_iMaxBytesToSend);
 
             //TODO: Remove This
             List<string> strPacketTypesInPacket = new List<string>();
 
+            int iPacketsSent = 0;
+
             //add as many packets as possible without hitting the max send data limit
-            for (int i = 0; i < PacketsInFlight.Count; i++)
+            for (int i = 0; i < PacketsInFlight.Count ; i++)
             {
                 DataPacket pktPacketToSend = PacketsInFlight[i];
 
@@ -545,15 +579,25 @@ namespace Networking
 
                     strPacketTypesInPacket.Add(pktPacketToSend.ToString());
                 }
-                else
+                else if (iPacketsSent < (m_iMaxPackestInFlight - 1) && i < PacketsInFlight.Count - 1)
                 {
+                    //send packet through transmitter
+                    m_ptrTransmitter.SentData(pkwPacketWrappepr.WriteStream.GetData());
+
+                    //setup new packet
+                    pkwPacketWrappepr = new PacketWrapper(m_iTotalPacketsReceived, iPacketStart + i, m_iMaxBytesToSend);
+
+                    i--;
+
+                }
+                else if(iPacketsSent == (m_iMaxPackestInFlight - 1))
+                { 
                     string strPacketDataInPacket = "";
 
-                    foreach(string strPacketDetails in strPacketTypesInPacket)
+                    foreach (string strPacketDetails in strPacketTypesInPacket)
                     {
-                        strPacketDataInPacket +=  ", "  + strPacketDetails;
+                        strPacketDataInPacket += ", " + strPacketDetails;
                     }
-
 
                     Debug.Log($"Connection from User:{m_ncnParentNetworkConneciton.m_lPeerID} to User:{m_lUserUniqueID} is Saturated with data: {strPacketDataInPacket} , Bytes Remaining in packet : {pkwPacketWrappepr.WriteStream.BytesRemaining} Packet that failed to add is { pktPacketToSend.PacketTotalSize} bytes");
 
@@ -564,11 +608,16 @@ namespace Networking
             //send packet through transmitter
             m_ptrTransmitter.SentData(pkwPacketWrappepr.WriteStream.GetData());
 
-            //update the time of last packet sent
-            m_dtmTimeOfLastMessageSent = DateTime.UtcNow;
+
+            //dont need to send first connection message any more
+            m_bSendConnectionMessage = false;
 
             //stop sending acks for packets
             m_bNeedToSendAckPacket = false;
+
+            //update the time of last packet sent
+            m_dtmTimeOfLastMessageSent = DateTime.UtcNow;
+
         }
 
         //takes the binary data in the packet wrapper and converts it to a data packet
@@ -589,7 +638,7 @@ namespace Networking
         private bool IsPacketInOrder(int iPacketNumber)
         {
             //check if packet has already been queued 
-            if (iPacketNumber <= m_iTotalPacketsReceived)
+            if (iPacketNumber != (m_iTotalPacketsReceived + 1))
             {
                 return false;
             }

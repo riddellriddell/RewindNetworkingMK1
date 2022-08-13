@@ -1,0 +1,1357 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!29 &1
+OcclusionCullingSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_OcclusionBakeSettings:
+    smallestOccluder: 5
+    smallestHole: 0.25
+    backfaceThreshold: 100
+  m_SceneGUID: 00000000000000000000000000000000
+  m_OcclusionCullingData: {fileID: 0}
+--- !u!104 &2
+RenderSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 9
+  m_Fog: 0
+  m_FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  m_FogMode: 3
+  m_FogDensity: 0.01
+  m_LinearFogStart: 0
+  m_LinearFogEnd: 300
+  m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
+  m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
+  m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
+  m_AmbientIntensity: 1
+  m_AmbientMode: 0
+  m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
+  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_HaloStrength: 0.5
+  m_FlareStrength: 1
+  m_FlareFadeSpeed: 3
+  m_HaloTexture: {fileID: 0}
+  m_SpotCookie: {fileID: 10001, guid: 0000000000000000e000000000000000, type: 0}
+  m_DefaultReflectionMode: 0
+  m_DefaultReflectionResolution: 128
+  m_ReflectionBounces: 1
+  m_ReflectionIntensity: 1
+  m_CustomReflection: {fileID: 0}
+  m_Sun: {fileID: 0}
+  m_IndirectSpecularColor: {r: 0.37311938, g: 0.38074005, b: 0.35872707, a: 1}
+  m_UseRadianceAmbientProbe: 0
+--- !u!157 &3
+LightmapSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 12
+  m_GIWorkflowMode: 1
+  m_GISettings:
+    serializedVersion: 2
+    m_BounceScale: 1
+    m_IndirectOutputScale: 1
+    m_AlbedoBoost: 1
+    m_EnvironmentLightingMode: 0
+    m_EnableBakedLightmaps: 1
+    m_EnableRealtimeLightmaps: 0
+  m_LightmapEditorSettings:
+    serializedVersion: 12
+    m_Resolution: 2
+    m_BakeResolution: 40
+    m_AtlasSize: 1024
+    m_AO: 0
+    m_AOMaxDistance: 1
+    m_CompAOExponent: 1
+    m_CompAOExponentDirect: 0
+    m_ExtractAmbientOcclusion: 0
+    m_Padding: 2
+    m_LightmapParameters: {fileID: 0}
+    m_LightmapsBakeMode: 1
+    m_TextureCompression: 1
+    m_FinalGather: 0
+    m_FinalGatherFiltering: 1
+    m_FinalGatherRayCount: 256
+    m_ReflectionCompression: 2
+    m_MixedBakeMode: 2
+    m_BakeBackend: 1
+    m_PVRSampling: 1
+    m_PVRDirectSampleCount: 32
+    m_PVRSampleCount: 512
+    m_PVRBounces: 2
+    m_PVREnvironmentSampleCount: 256
+    m_PVREnvironmentReferencePointCount: 2048
+    m_PVRFilteringMode: 1
+    m_PVRDenoiserTypeDirect: 1
+    m_PVRDenoiserTypeIndirect: 1
+    m_PVRDenoiserTypeAO: 1
+    m_PVRFilterTypeDirect: 0
+    m_PVRFilterTypeIndirect: 0
+    m_PVRFilterTypeAO: 0
+    m_PVREnvironmentMIS: 1
+    m_PVRCulling: 1
+    m_PVRFilteringGaussRadiusDirect: 1
+    m_PVRFilteringGaussRadiusIndirect: 5
+    m_PVRFilteringGaussRadiusAO: 2
+    m_PVRFilteringAtrousPositionSigmaDirect: 0.5
+    m_PVRFilteringAtrousPositionSigmaIndirect: 2
+    m_PVRFilteringAtrousPositionSigmaAO: 1
+    m_ExportTrainingData: 0
+    m_TrainingDataDestination: TrainingData
+    m_LightProbeSampleCountMultiplier: 4
+  m_LightingDataAsset: {fileID: 0}
+  m_LightingSettings: {fileID: 0}
+--- !u!196 &4
+NavMeshSettings:
+  serializedVersion: 2
+  m_ObjectHideFlags: 0
+  m_BuildSettings:
+    serializedVersion: 2
+    agentTypeID: 0
+    agentRadius: 0.5
+    agentHeight: 2
+    agentSlope: 45
+    agentClimb: 0.4
+    ledgeDropHeight: 0
+    maxJumpAcrossDistance: 0
+    minRegionArea: 2
+    manualCellSize: 0
+    cellSize: 0.16666667
+    manualTileSize: 0
+    tileSize: 256
+    accuratePlacement: 0
+    maxJobWorkers: 0
+    preserveTilesOutsideBounds: 0
+    debug:
+      m_Flags: 0
+  m_NavMeshData: {fileID: 0}
+--- !u!1 &96034786
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 96034788}
+  - component: {fileID: 96034787}
+  m_Layer: 0
+  m_Name: Peer (4)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &96034787
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 96034786}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bTestLocally: 1
+  m_bUseWebRTCTransmitter: 0
+  m_strUniqueDeviceID: 
+  m_bAlive: 0
+  m_usmGameUIStateManager: {fileID: 0}
+  m_gvcGameViewCamera: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iChainStartCandidates: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iBaseChainLinkIndex: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+  m_sstSimState:
+    m_bDrawDebugData: 0
+    m_lPeersAssignedToSlot: 
+    m_fShipHealth: []
+    m_fShipSpawnCountdown: []
+    m_fShipPosX: []
+    m_fShipPosY: []
+    m_fShipVelocityX: []
+    m_fShipVelocityY: []
+    m_fShipRotation: []
+    m_fShipWeaponCoolDown: []
+    m_fLazerPosX: []
+    m_fLazerPosY: []
+    m_fLazerLife: []
+--- !u!4 &96034788
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 96034786}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 6
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &112184870
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 112184872}
+  - component: {fileID: 112184871}
+  m_Layer: 0
+  m_Name: Peer (7)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &112184871
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 112184870}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bTestLocally: 1
+  m_bUseWebRTCTransmitter: 0
+  m_strUniqueDeviceID: 
+  m_bAlive: 0
+  m_usmGameUIStateManager: {fileID: 0}
+  m_gvcGameViewCamera: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iChainStartCandidates: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iBaseChainLinkIndex: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+  m_sstSimState:
+    m_bDrawDebugData: 0
+    m_lPeersAssignedToSlot: 
+    m_fShipHealth: []
+    m_fShipSpawnCountdown: []
+    m_fShipPosX: []
+    m_fShipPosY: []
+    m_fShipVelocityX: []
+    m_fShipVelocityY: []
+    m_fShipRotation: []
+    m_fShipWeaponCoolDown: []
+    m_fLazerPosX: []
+    m_fLazerPosY: []
+    m_fLazerLife: []
+--- !u!4 &112184872
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 112184870}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 9
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &468745024
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 468745026}
+  - component: {fileID: 468745025}
+  m_Layer: 0
+  m_Name: Peer (14)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &468745025
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 468745024}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bTestLocally: 1
+  m_bUseWebRTCTransmitter: 0
+  m_strUniqueDeviceID: 
+  m_bAlive: 0
+  m_usmGameUIStateManager: {fileID: 0}
+  m_gvcGameViewCamera: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iChainStartCandidates: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iBaseChainLinkIndex: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+  m_sstSimState:
+    m_bDrawDebugData: 0
+    m_lPeersAssignedToSlot: 
+    m_fShipHealth: []
+    m_fShipSpawnCountdown: []
+    m_fShipPosX: []
+    m_fShipPosY: []
+    m_fShipVelocityX: []
+    m_fShipVelocityY: []
+    m_fShipRotation: []
+    m_fShipWeaponCoolDown: []
+    m_fLazerPosX: []
+    m_fLazerPosY: []
+    m_fLazerLife: []
+--- !u!4 &468745026
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 468745024}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 16
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &805625185
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 805625187}
+  - component: {fileID: 805625186}
+  m_Layer: 0
+  m_Name: Peer (11)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &805625186
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 805625185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bTestLocally: 1
+  m_bUseWebRTCTransmitter: 0
+  m_strUniqueDeviceID: 
+  m_bAlive: 0
+  m_usmGameUIStateManager: {fileID: 0}
+  m_gvcGameViewCamera: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iChainStartCandidates: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iBaseChainLinkIndex: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+  m_sstSimState:
+    m_bDrawDebugData: 0
+    m_lPeersAssignedToSlot: 
+    m_fShipHealth: []
+    m_fShipSpawnCountdown: []
+    m_fShipPosX: []
+    m_fShipPosY: []
+    m_fShipVelocityX: []
+    m_fShipVelocityY: []
+    m_fShipRotation: []
+    m_fShipWeaponCoolDown: []
+    m_fLazerPosX: []
+    m_fLazerPosY: []
+    m_fLazerLife: []
+--- !u!4 &805625187
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 805625185}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 13
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &832455449
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 832455451}
+  - component: {fileID: 832455450}
+  m_Layer: 0
+  m_Name: InternetConnectionSim
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &832455450
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 832455449}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ccc095eb5b2172f429f42eee2b2d8d4e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bEnableLag: 1
+  m_fMinLag: 0.3
+  m_fMaxLag: 0.3
+  m_bEnableOutages: 0
+  m_fMinOutage: 0.25
+  m_fMaxOutage: 8
+  m_fMinTimeBetweenOutages: 3
+  m_fMaxTimeBetweenOutages: 9
+  m_bEnablePacketLoss: 0
+  m_fPacketLoss: 0.3
+--- !u!4 &832455451
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 832455449}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 2
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &987774158
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 987774160}
+  - component: {fileID: 987774159}
+  m_Layer: 0
+  m_Name: Peer (10)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &987774159
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 987774158}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bTestLocally: 1
+  m_bUseWebRTCTransmitter: 0
+  m_strUniqueDeviceID: 
+  m_bAlive: 0
+  m_usmGameUIStateManager: {fileID: 0}
+  m_gvcGameViewCamera: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iChainStartCandidates: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iBaseChainLinkIndex: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+  m_sstSimState:
+    m_bDrawDebugData: 0
+    m_lPeersAssignedToSlot: 
+    m_fShipHealth: []
+    m_fShipSpawnCountdown: []
+    m_fShipPosX: []
+    m_fShipPosY: []
+    m_fShipVelocityX: []
+    m_fShipVelocityY: []
+    m_fShipRotation: []
+    m_fShipWeaponCoolDown: []
+    m_fLazerPosX: []
+    m_fLazerPosY: []
+    m_fLazerLife: []
+--- !u!4 &987774160
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 987774158}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 12
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1098006610
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1098006612}
+  - component: {fileID: 1098006611}
+  m_Layer: 0
+  m_Name: Peer (13)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &1098006611
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1098006610}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bTestLocally: 1
+  m_bUseWebRTCTransmitter: 0
+  m_strUniqueDeviceID: 
+  m_bAlive: 0
+  m_usmGameUIStateManager: {fileID: 0}
+  m_gvcGameViewCamera: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iChainStartCandidates: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iBaseChainLinkIndex: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+  m_sstSimState:
+    m_bDrawDebugData: 0
+    m_lPeersAssignedToSlot: 
+    m_fShipHealth: []
+    m_fShipSpawnCountdown: []
+    m_fShipPosX: []
+    m_fShipPosY: []
+    m_fShipVelocityX: []
+    m_fShipVelocityY: []
+    m_fShipRotation: []
+    m_fShipWeaponCoolDown: []
+    m_fLazerPosX: []
+    m_fLazerPosY: []
+    m_fLazerLife: []
+--- !u!4 &1098006612
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1098006610}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 15
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1295798390
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1295798392}
+  - component: {fileID: 1295798391}
+  m_Layer: 0
+  m_Name: Peer (12)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &1295798391
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1295798390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bTestLocally: 1
+  m_bUseWebRTCTransmitter: 0
+  m_strUniqueDeviceID: 
+  m_bAlive: 0
+  m_usmGameUIStateManager: {fileID: 0}
+  m_gvcGameViewCamera: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iChainStartCandidates: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iBaseChainLinkIndex: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+  m_sstSimState:
+    m_bDrawDebugData: 0
+    m_lPeersAssignedToSlot: 
+    m_fShipHealth: []
+    m_fShipSpawnCountdown: []
+    m_fShipPosX: []
+    m_fShipPosY: []
+    m_fShipVelocityX: []
+    m_fShipVelocityY: []
+    m_fShipRotation: []
+    m_fShipWeaponCoolDown: []
+    m_fLazerPosX: []
+    m_fLazerPosY: []
+    m_fLazerLife: []
+--- !u!4 &1295798392
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1295798390}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 14
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1355680418
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1355680420}
+  - component: {fileID: 1355680419}
+  m_Layer: 0
+  m_Name: Peer (3)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &1355680419
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1355680418}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bTestLocally: 1
+  m_bUseWebRTCTransmitter: 0
+  m_strUniqueDeviceID: 
+  m_bAlive: 0
+  m_usmGameUIStateManager: {fileID: 0}
+  m_gvcGameViewCamera: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iChainStartCandidates: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iBaseChainLinkIndex: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+  m_sstSimState:
+    m_bDrawDebugData: 0
+    m_lPeersAssignedToSlot: 
+    m_fShipHealth: []
+    m_fShipSpawnCountdown: []
+    m_fShipPosX: []
+    m_fShipPosY: []
+    m_fShipVelocityX: []
+    m_fShipVelocityY: []
+    m_fShipRotation: []
+    m_fShipWeaponCoolDown: []
+    m_fLazerPosX: []
+    m_fLazerPosY: []
+    m_fLazerLife: []
+--- !u!4 &1355680420
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1355680418}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 5
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1483128916
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1483128918}
+  - component: {fileID: 1483128917}
+  m_Layer: 0
+  m_Name: Peer (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1483128917
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1483128916}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bTestLocally: 1
+  m_bUseWebRTCTransmitter: 0
+  m_strUniqueDeviceID: 
+  m_bAlive: 0
+  m_usmGameUIStateManager: {fileID: 0}
+  m_gvcGameViewCamera: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iChainStartCandidates: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iBaseChainLinkIndex: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+  m_sstSimState:
+    m_bDrawDebugData: 0
+    m_lPeersAssignedToSlot: 
+    m_fShipHealth: []
+    m_fShipSpawnCountdown: []
+    m_fShipPosX: []
+    m_fShipPosY: []
+    m_fShipVelocityX: []
+    m_fShipVelocityY: []
+    m_fShipRotation: []
+    m_fShipWeaponCoolDown: []
+    m_fLazerPosX: []
+    m_fLazerPosY: []
+    m_fLazerLife: []
+--- !u!4 &1483128918
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1483128916}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 3
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1505663426
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1505663428}
+  - component: {fileID: 1505663427}
+  m_Layer: 0
+  m_Name: Peer (8)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &1505663427
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1505663426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bTestLocally: 1
+  m_bUseWebRTCTransmitter: 0
+  m_strUniqueDeviceID: 
+  m_bAlive: 0
+  m_usmGameUIStateManager: {fileID: 0}
+  m_gvcGameViewCamera: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iChainStartCandidates: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iBaseChainLinkIndex: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+  m_sstSimState:
+    m_bDrawDebugData: 0
+    m_lPeersAssignedToSlot: 
+    m_fShipHealth: []
+    m_fShipSpawnCountdown: []
+    m_fShipPosX: []
+    m_fShipPosY: []
+    m_fShipVelocityX: []
+    m_fShipVelocityY: []
+    m_fShipRotation: []
+    m_fShipWeaponCoolDown: []
+    m_fLazerPosX: []
+    m_fLazerPosY: []
+    m_fLazerLife: []
+--- !u!4 &1505663428
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1505663426}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 10
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1596307946
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1596307948}
+  - component: {fileID: 1596307947}
+  m_Layer: 0
+  m_Name: FakeWebAPI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1596307947
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1596307946}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd042984fdc5efe4f816380a203dea68, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fLatncy: 0.6
+  m_fTimeOutChance: 0.01
+  m_fTimeOutTime: 5
+  m_fActionErrorChance: 0
+--- !u!4 &1596307948
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1596307946}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1652309641
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1652309643}
+  - component: {fileID: 1652309642}
+  m_Layer: 0
+  m_Name: MultiConnectionTester
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1652309642
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1652309641}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80ee9de96deb5d04fa9edf44502b7d0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_amgTesters:
+  - {fileID: 1483128917}
+  - {fileID: 1656940734}
+  - {fileID: 1355680419}
+  - {fileID: 96034787}
+  - {fileID: 2111602861}
+  - {fileID: 1738577103}
+  - {fileID: 112184871}
+  - {fileID: 1505663427}
+  - {fileID: 1961553835}
+  - {fileID: 987774159}
+  - {fileID: 805625186}
+  - {fileID: 1295798391}
+  - {fileID: 1098006611}
+  - {fileID: 468745025}
+  m_fInitalTesterDelayTime: 4
+  m_fMinAliveTime: 5
+  m_fMinDeadTime: 5
+  m_iMinActivePlayers: 2
+  m_fMinSwarmAliveTime: 5
+  m_tsmTestMode: 2
+  m_fChanceOfConenct: 0.08
+  m_fChanceOfDisconnect: 0.04
+  m_fTimeBetweenAdditions: 5
+  m_fTimeSinceLastConnect: 0
+--- !u!4 &1652309643
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1652309641}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1656940733
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1656940735}
+  - component: {fileID: 1656940734}
+  m_Layer: 0
+  m_Name: Peer (2)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &1656940734
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1656940733}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bTestLocally: 1
+  m_bUseWebRTCTransmitter: 0
+  m_strUniqueDeviceID: 
+  m_bAlive: 0
+  m_usmGameUIStateManager: {fileID: 0}
+  m_gvcGameViewCamera: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iChainStartCandidates: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iBaseChainLinkIndex: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+  m_sstSimState:
+    m_bDrawDebugData: 0
+    m_lPeersAssignedToSlot: 
+    m_fShipHealth: []
+    m_fShipSpawnCountdown: []
+    m_fShipPosX: []
+    m_fShipPosY: []
+    m_fShipVelocityX: []
+    m_fShipVelocityY: []
+    m_fShipRotation: []
+    m_fShipWeaponCoolDown: []
+    m_fLazerPosX: []
+    m_fLazerPosY: []
+    m_fLazerLife: []
+--- !u!4 &1656940735
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1656940733}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 4
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1738577102
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1738577104}
+  - component: {fileID: 1738577103}
+  m_Layer: 0
+  m_Name: Peer (6)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &1738577103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1738577102}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bTestLocally: 1
+  m_bUseWebRTCTransmitter: 0
+  m_strUniqueDeviceID: 
+  m_bAlive: 0
+  m_usmGameUIStateManager: {fileID: 0}
+  m_gvcGameViewCamera: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iChainStartCandidates: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iBaseChainLinkIndex: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+  m_sstSimState:
+    m_bDrawDebugData: 0
+    m_lPeersAssignedToSlot: 
+    m_fShipHealth: []
+    m_fShipSpawnCountdown: []
+    m_fShipPosX: []
+    m_fShipPosY: []
+    m_fShipVelocityX: []
+    m_fShipVelocityY: []
+    m_fShipRotation: []
+    m_fShipWeaponCoolDown: []
+    m_fLazerPosX: []
+    m_fLazerPosY: []
+    m_fLazerLife: []
+--- !u!4 &1738577104
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1738577102}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 8
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1961553834
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1961553836}
+  - component: {fileID: 1961553835}
+  m_Layer: 0
+  m_Name: Peer (9)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &1961553835
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1961553834}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bTestLocally: 1
+  m_bUseWebRTCTransmitter: 0
+  m_strUniqueDeviceID: 
+  m_bAlive: 0
+  m_usmGameUIStateManager: {fileID: 0}
+  m_gvcGameViewCamera: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iChainStartCandidates: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iBaseChainLinkIndex: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+  m_sstSimState:
+    m_bDrawDebugData: 0
+    m_lPeersAssignedToSlot: 
+    m_fShipHealth: []
+    m_fShipSpawnCountdown: []
+    m_fShipPosX: []
+    m_fShipPosY: []
+    m_fShipVelocityX: []
+    m_fShipVelocityY: []
+    m_fShipRotation: []
+    m_fShipWeaponCoolDown: []
+    m_fLazerPosX: []
+    m_fLazerPosY: []
+    m_fLazerLife: []
+--- !u!4 &1961553836
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1961553834}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 11
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2111602860
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2111602862}
+  - component: {fileID: 2111602861}
+  m_Layer: 0
+  m_Name: Peer (5)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &2111602861
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2111602860}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b156739ae7dd6f64e874b5b740521fd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_bTestLocally: 1
+  m_bUseWebRTCTransmitter: 0
+  m_strUniqueDeviceID: 
+  m_bAlive: 0
+  m_usmGameUIStateManager: {fileID: 0}
+  m_gvcGameViewCamera: {fileID: 0}
+  m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
+    type: 2}
+  m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_lPeerID: 0
+  m_staGlobalMessagingState: 0
+  m_iChainStartCandidates: 0
+  m_iTotalChainLinks: 0
+  m_iActiveChainLinks: 0
+  m_iBaseChainLinkIndex: 0
+  m_iGlobalMessagingChannelIndex: 0
+  m_gmsGlobalMessagingState: []
+  m_stcNetworkDebugData: []
+  m_sstSimState:
+    m_bDrawDebugData: 0
+    m_lPeersAssignedToSlot: 
+    m_fShipHealth: []
+    m_fShipSpawnCountdown: []
+    m_fShipPosX: []
+    m_fShipPosY: []
+    m_fShipVelocityX: []
+    m_fShipVelocityY: []
+    m_fShipRotation: []
+    m_fShipWeaponCoolDown: []
+    m_fLazerPosX: []
+    m_fLazerPosY: []
+    m_fLazerLife: []
+--- !u!4 &2111602862
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2111602860}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.871175, y: 3.3093264, z: -4.88542}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 7
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

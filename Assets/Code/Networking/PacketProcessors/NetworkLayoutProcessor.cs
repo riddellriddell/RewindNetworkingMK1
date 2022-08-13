@@ -10,12 +10,14 @@ namespace Networking
         public struct ConnectionState
         {
             public long m_lConnectionID;
-            public DateTime m_dtmTimeOfConnection;
 
-            public ConnectionState(long lID, DateTime dtmTimeOfConnection)
+            //when did this client conenct to this peer
+            public DateTime m_dtmPeerConnectionTime;
+
+            public ConnectionState(long lID, DateTime dtmPeerConnectionTime, DateTime dtmSwarmConnectionTime)
             {
                 m_lConnectionID = lID;
-                m_dtmTimeOfConnection = dtmTimeOfConnection;
+                m_dtmPeerConnectionTime = dtmPeerConnectionTime;
             }
 
         }
@@ -27,7 +29,7 @@ namespace Networking
             m_conConnectionDetails = new List<ConnectionState>(iConnectionCount);
         }
 
-        public void Add(long lConnectionID, DateTime dtmTimeOfConnection)
+        public void Add(long lConnectionID, DateTime dtmPeerConnectionTime, DateTime dtmSwarmConnectionTime)
         {
             if (m_conConnectionDetails == null)
             {
@@ -39,12 +41,12 @@ namespace Networking
             {
                 if (m_conConnectionDetails[i].m_lConnectionID == lConnectionID)
                 {
-                    m_conConnectionDetails[i] = new ConnectionState(lConnectionID, dtmTimeOfConnection);
+                    m_conConnectionDetails[i] = new ConnectionState(lConnectionID, dtmPeerConnectionTime, dtmSwarmConnectionTime);
                     return;
                 }
             }
 
-            m_conConnectionDetails.Add(new ConnectionState(lConnectionID, dtmTimeOfConnection));
+            m_conConnectionDetails.Add(new ConnectionState(lConnectionID, dtmPeerConnectionTime, dtmSwarmConnectionTime));
         }
 
         //returns list of connection id's not in the passed in conTargetConnections list
@@ -92,6 +94,25 @@ namespace Networking
 
             return false;
         }
+
+        public int FindIndexOfTarget(long lConnectionID)
+        {
+            if (m_conConnectionDetails == null)
+            {
+                return int.MinValue;
+            }
+
+            for (int i = 0; i < m_conConnectionDetails.Count; i++)
+            {
+                if (m_conConnectionDetails[i].m_lConnectionID == lConnectionID)
+                {
+                    return i;
+                }
+            }
+
+            return int.MinValue; ;
+        }
+
     }
 
     //serializer for network data layout
@@ -130,13 +151,13 @@ namespace Networking
         public static void Serialize(ReadByteStream rbsByteStream, ref NetworkLayout.ConnectionState Input)
         {
             ByteStream.Serialize(rbsByteStream, ref Input.m_lConnectionID);
-            ByteStream.Serialize(rbsByteStream, ref Input.m_dtmTimeOfConnection);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_dtmPeerConnectionTime);
         }
 
         public static void Serialize(WriteByteStream wbsByteStream, ref NetworkLayout.ConnectionState Input)
         {
             ByteStream.Serialize(wbsByteStream, ref Input.m_lConnectionID);
-            ByteStream.Serialize(wbsByteStream, ref Input.m_dtmTimeOfConnection);
+            ByteStream.Serialize(wbsByteStream, ref Input.m_dtmPeerConnectionTime);
         }
 
         public static int DataSize(ref NetworkLayout Input)
@@ -155,7 +176,7 @@ namespace Networking
         {
             int iSize = ByteStream.DataSize(Input.m_lConnectionID);
 
-            iSize += ByteStream.DataSize(Input.m_dtmTimeOfConnection);
+            iSize += ByteStream.DataSize(Input.m_dtmPeerConnectionTime);
 
             return iSize;
         }
@@ -241,6 +262,87 @@ namespace Networking
             return lOutput;
         }
 
+        //get all the peers that are connected to this agent or connected to an agent connected to this agent
+        public List<long> GatherKnownConnectedPeersExcludingId(long lIdToExclude)
+        {
+            List<long> lstConnectedPeers = new List<long>();
+
+            //add this peer
+            lstConnectedPeers.Add(ParentNetworkConnection.m_lPeerID);
+
+            foreach (ConnectionNetworkLayoutProcessor clpLayout in ChildConnectionProcessors.Values)
+            {
+                //check if fully connected
+                if (clpLayout.ParentConnection.Status == Connection.ConnectionStatus.Connected)
+                {
+                    if (!lstConnectedPeers.Contains(clpLayout.ParentConnection.m_lUserUniqueID) && clpLayout.ParentConnection.m_lUserUniqueID != lIdToExclude )
+                    {
+                        lstConnectedPeers.Add(clpLayout.ParentConnection.m_lUserUniqueID);
+                    }
+
+                    for (int i = 0; i < clpLayout.m_nlaNetworkLayout.m_conConnectionDetails.Count; i++)
+                    {
+                        if (!lstConnectedPeers.Contains(clpLayout.m_nlaNetworkLayout.m_conConnectionDetails[i].m_lConnectionID) && clpLayout.m_nlaNetworkLayout.m_conConnectionDetails[i].m_lConnectionID != lIdToExclude)
+                        {
+                            lstConnectedPeers.Add(clpLayout.m_nlaNetworkLayout.m_conConnectionDetails[i].m_lConnectionID);
+                        }
+                    }
+                }
+            }
+
+            return lstConnectedPeers;
+        }
+
+        //find the earliest instance of this id
+        public DateTime GetOldestConnectionOfID(long lTargetId)
+        {
+            DateTime dtmFirstTimeSeen = DateTime.MaxValue;
+
+            foreach ( var nlpConnection in ChildConnectionProcessors.Values)
+            {
+                int iTargetIndex = nlpConnection.m_nlaNetworkLayout.FindIndexOfTarget(lTargetId);
+
+                if(iTargetIndex != int.MinValue)
+                {
+                    DateTime conenctionTimeForPeer = nlpConnection.m_nlaNetworkLayout.m_conConnectionDetails[iTargetIndex].m_dtmPeerConnectionTime;
+                    dtmFirstTimeSeen = (conenctionTimeForPeer < dtmFirstTimeSeen) ? conenctionTimeForPeer : dtmFirstTimeSeen;
+                }
+            }
+
+            //if network has not been updated yet get own estimation for connection time
+            if(dtmFirstTimeSeen == DateTime.MaxValue)
+            {
+                dtmFirstTimeSeen = ParentNetworkConnection.m_dtmConnectionTime;
+            }
+
+            return dtmFirstTimeSeen;
+        }
+
+        public long PeerWithOldestConnectionToTarget(long lTargetId)
+        {
+            TimeNetworkProcessor tnpTime = ParentNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
+
+            long lOldestConnection = long.MaxValue;
+
+            //get the network current time
+            DateTime dtmOldestConnection = tnpTime.NetworkTime;
+            
+            foreach(var cnlConnectionLayoutKeyValue in ChildConnectionProcessors)
+            {
+                int iConnectionIndex = cnlConnectionLayoutKeyValue.Value.m_nlaNetworkLayout.FindIndexOfTarget(lTargetId);
+
+                if(iConnectionIndex != int.MinValue && 
+                    cnlConnectionLayoutKeyValue.Value.m_nlaNetworkLayout.m_conConnectionDetails[iConnectionIndex].m_dtmPeerConnectionTime < dtmOldestConnection)
+                {
+                    dtmOldestConnection = cnlConnectionLayoutKeyValue.Value.m_nlaNetworkLayout.m_conConnectionDetails[iConnectionIndex].m_dtmPeerConnectionTime;
+
+                    lOldestConnection = cnlConnectionLayoutKeyValue.Key;
+                }
+            }
+             
+            return lOldestConnection;
+        }
+
         //check that all peers have sent their connection layout data
         public bool HasRecievedNetworkLayoutDataFromAllConnectedPeers()
         {
@@ -278,7 +380,7 @@ namespace Networking
                     Debug.Log($"adding connection: {clpLayout.ParentConnection.m_lUserUniqueID} to network layout");
                     DateTime dtmTimeOfConnection = clpLayout.NetworkTimeOfConnection;
 
-                    networkLayout.Add(clpLayout.ParentConnection.m_lUserUniqueID, dtmTimeOfConnection);
+                    networkLayout.Add(clpLayout.ParentConnection.m_lUserUniqueID, dtmTimeOfConnection, GetOldestConnectionOfID(ParentNetworkConnection.m_lPeerID));
                 }
             }
 

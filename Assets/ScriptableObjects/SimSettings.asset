@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8efc8e892fc55194eb332d9466db51b9, type: 3}
   m_Name: SimSettings
   m_EditorClassIdentifier: 
-  m_iMaxPlayers: 6
+  m_iMaxPlayers: 14
   m_fixShipRespawnTime:
     Int: 6
     Dec_To_3_Places: 0

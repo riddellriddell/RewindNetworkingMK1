@@ -134,6 +134,11 @@ namespace Networking
 
         private void UpdatePacketOutages()
         {
+            if(!m_bEnableOutages)
+            {
+                return;
+            }
+
             if (m_fOutageTimeRemainig > 0)
             {
                 m_fOutageTimeRemainig -= Time.deltaTime;

@@ -96,14 +96,14 @@ namespace GameManagers
         public int m_iDefaultMaxGameSize = 6;
 
         //the amount of time to wait to get gateway before timing out and starting again
-        protected float m_fGettingGatewayTimeout = 20f;
+        protected float m_fGettingGatewayTimeout = 40f;
 
         //the amount of time to wait before timing out a connection through a gateway
-        protected float m_fGatewayConnectionTimeout = 20f;
+        protected float m_fGatewayConnectionTimeout = 240f;
         protected DateTime m_dtmConnectThroughGateStart;
 
         //the timeout time for getting sim state from cluster
-        protected float m_fGettingSimStateTimeOut = 30f;
+        protected float m_fGettingSimStateTimeOut = 240f;
         protected DateTime m_dtmGettingSimStateStart;
 
         //the amount of time ahead of the current network time to schedule a fetch for the game state 
@@ -250,6 +250,11 @@ namespace GameManagers
             else if (m_winWebInterface.ExternalGatewayCommunicationStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Failed &&
                (m_winWebInterface.ExternalGatewayCommunicationStatus.ShouldRestart() == false || m_winWebInterface.NoGatewayExistsOnServer))
             {
+                if(m_winWebInterface.ExternalGatewayCommunicationStatus.ShouldRestart() == false)
+                {
+                    Debug.Log($"User:{m_winWebInterface.UserID} could not get gateway");
+                }
+
                 EnterSetUpNewSim();
                 return;
             }
@@ -395,14 +400,14 @@ namespace GameManagers
             State = ActiveGameState.SetUpNewSim;
 
             //setup the peer to peer network settings 
-           m_ngpGlobalMessagingProcessor.Initalize(m_sdaSimSettingsData.MaxPlayers);
+            m_ngpGlobalMessagingProcessor.Initalize(m_sdaSimSettingsData.MaxPlayers);
 
             //use passed in target sim settings to setup inital sim
 
             // sim manager setup sim
             m_tsmSimManager.InitalizeAsFirstPeer(m_ncnNetworkConnection.m_lPeerID);
 
-            //start setting up the visuals 
+            //start setting up the visuals if visual system is attached
             m_gsvGameStateView?.SetupConstDataViewEntities(m_cdaConstData);
 
         }

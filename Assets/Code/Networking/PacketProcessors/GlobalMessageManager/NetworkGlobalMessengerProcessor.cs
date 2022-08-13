@@ -31,7 +31,7 @@ namespace Networking
         {
             get
             {
-                return TimeSpan.FromSeconds(0.5);
+                return TimeSpan.FromSeconds(3f);
             }
         }
 
@@ -54,12 +54,12 @@ namespace Networking
         //when a peer initaly conencted wait this time before deciding to kick a peer for
         // disconnect, this is to protect against unneccesary kicking while peer conenction is
         // propegating through the swarm 
-        public static TimeSpan JoinVoteGracePeriod { get; } = TimeSpan.FromSeconds(3);
+        public static TimeSpan JoinVoteGracePeriod { get; } = TimeSpan.FromSeconds(30);
 
         //to stop a connecting peer thinking its in the global messaging system too early by mistaking an old connection
         //with the same user id that is still in the process of being kicked as a new one voting in reconnecting peer connections are filtered 
         //by connection start time, this is not garanteed to be 100% accurate so this padding is added just in case
-        public static TimeSpan OldConnectionFilterPadding { get; } = TimeSpan.FromSeconds(4);
+        public static TimeSpan OldConnectionFilterPadding { get; } = TimeSpan.FromSeconds(5);
 
         //fixed max player count but in future will be dynamic? 
         public static int MaxPlayerCount { get; private set; } = 6;
@@ -730,6 +730,7 @@ namespace Networking
                 vmsVoteMessage.m_tupActionPerPeer[i] = new Tuple<byte, long>(0, lPeersToKick[i]);
             }
 
+            //TODO::Temp test to see if kicking is causing the disconnecting
             //create message node and send to all peers
             CreateMessageNode(vmsVoteMessage);
         }
@@ -924,7 +925,8 @@ namespace Networking
                 //create new state packet
                 GlobalChainStatePacket cspStatePacket = ParentConnection.m_cifPacketFactory.CreateType<GlobalChainStatePacket>(GlobalChainStatePacket.TypeID);
 
-                //get all chain links to send 
+                //get all chain links to send starting at the chain link this client has
+                //decided is the best chain link and looping back unitl a max of 10 chain links have been found
                 List<ChainLink> chlLinksToSend = new List<ChainLink>(10);
 
                 ChainLink chlLink = m_tParentPacketProcessor.m_chmChainManager.m_chlBestChainHead;
