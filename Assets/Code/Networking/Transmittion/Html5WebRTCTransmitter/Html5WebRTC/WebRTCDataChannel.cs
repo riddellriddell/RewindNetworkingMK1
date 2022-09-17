@@ -10,8 +10,8 @@ namespace Unity.Html5WebRTC
     {
         //static variables for buffer size 
         //can recieve a maximum of 50 messages at 1000 bytes each before overflowing
-        public static int s_iMessageBufferSize = 1000 * 100;
-        public static int s_iMessageIndexBufferSize = 200 + 1;
+        public static int s_iMessageBufferSize = 1000 * 200;
+        public static int s_iMessageIndexBufferSize = 2000 + 1;
 
         [SerializeField]
         protected class ChannelEvents
@@ -72,12 +72,31 @@ namespace Unity.Html5WebRTC
             m_bDataBuffer[0] = 0;
         }
 
+        /// <summary>
+        /// when the webasm grows in size its memory gets moved invalidating all buffer pointers
+        /// this function updates the javascript code on the new buffer locations
+        /// </summary>
+        public void RePassBufferPointers()
+        {
+            //pass buffers to data channel
+            NativeFunctions.DataChannelSetupMessageBuffer(
+                m_iDataChannelPtr,
+                m_bDataBuffer,
+                m_bDataBuffer.Length,
+                m_iMessageIndexBuffer,
+                m_iMessageIndexBuffer.Length
+                );
+        }
+
         public void Update()
         {
             if(m_bIsAlive == false)
             {
                 return;
             }
+
+            //try to refresh the data pointers 
+            RePassBufferPointers();
 
             //check for events on data channel
             string strEventsJson = NativeFunctions.GetDataChannelEvents(m_iDataChannelPtr);

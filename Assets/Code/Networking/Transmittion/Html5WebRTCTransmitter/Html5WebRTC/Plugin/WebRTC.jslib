@@ -35,9 +35,23 @@ mergeInto(LibraryManager.library, {
   NewConnection:function(strIceServerURL)
   {
     //connection settings 
-    const config = {iceServers: [{urls: "stun:stun.1.google.com:19302"}]};
+    const config =  JSON.parse(Pointer_stringify(strIceServerURL)); 
     
-    var conConnection = new RTCPeerConnection();
+    const exampleConfig = {
+      iceServers: [
+          {
+              username: 'myuser',
+              credential: 'userpassword',
+              urls: 'turn:public_ip_address:3478?transport=tcp'
+          }
+      ]
+  }
+
+    const oldConfig ={iceServers: [{urls: "stun:stun.1.google.com:19302"}]};
+    
+    console.log("oldCandidate: " + JSON.stringify(oldConfig) + " new candidate: " + JSON.stringify(config)  + " example config: " + JSON.stringify(exampleConfig));
+
+    var conConnection = new RTCPeerConnection(config);
 
     var iDataPtr = _MapDataNew(conConnection);
 
@@ -56,8 +70,6 @@ mergeInto(LibraryManager.library, {
     // setup function to handle ice candidates 
     function OnIceCandidate(iceCandidate)
     {
-      
-
       if(iceCandidate.candidate != undefined && iceCandidate.candidate != null && iceCandidate.candidate != "")
       {
         var jsnIceCandidate = JSON.stringify( iceCandidate.candidate);
@@ -327,9 +339,9 @@ mergeInto(LibraryManager.library, {
   {
     var conConnection = mapData.get(iConnectionPtr);
 
-    function OnAddIceCandidateError()
+    function OnAddIceCandidateError(error)
     {
-      console.log("Error adding ice candidate");
+      console.log(`Failure during addIceCandidate(): ${error.name}`);
     };
 
     conConnection.addIceCandidate(JSON.parse(Pointer_stringify(strIceCandidateJson))).catch(OnAddIceCandidateError);
@@ -402,6 +414,12 @@ mergeInto(LibraryManager.library, {
   {
     var dchDataChannel = mapData.get(iDataChannelPtr);
 
+    if( dchDataChannel != undefined && dchDataChannel.bMessageBuffer != undefined && dchDataChannel.bMessageBuffer.length != 0)
+    {
+      //console.log("message buffer already setup");
+      return;
+    }
+
     var bMessagesSharedArray = new Uint8Array(buffer, bMessageByteArray, iByteArraySize);
 
     var iMessageIndexArray =  new Int32Array(buffer, bMessageIndexArray,iMessageIndexArraySize);
@@ -416,6 +434,12 @@ mergeInto(LibraryManager.library, {
     //check that data channel is setup and ready 
     if(dchDataChannel.bIsMessageBufferSetup === undefined || dchDataChannel.bIsMessageBufferSetup == false)
     {
+      return;
+    }
+
+    if( dchDataChannel.bMessageBuffer.length == 0)
+    {
+      console.log("message buffer was detached unable to write message");
       return;
     }
 
@@ -453,6 +477,7 @@ mergeInto(LibraryManager.library, {
  
      //set the write to index 
      dchDataChannel.iMessageIndexBuffer[iIndexIndex] = iWriteEndIndex;
+     
      //update the number of messages in the buffer
      dchDataChannel.iMessageIndexBuffer[0] = dchDataChannel.iMessageIndexBuffer[0] + 1;
 

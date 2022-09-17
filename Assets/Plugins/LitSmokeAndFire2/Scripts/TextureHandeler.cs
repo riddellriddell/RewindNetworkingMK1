@@ -232,7 +232,7 @@ public class TextureHandeler
 		} 
 		else 
 		{
-			_texTargetTexture.Resize (Width, Height);
+			_texTargetTexture.Reinitialize (Width, Height);
 		}
 
 		_texTargetTexture.SetPixels(GetTextureColourArray());
@@ -695,7 +695,7 @@ public class TextureHandeler
 		}
 		else
 		{
-			texTextureToOverride.Resize(Width,Height);
+			texTextureToOverride.Reinitialize(Width,Height);
 
 			//texTextureToOverride. = TextureFormat.RGBA32;
 

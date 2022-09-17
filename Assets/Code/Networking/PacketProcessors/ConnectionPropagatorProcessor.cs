@@ -162,7 +162,7 @@ namespace Networking
 
             //check if we should have conencted by now
             //TODO:: put this in a setting somewhere 
-            TimeSpan forceConnection = TimeSpan.FromSeconds(20);
+            TimeSpan forceConnection = TimeSpan.FromSeconds(ParentNetworkConnection.m_ncsConnectionSettings.m_fForceConnectionTime);
             if(dtmThisPeerConnectionTime < m_tnpNetworkTime.NetworkTime - forceConnection &&
                dtmTargetPeerConnectionTime < m_tnpNetworkTime.NetworkTime - forceConnection)
             {

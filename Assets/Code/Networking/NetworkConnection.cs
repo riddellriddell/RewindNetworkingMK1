@@ -58,14 +58,16 @@ namespace Networking
 
         public IPeerTransmitterFactory m_ptfPeerTransmitterFactory;
 
-        public NetworkConnection(long lUserID, IPeerTransmitterFactory ptfPeerTransmitterFactory)
+        public NetworkConnectionSettings m_ncsConnectionSettings;
+
+        public NetworkConnection(long lUserID, IPeerTransmitterFactory ptfPeerTransmitterFactory, NetworkConnectionSettings ncsSettings)
         {
             //generate a unique ID
-            // m_lPlayerUniqueID = SystemInfo.deviceUniqueIdentifier.GetHashCode();
-            //m_lUserUniqueID = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
             m_lPeerID = lUserID;
 
             m_ptfPeerTransmitterFactory = ptfPeerTransmitterFactory;
+
+            m_ncsConnectionSettings = ncsSettings;
 
         }
 
@@ -85,6 +87,8 @@ namespace Networking
             }
 
             nppProcessor.OnAddToNetwork(this);
+            nppProcessor.ApplyNetworkSettings(this.m_ncsConnectionSettings);
+
         }
 
         public T GetPacketProcessor<T>() where T : BaseNetworkPacketProcessor
@@ -173,15 +177,15 @@ namespace Networking
             //set connection values 
 
             //max amount of data to try and send in a single packet
-            conNewConnection.m_iMaxBytesToSend = 1000;
+            conNewConnection.m_iMaxBytesToSend = m_ncsConnectionSettings.m_iMaxBytesToSend;
 
-            conNewConnection.m_iMaxPackestInFlight = 100;
+            conNewConnection.m_iMaxPackestInFlight = m_ncsConnectionSettings.m_iMaxPackestInFlight;
 
-            conNewConnection.m_tspConnectionTimeOutTime = TimeSpan.FromSeconds(20);
+            conNewConnection.m_tspConnectionTimeOutTime = TimeSpan.FromSeconds(m_ncsConnectionSettings.m_fConnectionTimeOutTime);
 
-            conNewConnection.m_tspConnectionEstablishTimeOut = TimeSpan.FromSeconds(60);
+            conNewConnection.m_tspConnectionEstablishTimeOut = TimeSpan.FromSeconds(m_ncsConnectionSettings.m_fConnectionEstablishTimeOut);
 
-            conNewConnection.m_tspMaxTimeBetweenMessages = TimeSpan.FromSeconds(0.5f);
+            conNewConnection.m_tspMaxTimeBetweenMessages = TimeSpan.FromSeconds(m_ncsConnectionSettings.m_fMaxTimeBetweenMessages);
 
             //process new connection 
             ProcessNewConnection(conNewConnection);

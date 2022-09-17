@@ -15,6 +15,11 @@ namespace Networking
         
         public Connection ParentConnection { get; private set; } = null;
 
+        public virtual void ApplySettings(NetworkConnectionSettings ncsNetworkSettings)
+        {
+
+        }
+
         //this gets called after the connection packet processor has been added to the 
         //conneciton and all of its setup values have been set
         public virtual void Start()

@@ -18,8 +18,13 @@ namespace Networking
 
         public override void OnAddToNetwork(NetworkConnection ncnNetwork)
         {
-            m_bSharedBuffer = new byte[s_iStartBufferSize];
             base.OnAddToNetwork(ncnNetwork);
+        }
+
+        public override void ApplyNetworkSettings(NetworkConnectionSettings ncsSettings)
+        {
+            base.ApplyNetworkSettings(ncsSettings);
+            m_bSharedBuffer = new byte[ncsSettings.s_iStartBufferSize];
         }
 
         protected override void AddDependentPacketsToPacketFactory(ClassWithIDFactory cifPacketFactory)

@@ -37,9 +37,9 @@ namespace Unity.Html5WebRTC
         //pointer to the connection in javascript memory
         protected int m_iConnectionPtr;
                
-        public WebRTCConnection(string strIceUrl)
+        public WebRTCConnection(RTCConnectionConfig ccfConnectionConfig)
         {
-            m_iConnectionPtr = NativeFunctions.NewConnection(strIceUrl);
+            m_iConnectionPtr = NativeFunctions.NewConnection(JsonUtility.ToJson(ccfConnectionConfig));
         }
 
         public void Update()

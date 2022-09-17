@@ -10,6 +10,8 @@ namespace Networking
     {
         public int m_iNumberOfPeersToCreate;
 
+        public NetworkConnectionSettings ncsNetworkSettings;
+
         public List<NetworkConnection> m_ncnPeerNetworks;
 
         public bool m_bAllPeersConnected = false;
@@ -53,7 +55,7 @@ namespace Networking
 
                 IPeerTransmitterFactory m_ptfTransmitterFactory = CreateTransmitterFactory();
 
-                NetworkConnection ncnNewNetworkConnection = new NetworkConnection(lPeerID,m_ptfTransmitterFactory);
+                NetworkConnection ncnNewNetworkConnection = new NetworkConnection(lPeerID,m_ptfTransmitterFactory, ncsNetworkSettings);
 
                 SetupPeerPacketProcessors(ncnNewNetworkConnection);
 

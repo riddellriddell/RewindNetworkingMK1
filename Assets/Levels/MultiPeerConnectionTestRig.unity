@@ -133,6 +133,7 @@ GameObject:
   m_Component:
   - component: {fileID: 96034788}
   - component: {fileID: 96034787}
+  - component: {fileID: 96034789}
   m_Layer: 0
   m_Name: Peer (4)
   m_TagString: Untagged
@@ -160,7 +161,11 @@ MonoBehaviour:
   m_gvcGameViewCamera: {fileID: 0}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_mgsMapSettingsDataInderface: {fileID: 11400000, guid: 04df9dd3da8d0a149a14cf17c1655548,
+    type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_ncsNetworkConnectionSettings: {fileID: 11400000, guid: 3e179e884a5a62d408608a40b3c4aa4f,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
@@ -199,6 +204,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &96034789
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 96034786}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab02d604defa88042a9f6118aef1bb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fChanceOfDirectionChange: 1
+  m_fChanceOfSpecial: 4
+  m_fCanceSpecialIsMissile: 0.5
+  m_fMaxMissileHoldTime: 3
 --- !u!1 &112184870
 GameObject:
   m_ObjectHideFlags: 0
@@ -209,6 +230,7 @@ GameObject:
   m_Component:
   - component: {fileID: 112184872}
   - component: {fileID: 112184871}
+  - component: {fileID: 112184873}
   m_Layer: 0
   m_Name: Peer (7)
   m_TagString: Untagged
@@ -236,7 +258,11 @@ MonoBehaviour:
   m_gvcGameViewCamera: {fileID: 0}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_mgsMapSettingsDataInderface: {fileID: 11400000, guid: 04df9dd3da8d0a149a14cf17c1655548,
+    type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_ncsNetworkConnectionSettings: {fileID: 11400000, guid: 3e179e884a5a62d408608a40b3c4aa4f,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
@@ -275,6 +301,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 9
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &112184873
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 112184870}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab02d604defa88042a9f6118aef1bb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fChanceOfDirectionChange: 1
+  m_fChanceOfSpecial: 4
+  m_fCanceSpecialIsMissile: 0.5
+  m_fMaxMissileHoldTime: 3
 --- !u!1 &468745024
 GameObject:
   m_ObjectHideFlags: 0
@@ -285,6 +327,7 @@ GameObject:
   m_Component:
   - component: {fileID: 468745026}
   - component: {fileID: 468745025}
+  - component: {fileID: 468745027}
   m_Layer: 0
   m_Name: Peer (14)
   m_TagString: Untagged
@@ -312,7 +355,11 @@ MonoBehaviour:
   m_gvcGameViewCamera: {fileID: 0}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_mgsMapSettingsDataInderface: {fileID: 11400000, guid: 04df9dd3da8d0a149a14cf17c1655548,
+    type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_ncsNetworkConnectionSettings: {fileID: 11400000, guid: 3e179e884a5a62d408608a40b3c4aa4f,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
@@ -351,6 +398,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 16
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &468745027
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 468745024}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab02d604defa88042a9f6118aef1bb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fChanceOfDirectionChange: 1
+  m_fChanceOfSpecial: 4
+  m_fCanceSpecialIsMissile: 0.5
+  m_fMaxMissileHoldTime: 3
 --- !u!1 &805625185
 GameObject:
   m_ObjectHideFlags: 0
@@ -361,6 +424,7 @@ GameObject:
   m_Component:
   - component: {fileID: 805625187}
   - component: {fileID: 805625186}
+  - component: {fileID: 805625188}
   m_Layer: 0
   m_Name: Peer (11)
   m_TagString: Untagged
@@ -388,7 +452,11 @@ MonoBehaviour:
   m_gvcGameViewCamera: {fileID: 0}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_mgsMapSettingsDataInderface: {fileID: 11400000, guid: 04df9dd3da8d0a149a14cf17c1655548,
+    type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_ncsNetworkConnectionSettings: {fileID: 11400000, guid: 3e179e884a5a62d408608a40b3c4aa4f,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
@@ -427,6 +495,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 13
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &805625188
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 805625185}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab02d604defa88042a9f6118aef1bb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fChanceOfDirectionChange: 1
+  m_fChanceOfSpecial: 4
+  m_fCanceSpecialIsMissile: 0.5
+  m_fMaxMissileHoldTime: 3
 --- !u!1 &832455449
 GameObject:
   m_ObjectHideFlags: 0
@@ -464,7 +548,7 @@ MonoBehaviour:
   m_fMaxOutage: 8
   m_fMinTimeBetweenOutages: 3
   m_fMaxTimeBetweenOutages: 9
-  m_bEnablePacketLoss: 0
+  m_bEnablePacketLoss: 1
   m_fPacketLoss: 0.3
 --- !u!4 &832455451
 Transform:
@@ -490,6 +574,7 @@ GameObject:
   m_Component:
   - component: {fileID: 987774160}
   - component: {fileID: 987774159}
+  - component: {fileID: 987774161}
   m_Layer: 0
   m_Name: Peer (10)
   m_TagString: Untagged
@@ -517,7 +602,11 @@ MonoBehaviour:
   m_gvcGameViewCamera: {fileID: 0}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_mgsMapSettingsDataInderface: {fileID: 11400000, guid: 04df9dd3da8d0a149a14cf17c1655548,
+    type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_ncsNetworkConnectionSettings: {fileID: 11400000, guid: 3e179e884a5a62d408608a40b3c4aa4f,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
@@ -556,6 +645,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 12
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &987774161
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 987774158}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab02d604defa88042a9f6118aef1bb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fChanceOfDirectionChange: 1
+  m_fChanceOfSpecial: 4
+  m_fCanceSpecialIsMissile: 0.5
+  m_fMaxMissileHoldTime: 3
 --- !u!1 &1098006610
 GameObject:
   m_ObjectHideFlags: 0
@@ -566,6 +671,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1098006612}
   - component: {fileID: 1098006611}
+  - component: {fileID: 1098006613}
   m_Layer: 0
   m_Name: Peer (13)
   m_TagString: Untagged
@@ -593,7 +699,11 @@ MonoBehaviour:
   m_gvcGameViewCamera: {fileID: 0}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_mgsMapSettingsDataInderface: {fileID: 11400000, guid: 04df9dd3da8d0a149a14cf17c1655548,
+    type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_ncsNetworkConnectionSettings: {fileID: 11400000, guid: 3e179e884a5a62d408608a40b3c4aa4f,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
@@ -632,6 +742,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 15
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1098006613
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1098006610}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab02d604defa88042a9f6118aef1bb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fChanceOfDirectionChange: 1
+  m_fChanceOfSpecial: 4
+  m_fCanceSpecialIsMissile: 0.5
+  m_fMaxMissileHoldTime: 3
 --- !u!1 &1295798390
 GameObject:
   m_ObjectHideFlags: 0
@@ -642,6 +768,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1295798392}
   - component: {fileID: 1295798391}
+  - component: {fileID: 1295798393}
   m_Layer: 0
   m_Name: Peer (12)
   m_TagString: Untagged
@@ -669,7 +796,11 @@ MonoBehaviour:
   m_gvcGameViewCamera: {fileID: 0}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_mgsMapSettingsDataInderface: {fileID: 11400000, guid: 04df9dd3da8d0a149a14cf17c1655548,
+    type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_ncsNetworkConnectionSettings: {fileID: 11400000, guid: 3e179e884a5a62d408608a40b3c4aa4f,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
@@ -708,6 +839,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 14
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1295798393
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1295798390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab02d604defa88042a9f6118aef1bb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fChanceOfDirectionChange: 1
+  m_fChanceOfSpecial: 4
+  m_fCanceSpecialIsMissile: 0.5
+  m_fMaxMissileHoldTime: 3
 --- !u!1 &1355680418
 GameObject:
   m_ObjectHideFlags: 0
@@ -718,6 +865,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1355680420}
   - component: {fileID: 1355680419}
+  - component: {fileID: 1355680421}
   m_Layer: 0
   m_Name: Peer (3)
   m_TagString: Untagged
@@ -745,7 +893,11 @@ MonoBehaviour:
   m_gvcGameViewCamera: {fileID: 0}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_mgsMapSettingsDataInderface: {fileID: 11400000, guid: 04df9dd3da8d0a149a14cf17c1655548,
+    type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_ncsNetworkConnectionSettings: {fileID: 11400000, guid: 3e179e884a5a62d408608a40b3c4aa4f,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
@@ -784,6 +936,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1355680421
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1355680418}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab02d604defa88042a9f6118aef1bb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fChanceOfDirectionChange: 1
+  m_fChanceOfSpecial: 4
+  m_fCanceSpecialIsMissile: 0.5
+  m_fMaxMissileHoldTime: 3
 --- !u!1 &1483128916
 GameObject:
   m_ObjectHideFlags: 0
@@ -794,13 +962,14 @@ GameObject:
   m_Component:
   - component: {fileID: 1483128918}
   - component: {fileID: 1483128917}
+  - component: {fileID: 1483128919}
   m_Layer: 0
   m_Name: Peer (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1483128917
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -821,7 +990,11 @@ MonoBehaviour:
   m_gvcGameViewCamera: {fileID: 0}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_mgsMapSettingsDataInderface: {fileID: 11400000, guid: 04df9dd3da8d0a149a14cf17c1655548,
+    type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_ncsNetworkConnectionSettings: {fileID: 11400000, guid: 3e179e884a5a62d408608a40b3c4aa4f,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
@@ -860,6 +1033,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1483128919
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1483128916}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab02d604defa88042a9f6118aef1bb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fChanceOfDirectionChange: 1
+  m_fChanceOfSpecial: 4
+  m_fCanceSpecialIsMissile: 0.5
+  m_fMaxMissileHoldTime: 3
 --- !u!1 &1505663426
 GameObject:
   m_ObjectHideFlags: 0
@@ -870,6 +1059,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1505663428}
   - component: {fileID: 1505663427}
+  - component: {fileID: 1505663429}
   m_Layer: 0
   m_Name: Peer (8)
   m_TagString: Untagged
@@ -897,7 +1087,11 @@ MonoBehaviour:
   m_gvcGameViewCamera: {fileID: 0}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_mgsMapSettingsDataInderface: {fileID: 11400000, guid: 04df9dd3da8d0a149a14cf17c1655548,
+    type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_ncsNetworkConnectionSettings: {fileID: 11400000, guid: 3e179e884a5a62d408608a40b3c4aa4f,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
@@ -936,6 +1130,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 10
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1505663429
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1505663426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab02d604defa88042a9f6118aef1bb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fChanceOfDirectionChange: 1
+  m_fChanceOfSpecial: 4
+  m_fCanceSpecialIsMissile: 0.5
+  m_fMaxMissileHoldTime: 3
 --- !u!1 &1596307946
 GameObject:
   m_ObjectHideFlags: 0
@@ -1007,7 +1217,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1652309641}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 80ee9de96deb5d04fa9edf44502b7d0d, type: 3}
   m_Name: 
@@ -1027,12 +1237,12 @@ MonoBehaviour:
   - {fileID: 1295798391}
   - {fileID: 1098006611}
   - {fileID: 468745025}
-  m_fInitalTesterDelayTime: 4
+  m_fInitalTesterDelayTime: 3
   m_fMinAliveTime: 5
   m_fMinDeadTime: 5
   m_iMinActivePlayers: 2
   m_fMinSwarmAliveTime: 5
-  m_tsmTestMode: 2
+  m_tsmTestMode: 1
   m_fChanceOfConenct: 0.08
   m_fChanceOfDisconnect: 0.04
   m_fTimeBetweenAdditions: 5
@@ -1061,6 +1271,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1656940735}
   - component: {fileID: 1656940734}
+  - component: {fileID: 1656940736}
   m_Layer: 0
   m_Name: Peer (2)
   m_TagString: Untagged
@@ -1088,7 +1299,11 @@ MonoBehaviour:
   m_gvcGameViewCamera: {fileID: 0}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_mgsMapSettingsDataInderface: {fileID: 11400000, guid: 04df9dd3da8d0a149a14cf17c1655548,
+    type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_ncsNetworkConnectionSettings: {fileID: 11400000, guid: 3e179e884a5a62d408608a40b3c4aa4f,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
@@ -1127,6 +1342,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1656940736
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1656940733}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab02d604defa88042a9f6118aef1bb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fChanceOfDirectionChange: 1
+  m_fChanceOfSpecial: 4
+  m_fCanceSpecialIsMissile: 0.5
+  m_fMaxMissileHoldTime: 3
 --- !u!1 &1738577102
 GameObject:
   m_ObjectHideFlags: 0
@@ -1137,6 +1368,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1738577104}
   - component: {fileID: 1738577103}
+  - component: {fileID: 1738577105}
   m_Layer: 0
   m_Name: Peer (6)
   m_TagString: Untagged
@@ -1164,7 +1396,11 @@ MonoBehaviour:
   m_gvcGameViewCamera: {fileID: 0}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_mgsMapSettingsDataInderface: {fileID: 11400000, guid: 04df9dd3da8d0a149a14cf17c1655548,
+    type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_ncsNetworkConnectionSettings: {fileID: 11400000, guid: 3e179e884a5a62d408608a40b3c4aa4f,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
@@ -1203,6 +1439,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 8
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1738577105
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1738577102}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab02d604defa88042a9f6118aef1bb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fChanceOfDirectionChange: 1
+  m_fChanceOfSpecial: 4
+  m_fCanceSpecialIsMissile: 0.5
+  m_fMaxMissileHoldTime: 3
 --- !u!1 &1961553834
 GameObject:
   m_ObjectHideFlags: 0
@@ -1213,6 +1465,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1961553836}
   - component: {fileID: 1961553835}
+  - component: {fileID: 1961553837}
   m_Layer: 0
   m_Name: Peer (9)
   m_TagString: Untagged
@@ -1240,7 +1493,11 @@ MonoBehaviour:
   m_gvcGameViewCamera: {fileID: 0}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_mgsMapSettingsDataInderface: {fileID: 11400000, guid: 04df9dd3da8d0a149a14cf17c1655548,
+    type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_ncsNetworkConnectionSettings: {fileID: 11400000, guid: 3e179e884a5a62d408608a40b3c4aa4f,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
@@ -1279,6 +1536,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 11
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1961553837
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1961553834}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab02d604defa88042a9f6118aef1bb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fChanceOfDirectionChange: 1
+  m_fChanceOfSpecial: 4
+  m_fCanceSpecialIsMissile: 0.5
+  m_fMaxMissileHoldTime: 3
 --- !u!1 &2111602860
 GameObject:
   m_ObjectHideFlags: 0
@@ -1289,6 +1562,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2111602862}
   - component: {fileID: 2111602861}
+  - component: {fileID: 2111602863}
   m_Layer: 0
   m_Name: Peer (5)
   m_TagString: Untagged
@@ -1316,7 +1590,11 @@ MonoBehaviour:
   m_gvcGameViewCamera: {fileID: 0}
   m_sdiSettingsDataInderface: {fileID: 11400000, guid: 33b4a0c5f8ff8074cbea27a10fed0ff3,
     type: 2}
+  m_mgsMapSettingsDataInderface: {fileID: 11400000, guid: 04df9dd3da8d0a149a14cf17c1655548,
+    type: 2}
   m_ecsErrorCorrectionSettings: {fileID: 11400000, guid: 5a95c755ec027864aa212cf2b4635df7,
+    type: 2}
+  m_ncsNetworkConnectionSettings: {fileID: 11400000, guid: 3e179e884a5a62d408608a40b3c4aa4f,
     type: 2}
   m_lPeerID: 0
   m_staGlobalMessagingState: 0
@@ -1355,3 +1633,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 7
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2111602863
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2111602860}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab02d604defa88042a9f6118aef1bb23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_fChanceOfDirectionChange: 1
+  m_fChanceOfSpecial: 4
+  m_fCanceSpecialIsMissile: 0.5
+  m_fMaxMissileHoldTime: 3

@@ -96,7 +96,7 @@ namespace Networking
 
         //adds the effect of all the messages after the last message processed by gmsStartMessageState state 
         //and stores the result in LatestState
-        public void UpdateFinalMessageState(long lLocalPeerID, bool bActivePeer, GlobalMessagingState gmsStartMessageState,NetworkingDataBridge ndbNetworkingDataBridge)
+        public void UpdateFinalMessageState(long lLocalPeerID, bool bActivePeer, GlobalMessagingState gmsStartMessageState,NetworkingDataBridge ndbNetworkingDataBridge, TimeSpan tspVoteTimeout, int iMaxPlayerCount)
         {
             LatestState.ResetToState(gmsStartMessageState);
 
@@ -111,11 +111,11 @@ namespace Networking
                 //check if message is new and should be added to network bridge message buffer
                 if(UnConfirmedMessageBuffer.Values[i].m_svaMessageSortingValue.CompareTo(m_svaStateProcessedUpTo) > -1)
                 {
-                    LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i], ndbNetworkingDataBridge);
+                    LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i], tspVoteTimeout, iMaxPlayerCount, ndbNetworkingDataBridge);
                 }
-                else
+                else    
                 {
-                    LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i], null);
+                    LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i], tspVoteTimeout, iMaxPlayerCount, null);
                 }                
             }
 

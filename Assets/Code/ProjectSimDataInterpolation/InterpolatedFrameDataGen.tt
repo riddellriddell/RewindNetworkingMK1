@@ -3,6 +3,7 @@
 <#@ import namespace="Sim" #>
 <#@ import namespace="System.Reflection" #>
 <#@ import namespace="System.Collections" #>
+<#@ output extension=".cs"#>
 
 using System.Collections;
 using System.Collections.Generic;

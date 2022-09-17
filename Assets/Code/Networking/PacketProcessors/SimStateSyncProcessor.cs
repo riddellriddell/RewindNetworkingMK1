@@ -8,12 +8,12 @@ namespace Networking
     public class SimStateSyncNetworkProcessor : ManagedNetworkPacketProcessor<SimStateSyncConnectionProcessor>
     {
         //the maximum size a single segment of the sim state will be
-        public static int MaxSegmentSize { get; } = 300;
+        public int MaxSegmentSize { get; private set; }
 
-        public static TimeSpan StateRequestTimeOut { get; } = TimeSpan.FromSeconds(10);
-        public static TimeSpan SegmentRequestTimeOut { get; } = TimeSpan.FromSeconds(2);
+        public TimeSpan StateRequestTimeOut { get; private set; }
+        public TimeSpan SegmentRequestTimeOut { get; private set; }
 
-        public static float MaxFailedRequestPercent = 0.5f;
+        public float MaxFailedRequestPercent { get; private set; }
 
         public enum State
         {
@@ -87,6 +87,16 @@ namespace Networking
         public SimStateSyncNetworkProcessor(NetworkingDataBridge ndbNetworkDataBridge): base()
         {
             m_ndbNetworkDataBridge = ndbNetworkDataBridge;
+        }
+
+        public override void ApplyNetworkSettings(NetworkConnectionSettings ncsSettings)
+        {
+            base.ApplyNetworkSettings(ncsSettings);
+
+            MaxSegmentSize = ncsSettings.m_iMaxSegmentSize;
+            StateRequestTimeOut = TimeSpan.FromSeconds(ncsSettings.m_fStateRequestTimeOut);
+            SegmentRequestTimeOut = TimeSpan.FromSeconds(ncsSettings.m_fSegmentRequestTimeOut);
+            MaxFailedRequestPercent = ncsSettings.m_fMaxFailedRequestPercent;
         }
 
         public override void Update()
@@ -677,7 +687,7 @@ namespace Networking
 
         public void OnNewRequestForSimDataAtTime( DateTime dtmTimeOfRequest, long lNewRequestFromPeerID)
         {         
-            DateTime dtmTimeOutTime = dtmTimeOfRequest + SimStateSyncNetworkProcessor.StateRequestTimeOut;
+            DateTime dtmTimeOutTime = dtmTimeOfRequest + this.StateRequestTimeOut;
 
             if (m_dtmTimeOfNextOutDataTimeOut > dtmTimeOutTime)
             {
@@ -937,8 +947,8 @@ namespace Networking
                 if (m_lOutSimDataSegmentsHash[i] == lDataHash)
                 {
                     //calculate start byte index for segment
-                    int iStart = SimStateSyncNetworkProcessor.MaxSegmentSize * i;
-                    int iCount = Math.Min(SimStateSyncNetworkProcessor.MaxSegmentSize, m_bSimDataAtPeerRequest.Length - iStart);
+                    int iStart = m_tParentPacketProcessor.MaxSegmentSize * i;
+                    int iCount = Math.Min(m_tParentPacketProcessor.MaxSegmentSize, m_bSimDataAtPeerRequest.Length - iStart);
 
                     //send data segment to peer 
                     SimSegmentSyncDataPacket ssdSegmentData = ParentConnection.m_cifPacketFactory.CreateType<SimSegmentSyncDataPacket>(SimSegmentSyncDataPacket.TypeID);
@@ -963,7 +973,7 @@ namespace Networking
         public void BuildSegmentDataHashArray()
         {
             //calculate the numer of segments needed
-            int iSegmentCount = (m_bSimDataAtPeerRequest.Length + SimStateSyncNetworkProcessor.MaxSegmentSize - 1) / SimStateSyncNetworkProcessor.MaxSegmentSize;
+            int iSegmentCount = (m_bSimDataAtPeerRequest.Length + m_tParentPacketProcessor.MaxSegmentSize - 1) / m_tParentPacketProcessor.MaxSegmentSize;
 
             //check segment count array is correct size 
             if (m_lOutSimDataSegmentsHash == null || iSegmentCount != m_lOutSimDataSegmentsHash.Length)
@@ -976,9 +986,9 @@ namespace Networking
                 for (int i = 0; i < iSegmentCount; i++)
                 {
                     //where to start generating the hash from
-                    int iOffset = i * SimStateSyncNetworkProcessor.MaxSegmentSize;
+                    int iOffset = i * m_tParentPacketProcessor.MaxSegmentSize;
                     //bytes to use in hash generation
-                    int iCount = Math.Min(m_bSimDataAtPeerRequest.Length - iOffset, SimStateSyncNetworkProcessor.MaxSegmentSize);
+                    int iCount = Math.Min(m_bSimDataAtPeerRequest.Length - iOffset, m_tParentPacketProcessor.MaxSegmentSize);
 
                     //generate hash
                     byte[] bHash = md5Hash.ComputeHash(m_bSimDataAtPeerRequest, iOffset, iCount);
@@ -997,7 +1007,7 @@ namespace Networking
                 return;
             }
 
-            DateTime dtmTimeOutTime = m_dtmTimeOfOutSimState + SimStateSyncNetworkProcessor.StateRequestTimeOut;
+            DateTime dtmTimeOutTime = m_dtmTimeOfOutSimState + m_tParentPacketProcessor.StateRequestTimeOut;
             
             //check if request for game state has timed out
             if (dtmTimeOutTime < dtmCurrentTime)

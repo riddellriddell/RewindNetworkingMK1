@@ -20,6 +20,8 @@ namespace GameStateView
 
         public GameObject m_objLazerPrefab;
 
+        public GameObject m_objLazerPreFirePrefab;
+
         public GameObject m_objLazerFirePrefab;
 
         public int m_iNumberOfImpactsPerShip;
@@ -29,6 +31,8 @@ namespace GameStateView
         public GameObject m_objShipSpawnPrefab;
 
         public GameObject m_objShipDiePrefab;
+
+        private List<GameObject> m_objLazerPreFirePool;
 
         private List<GameObject> m_objLazerFirePool;
 
@@ -101,6 +105,9 @@ namespace GameStateView
 
             //upate all lazers
             UpdateLazerStates(ifdInterpolatedFrameData);
+
+            //update all lazer charge effects
+            AllignLazerPreFireEffectsToShips();
 
             //update effect positions
             AllignLazerFireEffectsToShips();
@@ -264,6 +271,29 @@ namespace GameStateView
                     }
                     else
                     {
+
+                        //check if ship started charging laser 
+                        if (ifdInterpolatedFrameData.m_fixTimeUntilLaserFireErrorAdjusted[i] > 0)
+                        {
+                            Debug.Log("In Pre Fire");
+
+                            //check if ship has charge effect activated
+                            if (m_objLazerPreFirePool[i].activeInHierarchy == false)
+                            {
+                                Debug.Log("Activating Pre Fire Effect");
+
+                                //turn on laser charge 
+                                SpawnPreFireEffect(i);
+                            }
+                        }
+                        else
+                        {
+                            if (m_objLazerPreFirePool[i].activeInHierarchy == true)
+                            {
+                                m_objLazerPreFirePool[i].SetActive(false);
+                            }
+                        }
+
                         //move to location
                         m_emaEntityManager.SetComponentData(
                         m_entShips[i],
@@ -423,6 +453,28 @@ namespace GameStateView
             }
 
             //clean up
+            if (m_objLazerPreFirePool != null)
+            {
+                for (int i = 0; i < m_objLazerFirePool.Count; i++)
+                {
+                    Destroy(m_objLazerFirePool[i]);
+                }
+            }
+
+            //setup lazer charge effects 
+            m_objLazerPreFirePool = new List<GameObject>(iNumberOfShips);
+
+            for (int i = 0; i < iNumberOfShips; i++)
+            {
+                GameObject objNewObject = GameObject.Instantiate(m_objLazerPreFirePrefab, m_objEffectParentObject.transform);
+
+                objNewObject.SetActive(false);
+
+                m_objLazerFirePool.Add(objNewObject);
+            }
+
+
+            //clean up
             if (m_objLazerFirePool != null)
             {
                 for (int i = 0; i < m_objLazerFirePool.Count; i++)
@@ -512,6 +564,21 @@ namespace GameStateView
             }
         }
 
+        protected void SpawnPreFireEffect(int iShipIndex)
+        {
+            //get fire effect from pool
+            GameObject objPreFireEffect = m_objLazerPreFirePool[iShipIndex];
+
+            //move to correct position
+            objPreFireEffect.transform.localPosition = m_emaEntityManager.GetComponentData<Translation>(m_entShips[iShipIndex]).Value;
+            objPreFireEffect.transform.localScale = Vector3.one * m_emaEntityManager.GetComponentData<Scale>(m_entShips[iShipIndex]).Value;
+            objPreFireEffect.transform.localRotation = m_emaEntityManager.GetComponentData<Rotation>(m_entShips[iShipIndex]).Value;
+
+            //enable effect
+            objPreFireEffect.SetActive(false);
+            objPreFireEffect.SetActive(true);
+        }
+
         protected void SpawnFireEffect(int iShipIndex)
         {
             //get fire effect from pool
@@ -573,6 +640,19 @@ namespace GameStateView
             //enable effect
             objImpactEffect.SetActive(false);
             objImpactEffect.SetActive(true);
+        }
+
+        protected void AllignLazerPreFireEffectsToShips()
+        {
+            for (int i = 0; i < m_objLazerPreFirePool.Count; i++)
+            {
+                if (m_objLazerPreFirePool[i].activeInHierarchy)
+                {
+                    m_objLazerPreFirePool[i].transform.localPosition = m_emaEntityManager.GetComponentData<Translation>(m_entShips[i]).Value;
+                    m_objLazerPreFirePool[i].transform.localScale = Vector3.one * m_emaEntityManager.GetComponentData<Scale>(m_entShips[i]).Value;
+                    m_objLazerPreFirePool[i].transform.localRotation = m_emaEntityManager.GetComponentData<Rotation>(m_entShips[i]).Value;
+                }
+            }
         }
 
         protected void AllignLazerFireEffectsToShips()

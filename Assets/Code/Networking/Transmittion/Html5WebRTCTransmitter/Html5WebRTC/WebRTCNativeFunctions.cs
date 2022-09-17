@@ -15,7 +15,7 @@ namespace Unity.Html5WebRTC
         public static extern void Initialize();
         
         [DllImport("__Internal")]
-        public static extern int NewConnection(string strIceUrl);
+        public static extern int NewConnection(string strConfig);
 
         [DllImport("__Internal")]
         public static extern string GetConnectionEvents(int iConnectionPtr);

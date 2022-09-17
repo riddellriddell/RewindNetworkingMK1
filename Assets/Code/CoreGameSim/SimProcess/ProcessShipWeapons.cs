@@ -9,13 +9,17 @@ namespace Sim
         Fix AutoFireConeRangeSqr { get; }
 
         Fix TimeBetweenShots { get; }
+
+        Fix ShotsChargeTime { get; }
     }
 
     public interface IShipWeaponFrameData
     {
         byte[] LazerFireIndex { get; set; }
 
-        Fix[] TimeUntilNextFire { get; set; }
+        Fix[] TimeUntilLaserFire { get; set; }
+
+        Fix[] TimeUntilLaserReset { get; set; }
     }
 
     public class ProcessShipWeapons<TFrameData, TConstData, TSettingsData> :
@@ -32,7 +36,8 @@ namespace Sim
         public bool ApplySetupProcess(uint iTick, in TSettingsData sdaSettingsData, long lFirstPeerID, ref TFrameData fdaFrameData)
         {
             fdaFrameData.LazerFireIndex = new byte[sdaSettingsData.MaxPlayers];
-            fdaFrameData.TimeUntilNextFire = new Fix[sdaSettingsData.MaxPlayers];
+            fdaFrameData.TimeUntilLaserFire = new Fix[sdaSettingsData.MaxPlayers];
+            fdaFrameData.TimeUntilLaserReset = new Fix[sdaSettingsData.MaxPlayers];
 
             return true;
         }
@@ -45,11 +50,36 @@ namespace Sim
                 //check peer assigned to slot
                 if (fdaOutFrameData.PeerSlotAssignment[i] != long.MinValue && fdaOutFrameData.ShipHealth[i] > Fix.Zero)
                 {
+                    //apply weapon charge
+                    fdaOutFrameData.TimeUntilLaserFire[i] = fdaOutFrameData.TimeUntilLaserFire[i] - sdaSettingsData.SecondsPerTick;
+
                     //apply weapon cooldown
-                    fdaOutFrameData.TimeUntilNextFire[i] = fdaOutFrameData.TimeUntilNextFire[i] - sdaSettingsData.SecondsPerTick;
+                    fdaOutFrameData.TimeUntilLaserReset[i] = fdaOutFrameData.TimeUntilLaserReset[i] - sdaSettingsData.SecondsPerTick;
+
+                    //check if it is time to fire weapon 
+                    if (fdaOutFrameData.TimeUntilLaserFire[i] < Fix.Zero && (fdaOutFrameData.TimeUntilLaserFire[i] + sdaSettingsData.SecondsPerTick) >= Fix.Zero)
+                    {
+                        //Fire Lazer
+                        //increment fire index 
+                        fdaOutFrameData.LazerFireIndex[i] = (byte)((fdaOutFrameData.LazerFireIndex[i] + 1) % ProcessLazers<TFrameData, TConstData, TSettingsData>.LazersPerPeer(sdaSettingsData));
+
+                        //fire lazer 
+                        ProcessLazers<TFrameData, TConstData, TSettingsData>.FireLazer(
+                            fdaOutFrameData,
+                            sdaSettingsData,
+                            i,
+                            fdaOutFrameData.LazerFireIndex[i],
+                            fdaOutFrameData.ShipPositionX[i],
+                            fdaOutFrameData.ShipPositionY[i],
+                            fdaOutFrameData.ShipBaseAngle[i]);
+
+                        //reset time untill next shot
+                        fdaOutFrameData.TimeUntilLaserReset[i] = sdaSettingsData.TimeBetweenShots;
+                    }
+
 
                     //check if target in range to hit
-                    if (fdaOutFrameData.TimeUntilNextFire[i] < Fix.Zero)
+                    if (fdaOutFrameData.TimeUntilLaserReset[i] < Fix.Zero && fdaOutFrameData.TimeUntilLaserFire[i] < Fix.Zero)
                     {
                         bool bShouldFire = false;
 
@@ -72,7 +102,7 @@ namespace Sim
                                 Fix fixDistSqr = (fixDeltaX * fixDeltaX) + (fixDeltaY * fixDeltaY);
 
                                 //check if target is in range 
-                                if (fixDistSqr < sdaSettingsData.AutoFireConeRangeSqr && fixDistSqr >= Fix.Zero)
+                                if (fixDistSqr < sdaSettingsData.AutoFireConeRangeSqr && fixDistSqr > Fix.Zero)
                                 {
                                     //get direction to target
                                     Fix fixDirectionToTarget = FixMath.Atan2(fixDeltaY, fixDeltaX) % 360;
@@ -96,24 +126,10 @@ namespace Sim
                             }
                         }
 
+                        //if there is a viable target trigger shot attack charge
                         if (bShouldFire)
                         {
-                            //Fire Lazer
-                            //increment fire index 
-                            fdaOutFrameData.LazerFireIndex[i] = (byte)((fdaOutFrameData.LazerFireIndex[i] + 1) % ProcessLazers<TFrameData, TConstData, TSettingsData>.LazersPerPeer(sdaSettingsData));
-
-                            //fire lazer 
-                            ProcessLazers<TFrameData, TConstData, TSettingsData>.FireLazer(
-                                fdaOutFrameData,
-                                sdaSettingsData,
-                                i,
-                                fdaOutFrameData.LazerFireIndex[i],
-                                fdaOutFrameData.ShipPositionX[i],
-                                fdaOutFrameData.ShipPositionY[i],
-                                fdaOutFrameData.ShipBaseAngle[i]);
-
-                            //reset time untill next shot
-                            fdaOutFrameData.TimeUntilNextFire[i] = sdaSettingsData.TimeBetweenShots;
+                            fdaOutFrameData.TimeUntilLaserFire[i] = sdaSettingsData.ShotsChargeTime;
                         }
                     }
                 }

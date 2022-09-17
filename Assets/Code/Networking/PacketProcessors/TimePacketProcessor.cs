@@ -101,10 +101,10 @@ namespace Networking
         private TimeSpan m_tspTargetTimeOffset;
         private TimeSpan m_tspCurrentTimeOffset;
         private TimeSpan m_tspOffsetChangeRate;
-        private TimeSpan m_tspTimeLerpSpeed = TimeSpan.FromSeconds(0.2f);
-        private TimeSpan m_tspMaxLerpDistance = TimeSpan.FromSeconds(10);
-        private TimeSpan m_tspUpdateRate = TimeSpan.FromSeconds(1);
-        private TimeSpan m_tspMaxLatencyUsedInCalculations = TimeSpan.FromSeconds(2);
+        private TimeSpan m_tspTimeLerpSpeed;
+        private TimeSpan m_tspMaxLerpDistance;
+        private TimeSpan m_tspUpdateRate;
+        private TimeSpan m_tspMaxLatencyUsedInCalculations;
         private List<TimeSpan> m_tspTempTimeOffsets = new List<TimeSpan>();
 
         public TimeNetworkProcessor():base()
@@ -112,12 +112,22 @@ namespace Networking
 
         }
 
+        public override void ApplyNetworkSettings(NetworkConnectionSettings ncsSettings)
+        {
+            base.ApplyNetworkSettings(ncsSettings);
+
+            m_tspTimeLerpSpeed = TimeSpan.FromSeconds(ncsSettings.m_fTimeLerpSpeed);
+            m_tspMaxLerpDistance = TimeSpan.FromSeconds(ncsSettings.m_fMaxLerpDistance);
+            m_tspUpdateRate = TimeSpan.FromSeconds(ncsSettings.m_fUpdateRate);
+            m_tspMaxLatencyUsedInCalculations = TimeSpan.FromSeconds(ncsSettings.m_fMaxLatencyUsedInCalculations);
+        }
+
         public TimeNetworkProcessor(NetworkingDataBridge ndbNetworkDataBridge):base()
         {
             NetworkDataBridge = ndbNetworkDataBridge;
         }
 
-        protected override TimeConnectionProcessor NewConnectionProcessor()
+        protected override TimeConnectionProcessor NewConnectionProcessor(NetworkConnectionSettings ncsNetworkSettings)
         {
             return new TimeConnectionProcessor(m_tspUpdateRate);
         }

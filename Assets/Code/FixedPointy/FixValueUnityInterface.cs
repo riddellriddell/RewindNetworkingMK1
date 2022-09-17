@@ -21,10 +21,10 @@ public struct FixTo3PlacesUnityInterface
     {
         get
         {
-            if (m_bCalculated == false)
-            {
+            //if (m_bCalculated == false)
+            //{
                 CalculateValue();
-            }
+           // }
 
             //set the decimal value 
             return Value;
@@ -97,6 +97,8 @@ public struct FixVec3ValueUnityInterface
             {
                 return m_vecValue;
             }
+
+            m_bCalculated = true;
 
             //set the decimal value 
             FixVec2 outFixNumber = new FixVec2(IntValue.x << Fix.FRACTIONAL_BITS, IntValue.y << Fix.FRACTIONAL_BITS);

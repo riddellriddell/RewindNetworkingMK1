@@ -18,33 +18,33 @@
 
 	string localAddress = "test"; // this..ResolvePath("");
 
-	 var assembly2=Assembly.LoadFile("D:/Game Dev/RollBackNetworking/RollBackNetworkingUnityPrototype/Library/ScriptAssemblies/Main.dll");
+	//var assembly2=Assembly.LoadFile("C:/Users/ridde/Documents/PersonalGameDev/Rewind networking/Rewind_networking_git/Library/ScriptAssemblies/Main.dll");
 
-	var assembly3=Assembly.LoadFile("obj/Debug/Assembly-CSharp.dll");
+	//var assembly3=Assembly.LoadFile("obj/Debug/Assembly-CSharp.dll");
 
 	#>
-		//<#= localAddress#>
+		// localAddress
 
-		//<#= assembly1.ToString()#>
+		// assembly1.ToString()
 
-		//<#= assembly1.GetExportedTypes().Length#>
+		// assembly1.GetExportedTypes().Length
 
-		//<#= assembly2.ToString()#>
+		// assembly2.ToString()
 
-		//<#= assembly2.GetExportedTypes().Length#>
+		// assembly2.GetExportedTypes().Length
 
-		//<#= assembly3.ToString()#>
+		// assembly3.ToString()
 
-		//<#= assembly3.GetExportedTypes().Length#>
+		// assembly3.GetExportedTypes().Length
 		
 		
 
 	<#
 
-	foreach(var assType in assembly3.GetExportedTypes())
-    {
-		WriteLine("//" + assType.ToString());
-    }
+	//foreach(var assType in assembly3.GetExportedTypes())
+    //{
+	//	WriteLine("//" + assType.ToString());
+    //}
 
 
 #>

@@ -16,6 +16,24 @@ namespace Unity.Html5WebRTC
         public int sdpMLineIndex;
     }
 
+    [Serializable]
+    public struct RTCConnectionConfig
+    {
+        [SerializeField]
+        public RTCIceServer[] iceServers;
+    }
+
+    [Serializable]
+    public struct RTCIceServer
+    {
+        [SerializeField]
+        public string urls;
+        [SerializeField]
+        public string username;
+        [SerializeField]
+        public string credential;
+    }
+
     public class WebRTC
     {
         public static void Initialize()

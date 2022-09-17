@@ -11,8 +11,6 @@ namespace Networking
     /// </summary>
     public class GlobalMessagingState : ICloneable
     {
-        public static TimeSpan s_tspVoteTimeout = TimeSpan.FromSeconds(2f);
-
         //array for each of the available player slots holding the channel state
         public List<GlobalMessageChannelState> m_gmcMessageChannels;
 
@@ -59,7 +57,7 @@ namespace Networking
 
         //process a message lLocalPeer is the user in controll of this computer
         //and must be in the "Kept" group when split occures 
-        public void ProcessMessage(long lLocalPeer, bool bActivePeer, PeerMessageNode pmnMessageNode, NetworkingDataBridge ndbNetworkingDataBridge = null)
+        public void ProcessMessage(long lLocalPeer, bool bActivePeer, PeerMessageNode pmnMessageNode, TimeSpan tspVoteTimeout, int iMaxPlayerCount, NetworkingDataBridge ndbNetworkingDataBridge = null)
         {
             //update the most recent sorting value 
             m_svaLastMessageSortValue = SortingValue.Max(m_svaLastMessageSortValue, pmnMessageNode.m_svaMessageSortingValue);
@@ -77,7 +75,7 @@ namespace Networking
                     if (pmnMessageNode.m_bMessageType == VoteMessage.TypeID)
                     {
                         //apply votes
-                        ApplyVotesToChannel(lLocalPeer, bActivePeer, iIndexOfMessageChannel, pmnMessageNode, ndbNetworkingDataBridge);
+                        ApplyVotesToChannel(lLocalPeer, bActivePeer, iIndexOfMessageChannel, pmnMessageNode, tspVoteTimeout, iMaxPlayerCount, ndbNetworkingDataBridge);
                     }
                     else if (ndbNetworkingDataBridge != null && pmnMessageNode.m_gmbMessage is ISimMessagePayload)
                     {
@@ -189,60 +187,7 @@ namespace Networking
             return iActiveChannels;
         }
 
-        //check for failed votes and reset 
-        public void RemoveFailedVotesDeprecated(DateTime dtmTime)
-        {
-            //get list of all votes in action
-            List<int> iVotesInAction = new List<int>();
-            List<int> iActivePeers = new List<int>();
-            for (int i = 0; i < m_gmcMessageChannels.Count; i++)
-            {
-                if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.VoteJoin)
-                {
-                    iVotesInAction.Add(i);
-                }
-                else if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Assigned)
-                {
-                    iActivePeers.Add(i);
-                }
-            }
-
-            //check if anyone is still voting on peer
-            for (int i = 0; i < iVotesInAction.Count; i++)
-            {
-                bool bIsActive = false;
-
-                for (int j = 0; j < iActivePeers.Count; j++)
-                {
-                    //get vote for peer
-                    GlobalMessageChannelState.ChannelVote cvtVote = m_gmcMessageChannels[iActivePeers[j]].m_chvVotes[iVotesInAction[i]];
-
-                    //check if vote is to add peer and is still active
-                    if (cvtVote.m_vtpVoteType == GlobalMessageChannelState.ChannelVote.VoteType.Add &&
-                        cvtVote.IsActive(dtmTime, s_tspVoteTimeout) &&
-                        m_gmcMessageChannels[iVotesInAction[i]].m_lChannelPeer == cvtVote.m_lPeerID)
-                    {
-                        bIsActive = true;
-                        break;
-                    }
-                }
-
-                //check if anyone still actively voting to add peer
-                if (bIsActive == false)
-                {
-                    //removre peer
-                    m_gmcMessageChannels[iVotesInAction[i]].ClearChannel();
-
-                    //clear any votes for peer
-                    for (int j = 0; j < m_gmcMessageChannels.Count; j++)
-                    {
-                        m_gmcMessageChannels[j].ClearVotesForChannelIndex(iVotesInAction[i]);
-                    }
-                }
-            }
-        }
-
-        public void RemoveFailedVotes(DateTime dtmTime)
+        public void RemoveFailedVotes(DateTime dtmTime, TimeSpan tspVoteTimeout)
         {
             for(int i = 0; i < m_gmcMessageChannels.Count; i++)
             {
@@ -257,7 +202,7 @@ namespace Networking
                 TimeSpan tspTimeSinceVoteStart =  dtmTime - m_gmcMessageChannels[i].m_dtmVoteTime;
 
                 //check if vote has timed out
-                if(tspTimeSinceVoteStart > s_tspVoteTimeout)
+                if(tspTimeSinceVoteStart > tspVoteTimeout)
                 {
                     //clear any votes for peer
                     for (int j = 0; j < m_gmcMessageChannels.Count; j++)
@@ -344,9 +289,8 @@ namespace Networking
         }
 
         //apply the vote command to the peer
-        protected void ApplyVotesToChannel(long lLocalPeerID, bool bActivePeer, int iMessageChannel,PeerMessageNode pmnMessage , NetworkingDataBridge ndbNetworkingDataBridge = null)
+        protected void ApplyVotesToChannel(long lLocalPeerID, bool bActivePeer, int iMessageChannel,PeerMessageNode pmnMessage , TimeSpan tspVoteTimeout, int iMaxPlayerCount, NetworkingDataBridge ndbNetworkingDataBridge = null)
         {
-
             DateTime dtmMessageCreationTime = pmnMessage.m_dtmMessageCreationTime;
             VoteMessage vmsMessageNode = pmnMessage.m_gmbMessage as VoteMessage;
 
@@ -357,7 +301,7 @@ namespace Networking
                 long lPeerID = vmsMessageNode.m_tupActionPerPeer[i].Item2;
 
                 //clear any previous votes that have failed  
-                RemoveFailedVotes(dtmMessageCreationTime);
+                RemoveFailedVotes(dtmMessageCreationTime, tspVoteTimeout);
 
                 //process join commands
                 if (bIsJoin > 0)
@@ -405,10 +349,10 @@ namespace Networking
             }
             
             //process join votes
-            ProcessJoin(iMessageChannel, dtmMessageCreationTime, out List<int> iJoinPeers);
+            ProcessJoin(iMessageChannel, dtmMessageCreationTime, tspVoteTimeout, out List<int> iJoinPeers);
                                   
             //process kick messages 
-            ProcessSplitVotes(lLocalPeerID, bActivePeer, iMessageChannel, dtmMessageCreationTime, out List<int> iKickPeers);
+            ProcessSplitVotes(lLocalPeerID, bActivePeer, iMessageChannel, dtmMessageCreationTime, tspVoteTimeout, iMaxPlayerCount, out List<int> iKickPeers);
 
             //changes are only stored in the sim messsage buffer if updating the main branch or unconfimed message head 
             if (ndbNetworkingDataBridge != null)
@@ -425,7 +369,7 @@ namespace Networking
         }
 
         //process split vote
-        protected void ProcessSplitVotes(long lLocalPeerID, bool bActivePeer, int iChangedMessageChannel, DateTime dtmTimeOfVote, out List<int> iKickPeers)
+        protected void ProcessSplitVotes(long lLocalPeerID, bool bActivePeer, int iChangedMessageChannel, DateTime dtmTimeOfVote, TimeSpan tspVoteTimeout, int iMaxPlayerCount, out List<int> iKickPeers)
         {
             //get list of kick and non kick
             List<int> iKeepList = new List<int>();
@@ -438,10 +382,10 @@ namespace Networking
             {
                 //check if vote is for kicking peer and is still active
                 if (gmcChangedChannel.m_chvVotes[i].m_vtpVoteType == GlobalMessageChannelState.ChannelVote.VoteType.Kick &&
-                    gmcChangedChannel.m_chvVotes[i].IsActive(dtmTimeOfVote, s_tspVoteTimeout))
+                    gmcChangedChannel.m_chvVotes[i].IsActive(dtmTimeOfVote, tspVoteTimeout))
                 {
                     //todo remove this code
-                    if(i < 0 || i > NetworkGlobalMessengerProcessor.MaxPlayerCount)
+                    if(i < 0 || i > iMaxPlayerCount)
                     {
                         Debug.LogError("Attempting to kick peer out of bounds");
                     }
@@ -450,7 +394,7 @@ namespace Networking
                 }
                 else if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Assigned) //get non kick peer list
                 {
-                    if (i < 0 || i > NetworkGlobalMessengerProcessor.MaxPlayerCount)
+                    if (i < 0 || i > iMaxPlayerCount)
                     {
                         Debug.LogError("Attempting to add peer out of bounds");
                     }
@@ -488,7 +432,7 @@ namespace Networking
                     GlobalMessageChannelState.ChannelVote cvtVote = gmcInGroupChannel.m_chvVotes[iKickTargetChannel];
 
                     //check if in group peer is not voting to kick out group peer
-                    if (cvtVote.IsActive(dtmTimeOfVote, s_tspVoteTimeout) == false ||
+                    if (cvtVote.IsActive(dtmTimeOfVote, tspVoteTimeout) == false ||
                         cvtVote.m_vtpVoteType != GlobalMessageChannelState.ChannelVote.VoteType.Kick ||
                         m_gmcMessageChannels[iKickTargetChannel].m_lChannelPeer != cvtVote.m_lPeerID)
                     {
@@ -534,7 +478,7 @@ namespace Networking
         }
 
         //process join vote
-        protected void ProcessJoin(int iMessagingChannel, DateTime dtmTimeOfVote, out List<int> iJoinPeers)
+        protected void ProcessJoin(int iMessagingChannel, DateTime dtmTimeOfVote, TimeSpan tspVoteTimeout, out List<int> iJoinPeers)
         {
             //first value is the channel seccond is number of voted
             List<Tuple<int, int>> tupJoinRequest = new List<Tuple<int, int>>();
@@ -549,7 +493,7 @@ namespace Networking
 
                 //check if vote is for join and is still valid and peer 
                 if (cvtVote.m_vtpVoteType == GlobalMessageChannelState.ChannelVote.VoteType.Add &&
-                    cvtVote.IsActive(dtmTimeOfVote, s_tspVoteTimeout) &&
+                    cvtVote.IsActive(dtmTimeOfVote, tspVoteTimeout) &&
                     m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.VoteJoin &&
                     m_gmcMessageChannels[i].m_lChannelPeer == cvtVote.m_lPeerID)
                 {
@@ -583,7 +527,7 @@ namespace Networking
 
                     //check if channel voted to add peer
                     if (cvtVote.m_vtpVoteType == GlobalMessageChannelState.ChannelVote.VoteType.Add &&
-                   cvtVote.IsActive(dtmTimeOfVote, s_tspVoteTimeout) &&
+                   cvtVote.IsActive(dtmTimeOfVote, tspVoteTimeout) &&
                    m_gmcMessageChannels[tupRequest.Item1].m_lChannelPeer == cvtVote.m_lPeerID)
                     {
                         //increment votes for add                        

@@ -12,18 +12,24 @@ namespace Networking
         #region LinkRebasing
         //the percent of active peers that need to acknowledge a link to make it 
         //a valid base link candidate
-        public static float PercentOfAcknowledgementsToRebase { get; } = 0.5f;
+        public float PercentOfAcknowledgementsToRebase { get; private set; }
 
-        public static uint MinCycleAge { get; } = 10;
+        public uint MinCycleAge { get; private set; }
 
-        public static uint MaxCycleAge { get; } = 100;
+        public uint MaxCycleAge { get; private set; }
 
-        public static int MinChainLenght { get; } = 10;
+        public int MinChainLenght { get; private set; }
+
+        public int MaxChannelCount { get; private set; }
+
+        #endregion
+        #region Voting
+        public TimeSpan VoteTimeout { get; private set; }
 
         #endregion
 
         #region LinkTiming
-        public static TimeSpan TimeBetweenLinks { get; } = TimeSpan.FromSeconds(1f);
+        public static TimeSpan TimeBetweenLinks { get; private set; }
 
         //each chain is based off the start of the year
         public static DateTime GetChainBaseTime(DateTime dtmCurrentNetworkTime)
@@ -51,9 +57,6 @@ namespace Networking
         //the highest ranked chain 
         public ChainLink m_chlBestChainHead;
 
-        //max number of peers in the global message system at once 
-        public int m_iChannelCount;
-
         public void SetStartState(long lFirstPeerID, int iMaxPeerCount, DateTime dtmStartTime)
         {
             m_gmsChainStartState = new GlobalMessagingState(iMaxPeerCount, lFirstPeerID, dtmStartTime);
@@ -75,14 +78,14 @@ namespace Networking
             chkChainLink.m_bIsConnectedToBase = true;
 
             //calculate chain state 
-            chkChainLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, bActivePeer, m_gmsChainStartState, ndbNetworkDataBridge);
+            chkChainLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, bActivePeer, m_gmsChainStartState, VoteTimeout, MaxChannelCount, ndbNetworkDataBridge);
 
             //setup acknoledgements 
-            chkChainLink.m_bIsChannelBranch = new List<bool>(m_iChannelCount);
+            chkChainLink.m_bIsChannelBranch = new List<bool>(MaxChannelCount);
 
             //set acknowledgement of first link
             //this assumes the inital peer is at position 0;
-            for (int i = 0; i < m_iChannelCount; i++)
+            for (int i = 0; i < MaxChannelCount; i++)
             {
                 chkChainLink.m_bIsChannelBranch.Add(false);
             }
@@ -209,7 +212,7 @@ namespace Networking
                 //loop through all the messages and apply them to the game state 
                 for(int j = 0; j < chlLinkChanges[i].m_pmnMessages.Count; j++)
                 {
-                    gsmMessageState.ProcessMessage(lLocalPeer, bIsActive, chlLinkChanges[i].m_pmnMessages[j], ndbNetworkingDataBridge);
+                    gsmMessageState.ProcessMessage(lLocalPeer, bIsActive, chlLinkChanges[i].m_pmnMessages[j], VoteTimeout, MaxChannelCount, ndbNetworkingDataBridge);
                 }
             }
         }
@@ -227,9 +230,9 @@ namespace Networking
             for (int i = ChainLinks.Count - 1; i > -1; i--)
             {
                 //check if acknowledgements need setting up
-                if (ChainLinks.Values[i].m_bIsChannelBranch == null || ChainLinks.Values[i].m_bIsChannelBranch.Count != m_iChannelCount)
+                if (ChainLinks.Values[i].m_bIsChannelBranch == null || ChainLinks.Values[i].m_bIsChannelBranch.Count != MaxChannelCount)
                 {
-                    SetupChannelAckArray(ChainLinks.Values[i], m_iChannelCount);
+                    SetupChannelAckArray(ChainLinks.Values[i], MaxChannelCount);
                 }
 
                 if (ChainLinks.Values[i] == chlAcknowledgedLink && chlAcknowledgedLink != null)
@@ -264,9 +267,9 @@ namespace Networking
             }
 
             //check if acknowledgements need setting up
-            if (chlLink.m_bIsChannelBranch == null || chlLink.m_bIsChannelBranch.Count != m_iChannelCount)
+            if (chlLink.m_bIsChannelBranch == null || chlLink.m_bIsChannelBranch.Count != MaxChannelCount)
             {
-                SetupChannelAckArray(chlLink, m_iChannelCount);
+                SetupChannelAckArray(chlLink, MaxChannelCount);
             }
             
             //check if link needs to find parent and is not base which will have no parent
@@ -301,7 +304,7 @@ namespace Networking
             //check if state needs to be calculated 
             if (chlLink.m_bIsConnectedToBase && chlLink.m_gmsState == null)
             {
-                chlLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, bActivePeer, chlLink.m_chlParentChainLink.m_gmsState);
+                chlLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, bActivePeer, chlLink.m_chlParentChainLink.m_gmsState, VoteTimeout, MaxChannelCount);
             }
 
             //TODO: do this in a more efficient way that is not redone for every link when a new link is 
@@ -463,7 +466,7 @@ namespace Networking
                     }
 
                     //recalculate state at end of chain link
-                    ChainLinks.Values[i].CaluclateGlobalMessagingStateAtEndOflink(lLocalPeer, bActivePeer, gmsPreviousLinkEndState);
+                    ChainLinks.Values[i].CaluclateGlobalMessagingStateAtEndOflink(lLocalPeer, bActivePeer, gmsPreviousLinkEndState, VoteTimeout, MaxChannelCount);
                 }
             }
         }
@@ -544,7 +547,7 @@ namespace Networking
             SetupChannelAckArray(chlFirstLink, iMaxPlayerCount);
 
             //get state at end of first link
-            chlFirstLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, bActivePeer, gmsStartState, ndbNetworkingDataBridge);
+            chlFirstLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, bActivePeer, gmsStartState, VoteTimeout, MaxChannelCount, ndbNetworkingDataBridge);
 
             foreach (ChainLink chlLink in ChainLinks.Values)
             {
@@ -568,10 +571,21 @@ namespace Networking
         }
 
         //perform inital setup
-        public ChainManager(int iMaxPlayerCount)
+        public ChainManager(int iMaxPlayerCount, NetworkConnectionSettings ncsSettings)
         {
-            m_iChannelCount = iMaxPlayerCount;
-            m_gmsChainStartState = new GlobalMessagingState(m_iChannelCount);
+            MaxChannelCount = iMaxPlayerCount;
+
+            m_gmsChainStartState = new GlobalMessagingState(MaxChannelCount);
+
+            MinCycleAge = ncsSettings.m_iMinCycleAge;
+
+            MaxCycleAge = ncsSettings.m_iMaxCycleAge;
+
+            MinChainLenght = ncsSettings.m_iMinChainLenght;
+
+            TimeBetweenLinks = TimeSpan.FromSeconds(ncsSettings.m_fTimeBetweenLinks);
+
+            VoteTimeout = TimeSpan.FromSeconds(ncsSettings.m_fVoteTimeout);
         }
 
         //get chain link for time

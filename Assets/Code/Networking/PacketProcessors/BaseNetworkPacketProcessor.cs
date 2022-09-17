@@ -19,6 +19,11 @@ namespace Networking
 
         }
 
+        public virtual void ApplyNetworkSettings(NetworkConnectionSettings ncsSettings)
+        {
+
+        }
+
         //this gets called when added to the network
         public virtual void OnAddToNetwork(NetworkConnection ncnNetwork)
         {

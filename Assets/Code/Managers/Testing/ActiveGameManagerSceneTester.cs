@@ -72,6 +72,7 @@ namespace GameManagers
         public float[] m_fShipVelocityX;
         public float[] m_fShipVelocityY;
         public float[] m_fShipRotation;
+        public float[] m_fShipWeaponChargeUp;
         public float[] m_fShipWeaponCoolDown;
 
         public float[] m_fLazerPosX;
@@ -110,7 +111,13 @@ namespace GameManagers
         public SimProcessorSettingsInterface m_sdiSettingsDataInderface;
 
         [SerializeField]
+        public MapGenSettings m_mgsMapSettingsDataInderface;
+
+        [SerializeField]
         public InterpolationErrorCorrectionSettingsGen m_ecsErrorCorrectionSettings;
+
+        [SerializeField]
+        public NetworkConnectionSettings m_ncsNetworkConnectionSettings;
 
         [SerializeField]
         public long m_lPeerID;
@@ -246,11 +253,12 @@ namespace GameManagers
 
             m_agmActiveGameManager?.OnCleanup();
 
-            m_cdaConstSimData = new ConstData();
+            m_cdaConstSimData = new ConstData(m_mgsMapSettingsDataInderface);
 
             m_agmActiveGameManager = new ActiveGameManager(
                 m_sdiSettingsDataInderface.ConvertToSettingsData(), 
-                m_ecsErrorCorrectionSettings, 
+                m_ecsErrorCorrectionSettings,
+                m_ncsNetworkConnectionSettings,
                 m_cdaConstSimData, 
                 m_wbiWebInterface, 
                 m_ptfTransmitterFactory,
@@ -342,7 +350,7 @@ namespace GameManagers
                         {
                             //if(gcsVotingChannel.m_chvVotes[i].m_lPeerID == gcsChannelState.m_lChannelPeer)
                             //{
-                            if (gcsVotingChannel.m_chvVotes[i].IsActive(tnpTimeProcessor.NetworkTime, GlobalMessagingState.s_tspVoteTimeout) == true)
+                            if (gcsVotingChannel.m_chvVotes[i].IsActive(tnpTimeProcessor.NetworkTime, gmpGlobalMessagingProcessor.m_chmChainManager.VoteTimeout) == true)
                             {
                                 iVotes++;
                             }
@@ -414,6 +422,7 @@ namespace GameManagers
                         m_sstSimState.m_fShipVelocityX = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
                         m_sstSimState.m_fShipVelocityY = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
                         m_sstSimState.m_fShipRotation = new float[ifdInterpolatedFrameData.m_fixShipBaseAngleErrorAdjusted.Length];
+                        m_sstSimState.m_fShipWeaponChargeUp = new float[ifdInterpolatedFrameData.m_fixTimeUntilLaserFireErrorAdjusted.Length];
                         m_sstSimState.m_fShipWeaponCoolDown = new float[ifdInterpolatedFrameData.m_fixTimeUntilNextFireErrorAdjusted.Length];
                     }
 
@@ -427,6 +436,7 @@ namespace GameManagers
                         m_sstSimState.m_fShipVelocityX[i] = ifdInterpolatedFrameData.m_fixShipVelocityXErrorAdjusted[i];
                         m_sstSimState.m_fShipVelocityY[i] = ifdInterpolatedFrameData.m_fixShipVelocityYErrorAdjusted[i];
                         m_sstSimState.m_fShipRotation[i] = Mathf.Deg2Rad * ifdInterpolatedFrameData.m_fixShipBaseAngle[i];
+                        m_sstSimState.m_fShipWeaponChargeUp[i] = ifdInterpolatedFrameData.m_fixTimeUntilLaserFireErrorAdjusted[i];
                         m_sstSimState.m_fShipWeaponCoolDown[i] = ifdInterpolatedFrameData.m_fixTimeUntilNextFireErrorAdjusted[i];
                     }
 

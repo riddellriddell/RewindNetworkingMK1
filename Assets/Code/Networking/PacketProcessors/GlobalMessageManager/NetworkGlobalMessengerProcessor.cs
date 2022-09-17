@@ -27,24 +27,15 @@ namespace Networking
 
         //the max time a channel can not send a message before being considered 
         //disconnected
-        public static TimeSpan ChannelTimeOutTime
-        {
-            get
-            {
-                return TimeSpan.FromSeconds(3f);
-            }
-        }
+        public TimeSpan ChannelTimeOutTime { get; private set; }
 
         #region StartStateSelection
 
         //the max time to wait before selecting a start state 
-        public static TimeSpan StateCollectionTimeOutTime { get; } = TimeSpan.FromSeconds(20);
-
-        //the min amount of time to wait before selecting start state 
-        public static TimeSpan StateCollactionMinTime { get; } = TimeSpan.FromSeconds(2);
+        public TimeSpan StateCollectionTimeOutTime { get; private set; }
 
         //the min percent of states from peers to collect before initalising 
-        public static float MinPercentOfStartStatesFromPeers { get; } = 0.75f;
+        public float MinPercentOfStartStatesFromPeers { get; private set; }
 
         //for debug reasons 
         public float m_fPercentOfStartStatesRecieved;
@@ -54,15 +45,15 @@ namespace Networking
         //when a peer initaly conencted wait this time before deciding to kick a peer for
         // disconnect, this is to protect against unneccesary kicking while peer conenction is
         // propegating through the swarm 
-        public static TimeSpan JoinVoteGracePeriod { get; } = TimeSpan.FromSeconds(30);
+        public TimeSpan JoinVoteGracePeriod { get; private set; }
 
         //to stop a connecting peer thinking its in the global messaging system too early by mistaking an old connection
         //with the same user id that is still in the process of being kicked as a new one voting in reconnecting peer connections are filtered 
         //by connection start time, this is not garanteed to be 100% accurate so this padding is added just in case
-        public static TimeSpan OldConnectionFilterPadding { get; } = TimeSpan.FromSeconds(5);
+        public TimeSpan OldConnectionFilterPadding { get; private set; }
 
         //fixed max player count but in future will be dynamic? 
-        public static int MaxPlayerCount { get; private set; } = 6;
+        public int MaxChannelCount { get; private set; }
 
         //the state of the global message system
         public State m_staState = State.WaitingForConnection;
@@ -115,10 +106,10 @@ namespace Networking
 
         public void Initalize(int iMaxPlayerCount)
         {
-            MaxPlayerCount = iMaxPlayerCount;
+            MaxChannelCount = iMaxPlayerCount;
 
             //setup the chain manager for the max player count 
-            m_chmChainManager = new ChainManager(MaxPlayerCount);
+            m_chmChainManager = new ChainManager(MaxChannelCount, ParentNetworkConnection.m_ncsConnectionSettings);
 
         }
 
@@ -147,6 +138,20 @@ namespace Networking
 
         }
 
+        public override void ApplyNetworkSettings(NetworkConnectionSettings ncsSettings)
+        {
+            base.ApplyNetworkSettings(ncsSettings);
+                
+            ChannelTimeOutTime = TimeSpan.FromSeconds(ncsSettings.m_fChannelTimeOutTime);
+
+            StateCollectionTimeOutTime = TimeSpan.FromSeconds(ncsSettings.m_fStateCollectionTimeOutTime);
+
+            MinPercentOfStartStatesFromPeers = ncsSettings.m_fMinPercentOfStartStatesFromPeers;
+
+            JoinVoteGracePeriod = TimeSpan.FromSeconds(ncsSettings.m_fJoinVoteGracePeriod);
+
+            OldConnectionFilterPadding = TimeSpan.FromSeconds(ncsSettings.m_fOldConnectionFilterPadding);
+        }   
         public override void Update()
         {
             base.Update();
@@ -297,12 +302,25 @@ namespace Networking
                     bIsActivePeer = true;
                 }
 
-                m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, bIsActivePeer, clpChainLinkPacket.m_chlLink, m_gkmKeyManager, m_gmbMessageBuffer, m_ndbNetworkDataBridge, out bool bIsMessageBufferDirty);
+                m_chmChainManager.AddChainLink(
+                    ParentNetworkConnection.m_lPeerID, 
+                    bIsActivePeer, 
+                    clpChainLinkPacket.m_chlLink, 
+                    m_gkmKeyManager, 
+                    m_gmbMessageBuffer, 
+                    m_ndbNetworkDataBridge, 
+                    out bool bIsMessageBufferDirty);
 
                 if (bIsMessageBufferDirty)
                 {
                     //update the final unconfirmed message state 
-                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
+                    m_gmbMessageBuffer.UpdateFinalMessageState(
+                        ParentNetworkConnection.m_lPeerID, 
+                        bIsActivePeer, 
+                        m_chmChainManager.m_chlBestChainHead.m_gmsState, 
+                        m_ndbNetworkDataBridge, 
+                        m_chmChainManager.VoteTimeout, 
+                        m_chmChainManager.MaxChannelCount);
                 }
             }
         }
@@ -341,12 +359,25 @@ namespace Networking
                 //get lock on network data bridge values
 
                 //add link to local link tracker 
-                m_chmChainManager.AddChainLink(ParentNetworkConnection.m_lPeerID, true, chlNextLink, m_gkmKeyManager, m_gmbMessageBuffer, m_ndbNetworkDataBridge, out bool bIsMessageBufferDirty);
+                m_chmChainManager.AddChainLink(
+                    ParentNetworkConnection.m_lPeerID, 
+                    true, 
+                    chlNextLink, 
+                    m_gkmKeyManager, 
+                    m_gmbMessageBuffer, 
+                    m_ndbNetworkDataBridge, 
+                    out bool bIsMessageBufferDirty);
 
                 if (bIsMessageBufferDirty)
                 {
                     //update the final unconfirmed message state 
-                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, true, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
+                    m_gmbMessageBuffer.UpdateFinalMessageState(
+                        ParentNetworkConnection.m_lPeerID, 
+                        true, 
+                        m_chmChainManager.m_chlBestChainHead.m_gmsState, 
+                        m_ndbNetworkDataBridge, 
+                        m_chmChainManager.VoteTimeout,
+                        m_chmChainManager.MaxChannelCount);
                 }
 
                 //unlock network data bridge values 
@@ -380,7 +411,7 @@ namespace Networking
         public void StartAsFirstPeerInSystem()
         {
             //setup the inital state of the chain
-            m_chmChainManager.SetStartState(ParentNetworkConnection.m_lPeerID, MaxPlayerCount, m_tnpNetworkTime.NetworkTime);
+            m_chmChainManager.SetStartState(ParentNetworkConnection.m_lPeerID, MaxChannelCount, m_tnpNetworkTime.NetworkTime);
 
             DateTime dtmNetworkTime = m_tnpNetworkTime.NetworkTime;
 
@@ -393,7 +424,7 @@ namespace Networking
             //get the last time that this peer should have created a chain link
             m_chmChainManager.GetPreviousChainLinkForChannel(
                 0,
-                m_chmChainManager.m_iChannelCount,
+                m_chmChainManager.MaxChannelCount,
                 iCurrentChainLink,
                 ChainManager.TimeBetweenLinks,
                 ChainManager.GetChainBaseTime(m_tnpNetworkTime.NetworkTime),
@@ -410,7 +441,7 @@ namespace Networking
             m_gmbMessageBuffer.m_svaStateProcessedUpTo = m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue.NextSortValue();
 
             //update buffer final state
-            m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, true, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
+            m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, true, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge, m_chmChainManager.VoteTimeout, m_chmChainManager.MaxChannelCount);
 
             //update the time of the next chian link
             SetTimeOfNextPeerChainLink(dtmNetworkTime);
@@ -475,13 +506,13 @@ namespace Networking
             {
                 m_staState = State.Connected;
 
-                m_chmChainManager.SetChainStartState(ParentNetworkConnection.m_lPeerID, false, MaxPlayerCount, sscStartStateCandidate.m_gmsStateCandidate, sscStartStateCandidate.m_chlNextLink, m_ndbNetworkDataBridge);
+                m_chmChainManager.SetChainStartState(ParentNetworkConnection.m_lPeerID, false, MaxChannelCount, sscStartStateCandidate.m_gmsStateCandidate, sscStartStateCandidate.m_chlNextLink, m_ndbNetworkDataBridge);
 
                 //reset the last message processed value on the message buffer
                 m_gmbMessageBuffer.m_svaStateProcessedUpTo = m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue;
 
                 //update message buffer final state
-                m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, false, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
+                m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, false, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge, m_chmChainManager.VoteTimeout, m_chmChainManager.MaxChannelCount);
             }
         }
 
@@ -508,7 +539,7 @@ namespace Networking
                 //get the next time the channel will be addding a chain link
                 m_chmChainManager.GetNextChainLinkForChannel(
                     iPeerChannel,
-                    m_chmChainManager.m_iChannelCount,
+                    m_chmChainManager.MaxChannelCount,
                     iCurrentChainLink,
                     ChainManager.TimeBetweenLinks,
                     ChainManager.GetChainBaseTime(dtmCurrentNetworkTime),
@@ -584,7 +615,7 @@ namespace Networking
             }
 
             //check if game is full
-            if (iPlayerCount == MaxPlayerCount)
+            if (iPlayerCount == MaxChannelCount)
             {
                 return;
             }
@@ -616,7 +647,7 @@ namespace Networking
                 if (m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(kvpEntries.Key, out int iIndex) == false ||
                     (m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iIndex].m_staState == GlobalMessageChannelState.State.VoteJoin &&
                     (m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iLocalPeerChannel].m_chvVotes[iIndex].m_vtpVoteType != GlobalMessageChannelState.ChannelVote.VoteType.Add ||
-                    m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iLocalPeerChannel].m_chvVotes[iIndex].IsActive(m_tnpNetworkTime.NetworkTime, GlobalMessagingState.s_tspVoteTimeout) == false)))
+                    m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iLocalPeerChannel].m_chvVotes[iIndex].IsActive(m_tnpNetworkTime.NetworkTime, m_chmChainManager.VoteTimeout) == false)))
                 {
                     //get the time the candidate connected 
                     long lConnectionTime = kvpEntries.Value.ParentConnection.m_dtmConnectionEstablishTime.Ticks;
@@ -641,7 +672,7 @@ namespace Networking
             }
 
             //number of peers to add
-            int iPeersToAdd = Math.Min((MaxPlayerCount - iPlayerCount), lJoinCandidates.Count);
+            int iPeersToAdd = Math.Min((MaxChannelCount - iPlayerCount), lJoinCandidates.Count);
 
             //create add message payload
             VoteMessage vmsVoteMessage = m_cifGlobalMessageFactory.CreateType<VoteMessage>(VoteMessage.TypeID);
@@ -704,7 +735,7 @@ namespace Networking
 
                     //check if already kicking peer 
                     if (chvVote.m_vtpVoteType == GlobalMessageChannelState.ChannelVote.VoteType.Kick &&
-                        chvVote.IsActive(m_tnpNetworkTime.NetworkTime, GlobalMessagingState.s_tspVoteTimeout))
+                        chvVote.IsActive(m_tnpNetworkTime.NetworkTime, m_chmChainManager.VoteTimeout))
                     {
                         //skip peer because already kicking
                         continue;
@@ -834,13 +865,13 @@ namespace Networking
                         m_chmChainManager.OnBestHeadChange(chlBestLink, ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_ndbNetworkDataBridge, m_gmbMessageBuffer);
 
                         //rebuild message state 
-                        m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
+                        m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge, m_chmChainManager.VoteTimeout, m_chmChainManager.MaxChannelCount);
                     }
 ;                }
                 else
                 {
                     //rebuild message state 
-                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge);
+                    m_gmbMessageBuffer.UpdateFinalMessageState(ParentNetworkConnection.m_lPeerID, bIsActivePeer, m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge, m_chmChainManager.VoteTimeout, m_chmChainManager.MaxChannelCount);
                 }
             }
         }

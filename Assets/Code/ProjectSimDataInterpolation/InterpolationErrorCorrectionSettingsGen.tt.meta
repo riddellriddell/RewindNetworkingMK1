@@ -2,7 +2,7 @@ fileFormatVersion: 2
 guid: 2eb0c66b09a37474fb7938f17afe632d
 DefaultImporter:
   externalObjects: {}
-  userData: '{"OutputPath": "Assets/Code/ProjectSimDataInterpolation/InterpolationErrorCorrectionSettingsGen.cs",
-    "OutputType": 1, "Trigger": 0, "TriggerDelay": 208, "WatchedAssets": []}'
+  userData: '{"OutputPath": "", "OutputType": 1, "Trigger": 0, "TriggerDelay": 500,
+    "WatchedAssets": []}'
   assetBundleName: 
   assetBundleVariant: 

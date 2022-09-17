@@ -31,7 +31,7 @@ namespace Networking
             }
         }
 
-        protected override TickStampedDataConnectionProcessor NewConnectionProcessor()
+        protected override TickStampedDataConnectionProcessor NewConnectionProcessor(NetworkConnectionSettings ncsNetworkSettings)
         {
             return new TickStampedDataConnectionProcessor(m_iTick);
         }

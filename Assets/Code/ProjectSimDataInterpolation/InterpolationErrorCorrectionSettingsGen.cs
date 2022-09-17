@@ -1,4 +1,5 @@
 ﻿
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -28,6 +29,8 @@ namespace SimDataInterpolation
 		public ErrorCorrectionSetting m_fixShipVelocityYErrorCorrectionSetting; 
 		
 		public ErrorCorrectionSetting m_fixShipBaseAngleErrorCorrectionSetting; 
+		
+		public ErrorCorrectionSetting m_fixTimeUntilLaserFireErrorCorrectionSetting; 
 		
 		public ErrorCorrectionSetting m_fixTimeUntilNextFireErrorCorrectionSetting; 
 		

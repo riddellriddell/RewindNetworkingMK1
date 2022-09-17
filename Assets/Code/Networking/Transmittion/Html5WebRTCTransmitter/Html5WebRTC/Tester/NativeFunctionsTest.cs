@@ -81,13 +81,30 @@ public class NativeFunctionsTest : MonoBehaviour
         //setup
         WebRTC.Initialize();
 
-        string strIceConnectionUrl = "stun:stun2.l.google.com:19302";
+        RTCConnectionConfig ccfConfig = new RTCConnectionConfig();
+
+        RTCIceServer isrStunServer = new RTCIceServer();
+        isrStunServer.urls = "stun:3.26.25.12:3478";
+        isrStunServer.username = "";
+        isrStunServer.credential = "";
+
+        RTCIceServer isrTurnServer = new RTCIceServer();
+        isrTurnServer.urls = "turn:3.26.25.12:3478";
+        isrTurnServer.username = "USERNAME";
+        isrTurnServer.credential = "PASSWORD";
+
+        RTCIceServer isrBackupServer = new RTCIceServer();
+        isrBackupServer.urls = "stun:stun.l.google.com:19302";
+        isrBackupServer.username = "";
+        isrBackupServer.credential = "";
+
+        ccfConfig.iceServers = new RTCIceServer[] { isrStunServer, isrTurnServer, isrBackupServer };
 
         Debug.Log("CreatingConneciton");
 
-        WebRTCConnection conSendConnection = new WebRTCConnection(strIceConnectionUrl);
+        WebRTCConnection conSendConnection = new WebRTCConnection(ccfConfig);
 
-        WebRTCConnection conReplyConnection = new WebRTCConnection(strIceConnectionUrl);
+        WebRTCConnection conReplyConnection = new WebRTCConnection(ccfConfig);
 
         conSendConnection.OnIceCandidate = (RTCIceCandidate icdIceCandidate) =>
         {

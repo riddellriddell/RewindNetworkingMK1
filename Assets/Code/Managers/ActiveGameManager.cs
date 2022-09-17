@@ -53,6 +53,8 @@ namespace GameManagers
 
         public InterpolationErrorCorrectionSettingsGen m_ecsInterpolationErrorCorrectionSettings;
 
+        public NetworkConnectionSettings m_ncsNetworkConnectionSettings;
+
         public ConstData m_cdaConstData;
 
         //the peer to peer network
@@ -112,6 +114,7 @@ namespace GameManagers
         public ActiveGameManager(
             SimProcessorSettings sdaSimSettingsData, 
             InterpolationErrorCorrectionSettingsGen ecsInterpolationErrorCorrectionSettings, 
+            NetworkConnectionSettings ncsNetworkConnectionSettings,
             ConstData cdaConstantSimData, 
             WebInterface winWebInterface, 
             IPeerTransmitterFactory ptfTransmitterFactory,
@@ -123,6 +126,7 @@ namespace GameManagers
             m_winWebInterface = winWebInterface;
             m_sdaSimSettingsData = sdaSimSettingsData;
             m_ecsInterpolationErrorCorrectionSettings = ecsInterpolationErrorCorrectionSettings;
+            m_ncsNetworkConnectionSettings = ncsNetworkConnectionSettings;
             m_cdaConstData = cdaConstantSimData;
             m_gsvGameStateView = gsvGameStateViewSpawner;
             m_usmUIStateManager = usmUIManager;
@@ -639,7 +643,7 @@ namespace GameManagers
             m_ncnNetworkConnection?.OnCleanup();
 
             //create network
-            m_ncnNetworkConnection = new NetworkConnection(m_winWebInterface.UserID, m_ptfTransmitterFactory);
+            m_ncnNetworkConnection = new NetworkConnection(m_winWebInterface.UserID, m_ptfTransmitterFactory, m_ncsNetworkConnectionSettings);
 
             //create network data bridge
             m_ndbDataBridge = new NetworkingDataBridge();

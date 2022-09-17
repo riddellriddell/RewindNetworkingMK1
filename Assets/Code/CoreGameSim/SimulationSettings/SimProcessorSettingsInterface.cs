@@ -60,6 +60,8 @@ namespace Sim
         public FixTo3PlacesUnityInterface m_fixAutoFireConeRange;
 
         public FixTo3PlacesUnityInterface m_fixTimeBetweenShots;
+
+        public FixTo3PlacesUnityInterface m_fixShotsChargeTime;
         #endregion
 
         #region ILazerSettingsData
@@ -113,6 +115,8 @@ namespace Sim
             m_fixAutoFireConeRange.CalculateValue();
 
             m_fixTimeBetweenShots.CalculateValue();
+
+            m_fixShotsChargeTime.CalculateValue();
             #endregion
 
             #region ILazerSettingsData
@@ -172,6 +176,9 @@ namespace Sim
                 m_fixAutoFireConeRangeSqr = m_fixAutoFireConeRange.Value * m_fixAutoFireConeRange.Value,
 
                 m_fixTimeBetweenShots = m_fixTimeBetweenShots.Value,
+
+                m_fixShotsChargeTime = m_fixShotsChargeTime.Value,
+
                 #endregion
 
                 #region ILazerSettingsData

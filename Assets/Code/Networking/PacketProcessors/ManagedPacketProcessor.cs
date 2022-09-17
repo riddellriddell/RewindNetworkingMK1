@@ -16,11 +16,13 @@ namespace Networking
 
         public Dictionary<long, T> ChildConnectionProcessors { get; } = new Dictionary<long, T>();
 
-        protected virtual T NewConnectionProcessor()
+        protected virtual T NewConnectionProcessor( NetworkConnectionSettings ncsNetworkSettings)
         {
-            return new T();
+            T newProcessor = new T();
+            newProcessor.ApplySettings(ncsNetworkSettings);
+            return newProcessor;
         }
-
+            
         protected virtual void OnConnectionLayoutChange(Connection conConnection,T tConnectionProcessor)
         {
 
@@ -42,7 +44,7 @@ namespace Networking
             foreach (Connection conConnection in ParentNetworkConnection.ConnectionList.Values)
             {
                 //create new packet processor
-                T connectionProcessor = NewConnectionProcessor();
+                T connectionProcessor = NewConnectionProcessor(ParentNetworkConnection.m_ncsConnectionSettings);
 
                 //add it to list of child packet processors
                 ChildConnectionProcessors.Add(conConnection.m_lUserUniqueID, connectionProcessor);
@@ -57,7 +59,7 @@ namespace Networking
         public override void OnNewConnection(Connection conConnection)
         {
             //create new packet processor
-            T connectionProcessor = NewConnectionProcessor();
+            T connectionProcessor = NewConnectionProcessor(ParentNetworkConnection.m_ncsConnectionSettings);
 
             connectionProcessor.SetParentProcessor(this);
 

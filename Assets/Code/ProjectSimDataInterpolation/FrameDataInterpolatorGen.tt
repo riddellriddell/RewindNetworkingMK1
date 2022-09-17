@@ -1,5 +1,7 @@
 <#@ template language="C#" #>
 <#@ assembly name="System.Core" #>
+<#@ output extension=".cs"#>
+
 <#@ import namespace="Sim" #>
 <#@ import namespace="System.Reflection" #>
 <#@ import namespace="System.Collections" #>

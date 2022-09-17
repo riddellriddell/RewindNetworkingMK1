@@ -60,10 +60,10 @@ namespace Networking
             m_monCoroutineExecutionObject = monCoroutineExecutionObject;
 
             //get config
-            string strConfig = GetSelectedSdpSemantics();
+            RTCConnectionConfig ccfConfig = SettupConnectionConfigStruct();
 
             //create peer connection
-            m_pcnPeerConnection = new WebRTCConnection(strConfig);
+            m_pcnPeerConnection = new WebRTCConnection(ccfConfig);
 
             m_pcnPeerConnection.OnDataChannel = OnDataChannelRecieved;
             m_pcnPeerConnection.OnIceCandidate = OnIceCandidate;
@@ -484,9 +484,28 @@ namespace Networking
             }
         }
 
-        protected string GetSelectedSdpSemantics()
+        protected RTCConnectionConfig SettupConnectionConfigStruct()
         {
-            return "stun:stun.l.google.com:19302";
+            RTCConnectionConfig ccfConfig = new RTCConnectionConfig();
+
+            RTCIceServer isrStunServer = new RTCIceServer();
+            isrStunServer.urls = "stun:3.26.25.12:3478";
+            isrStunServer.username = "";
+            isrStunServer.credential = "";
+
+            RTCIceServer isrTurnServer = new RTCIceServer();
+            isrTurnServer.urls = "turn:3.26.25.12:3478";
+            isrTurnServer.username = "USERNAME";
+            isrTurnServer.credential = "PASSWORD";
+
+            RTCIceServer isrBackupServer = new RTCIceServer();
+            isrBackupServer.urls = "stun:stun.l.google.com:19302";
+            isrBackupServer.username = "";
+            isrBackupServer.credential = "";
+
+            ccfConfig.iceServers = new RTCIceServer[]{ isrStunServer, isrTurnServer, isrBackupServer };
+
+            return ccfConfig;
         }
     }
 }

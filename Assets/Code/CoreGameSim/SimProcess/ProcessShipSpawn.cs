@@ -70,12 +70,10 @@ namespace Sim
                         //reset ship respawn time
                         fdaOutFrameData.TimeUntilRespawn[i] = sdaSettingsData.ShipRespawnTime;
 
-                        long lSeed = ((long.MinValue + iTick) << 8) + i;
-
-                        lSeed = unchecked( lSeed * lSeed * lSeed);
+                        long lSeed = iTick;
 
                         //create deterministic random number generator
-                        DeterministicRandomNumberGenerator drgRandomNumberGenerator = new DeterministicRandomNumberGenerator(lSeed);
+                        DeterministicLCRGenerator drgRandomNumberGenerator = new DeterministicLCRGenerator(lSeed);
 
                         //pick random location on boundry of world 
                         Fix fixRandomDirection = drgRandomNumberGenerator.GetRandomFix(Fix.Zero, (Fix)360);

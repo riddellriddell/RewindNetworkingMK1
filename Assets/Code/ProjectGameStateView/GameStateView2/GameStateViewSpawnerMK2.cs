@@ -18,6 +18,8 @@ namespace GameStateView
 
         public GameObject m_objLazerPrefab;
 
+        public GameObject m_objLazerChargePrefab;
+
         public GameObject m_objLazerFirePrefab;
 
         public int m_iNumberOfImpactsPerShip;
@@ -27,7 +29,9 @@ namespace GameStateView
         public GameObject m_objShipSpawnPrefab;
 
         public GameObject m_objShipDiePrefab;
-               
+
+        private List<GameObject> m_objLazerChargePool;
+
         private List<GameObject> m_objLazerFirePool;
 
         private List<GameObject> m_objLazerImpactPool;
@@ -82,6 +86,7 @@ namespace GameStateView
             UpdateLazerStates(ifdInterpolatedFrameData);
 
             //update effect positions
+            AllignLazerPreFireEffectsToShips();
             AllignLazerFireEffectsToShips();
         }
 
@@ -150,7 +155,6 @@ namespace GameStateView
             for (int i = 0; i < ifdInterpolatedFrameData.m_fixShipHealth.Length; i++)
             {
 
-
                 // check if object has been enabled or disabled
                 if (ifdInterpolatedFrameData.m_fixShipHealth[i] <= 0)
                 {
@@ -214,6 +218,29 @@ namespace GameStateView
                         float fRotation = (-ifdInterpolatedFrameData.m_fixShipBaseAngleErrorAdjusted[i] + 90);
 
                         m_objShips[i].transform.rotation = Quaternion.Euler(0, fRotation, 0);
+
+                        //check if ship is has started charging 
+                        //check if ship started charging laser 
+                        if (ifdInterpolatedFrameData.m_fixTimeUntilLaserFireErrorAdjusted[i] > 0)
+                        {
+                          //  Debug.Log("In Pre Fire");
+
+                            //check if ship has charge effect activated
+                            if (m_objLazerChargePool[i].activeInHierarchy == false)
+                            {
+                                // Debug.Log("Activating Pre Fire Effect");
+
+                                //turn on laser charge 
+                                SpawnChargeEffect(i);
+                            }
+                        }
+                        else
+                        {
+                            if (m_objLazerChargePool[i].activeInHierarchy == true)
+                            {
+                                m_objLazerChargePool[i].SetActive(false);
+                            }
+                        }
                     }
 
                 }
@@ -296,6 +323,28 @@ namespace GameStateView
             }
 
             //clean up
+            if (m_objLazerChargePool != null)
+            {
+                for (int i = 0; i < m_objLazerChargePool.Count; i++)
+                {
+                    Destroy(m_objLazerChargePool[i]);
+                }
+            }
+
+            //setup lazer charge effects 
+            m_objLazerChargePool = new List<GameObject>(iNumberOfShips);
+
+            for (int i = 0; i < iNumberOfShips; i++)
+            {
+                GameObject objNewObject = GameObject.Instantiate(m_objLazerChargePrefab, m_objEffectParentObject.transform);
+
+                objNewObject.SetActive(false);
+
+                m_objLazerChargePool.Add(objNewObject);
+            }
+
+
+            //clean up
             if (m_objLazerFirePool != null)
             {
                 for (int i = 0; i < m_objLazerFirePool.Count; i++)
@@ -303,6 +352,8 @@ namespace GameStateView
                     Destroy(m_objLazerFirePool[i]);
                 }
             }
+
+
 
             //setup lazer fire effects 
             m_objLazerFirePool = new List<GameObject>(iNumberOfShips);
@@ -321,7 +372,7 @@ namespace GameStateView
             //clean up
             if (m_objLazerImpactPool != null)
             {
-                for (int i = 0; i < m_objLazerFirePool.Count; i++)
+                for (int i = 0; i < m_objLazerImpactPool.Count; i++)
                 {
                     Destroy(m_objLazerImpactPool[i]);
                 }
@@ -345,7 +396,7 @@ namespace GameStateView
             //clean up
             if (m_objShipSpawnPool != null)
             {
-                for (int i = 0; i < m_objLazerFirePool.Count; i++)
+                for (int i = 0; i < m_objShipSpawnPool.Count; i++)
                 {
                     Destroy(m_objShipSpawnPool[i]);
                 }
@@ -367,7 +418,7 @@ namespace GameStateView
             //clean up
             if (m_objShipDiePool != null)
             {
-                for (int i = 0; i < m_objLazerFirePool.Count; i++)
+                for (int i = 0; i < m_objShipDiePool.Count; i++)
                 {
                     Destroy(m_objShipDiePool[i]);
                 }
@@ -383,6 +434,22 @@ namespace GameStateView
 
                 m_objShipDiePool.Add(objNewObject);
             }
+        }
+
+
+        protected void SpawnChargeEffect(int iShipIndex)
+        {
+            //get fire effect from pool
+            GameObject objChargeEffect = m_objLazerChargePool[iShipIndex];
+
+            //move to correct position
+            objChargeEffect.transform.localPosition = m_objShips[iShipIndex].transform.position;
+            objChargeEffect.transform.localScale = m_objShips[iShipIndex].transform.localScale;
+            objChargeEffect.transform.localRotation = m_objShips[iShipIndex].transform.localRotation;
+
+            //enable effect
+            objChargeEffect.SetActive(false);
+            objChargeEffect.SetActive(true);
         }
 
         protected void SpawnFireEffect(int iShipIndex)
@@ -447,6 +514,21 @@ namespace GameStateView
             objImpactEffect.SetActive(false);
             objImpactEffect.SetActive(true);
         }
+
+
+        protected void AllignLazerPreFireEffectsToShips()
+        {
+            for (int i = 0; i < m_objLazerChargePool.Count; i++)
+            {
+                if (m_objLazerChargePool[i].activeInHierarchy)
+                {
+                    m_objLazerChargePool[i].transform.localPosition = m_objShips[i].transform.position;
+                    m_objLazerChargePool[i].transform.localScale = m_objShips[i].transform.localScale;
+                    m_objLazerChargePool[i].transform.localRotation = m_objShips[i].transform.localRotation;
+                }
+            }
+        }
+
 
         protected void AllignLazerFireEffectsToShips()
         {

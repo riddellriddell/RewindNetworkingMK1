@@ -15,24 +15,13 @@ namespace Networking
         /// <summary>
         /// how many secconds between anouncing you currently have a gateway running
         /// </summary>
-        public static TimeSpan GatewayAnounceRate
-        {
-            get
-            {
-                return TimeSpan.FromSeconds(3);
-            }
-        }
+        public TimeSpan GatewayAnounceRate { get; private set; }
 
         /// <summary>
         /// if another gateway anounce is not recieved in this time a users gateway is considered closed
         /// </summary>
-        public static TimeSpan GatewayTimeout
-        {
-            get
-            {
-                return TimeSpan.FromSeconds(10);
-            }
-        }
+        public TimeSpan GatewayTimeout { get; private set; }
+    
 
         /// <summary>
         /// based on the current peer network should this peer have a gateway to the matchmaker open
@@ -225,6 +214,14 @@ namespace Networking
             m_nlpNetworkLayoutProcessor = ParentNetworkConnection.GetPacketProcessor<NetworkLayoutProcessor>();
         }
 
+        public override void ApplyNetworkSettings(NetworkConnectionSettings ncsSettings)
+        {
+            base.ApplyNetworkSettings(ncsSettings);
+
+            GatewayAnounceRate = TimeSpan.FromSeconds(ncsSettings.m_fGatewayAnounceRate);
+            GatewayTimeout = TimeSpan.FromSeconds(ncsSettings.m_fGatewayTimeout);
+        }
+
         protected override void AddDependentPacketsToPacketFactory(ClassWithIDFactory cifPacketFactory)
         {
             cifPacketFactory.AddType<GatewayActiveAnouncePacket>(GatewayActiveAnouncePacket.TypeID);
@@ -237,7 +234,7 @@ namespace Networking
         {
             get
             {
-                if (m_tnpNetworkTime.BaseTime - TimeOfLastGatewayNotification < NetworkGatewayManager.GatewayTimeout)
+                if (m_tnpNetworkTime.BaseTime - TimeOfLastGatewayNotification < m_tParentPacketProcessor.GatewayTimeout)
                 {
                     return true;
                 }
@@ -277,7 +274,7 @@ namespace Networking
             if (m_tParentPacketProcessor.ParentNetworkConnection.m_bIsConnectedToSwarm && m_tParentPacketProcessor.NeedsOpenGateway)
             {
                 //check if gateway has timed out
-                if (m_tnpNetworkTime.BaseTime - m_dtmTimeOfLastOpenGateNotification > NetworkGatewayManager.GatewayAnounceRate)
+                if (m_tnpNetworkTime.BaseTime - m_dtmTimeOfLastOpenGateNotification > m_tParentPacketProcessor.GatewayAnounceRate)
                 {
                     //create packet to send
                     GatewayActiveAnouncePacket gapAnouncePacket = ParentConnection.m_cifPacketFactory.CreateType<GatewayActiveAnouncePacket>(GatewayActiveAnouncePacket.TypeID);
@@ -292,7 +289,7 @@ namespace Networking
 
             if (HadTimeToRecieveGateNotification == false)
             {
-                if (ParentConnection.Status == Connection.ConnectionStatus.Connected && ParentConnection.m_dtmConnectionEstablishTime + NetworkGatewayManager.GatewayTimeout < m_tnpNetworkTime.BaseTime)
+                if (ParentConnection.Status == Connection.ConnectionStatus.Connected && ParentConnection.m_dtmConnectionEstablishTime + m_tParentPacketProcessor.GatewayTimeout < m_tnpNetworkTime.BaseTime)
                 {
                     HadTimeToRecieveGateNotification = true;
                 }

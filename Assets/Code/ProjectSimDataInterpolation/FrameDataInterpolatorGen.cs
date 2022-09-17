@@ -1,4 +1,5 @@
 ﻿
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -104,6 +105,11 @@ namespace SimDataInterpolation
 				ifdOldFrameData.m_fixShipBaseAngleErrorOffset[i] += (System.Single) (ifdNewFrameData.m_fixShipBaseAngle[i] - ifdOldFrameData.m_fixShipBaseAngle[i]);
 			}
 
+			for(int i = 0 ; i < ifdOldFrameData.m_fixTimeUntilLaserFire.Length; i++)
+			{
+				ifdOldFrameData.m_fixTimeUntilLaserFireErrorOffset[i] += (System.Single) (ifdNewFrameData.m_fixTimeUntilLaserFire[i] - ifdOldFrameData.m_fixTimeUntilLaserFire[i]);
+			}
+
 			for(int i = 0 ; i < ifdOldFrameData.m_fixTimeUntilNextFire.Length; i++)
 			{
 				ifdOldFrameData.m_fixTimeUntilNextFireErrorOffset[i] += (System.Single) (ifdNewFrameData.m_fixTimeUntilNextFire[i] - ifdOldFrameData.m_fixTimeUntilNextFire[i]);
@@ -181,6 +187,11 @@ namespace SimDataInterpolation
 				ifdFrameData.m_fixShipBaseAngleErrorAdjusted[i] = (System.Single)(ifdFrameData.m_fixShipBaseAngle[i] - ifdFrameData.m_fixShipBaseAngleErrorOffset[i]);
 			}
 
+			for(int i = 0 ; i < ifdFrameData.m_fixTimeUntilLaserFire.Length; i++)
+			{
+				ifdFrameData.m_fixTimeUntilLaserFireErrorAdjusted[i] = (System.Single)(ifdFrameData.m_fixTimeUntilLaserFire[i] - ifdFrameData.m_fixTimeUntilLaserFireErrorOffset[i]);
+			}
+
 			for(int i = 0 ; i < ifdFrameData.m_fixTimeUntilNextFire.Length; i++)
 			{
 				ifdFrameData.m_fixTimeUntilNextFireErrorAdjusted[i] = (System.Single)(ifdFrameData.m_fixTimeUntilNextFire[i] - ifdFrameData.m_fixTimeUntilNextFireErrorOffset[i]);
@@ -254,6 +265,11 @@ namespace SimDataInterpolation
 			for(int i = 0 ; i < ifdFrameData.m_fixShipBaseAngle.Length; i++)
 			{
 				ifdFrameData.m_fixShipBaseAngleErrorOffset[i] *= CalculateErrorScalingAmount(ifdFrameData.m_fixShipBaseAngleErrorOffset[i],fDeltaTime,ecsErrorCorrectionSetting.m_fixShipBaseAngleErrorCorrectionSetting );
+			}
+
+			for(int i = 0 ; i < ifdFrameData.m_fixTimeUntilLaserFire.Length; i++)
+			{
+				ifdFrameData.m_fixTimeUntilLaserFireErrorOffset[i] *= CalculateErrorScalingAmount(ifdFrameData.m_fixTimeUntilLaserFireErrorOffset[i],fDeltaTime,ecsErrorCorrectionSetting.m_fixTimeUntilLaserFireErrorCorrectionSetting );
 			}
 
 			for(int i = 0 ; i < ifdFrameData.m_fixTimeUntilNextFire.Length; i++)
@@ -426,6 +442,19 @@ namespace SimDataInterpolation
 
 					ifdInterpolatedFrameData.m_bLazerFireIndex[i] = (System.Byte) fdaToFrame.m_bLazerFireIndex[i];
 
+			}
+			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixTimeUntilLaserFire.Length ; i++)
+			{
+
+				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
+				{
+					ifdInterpolatedFrameData.m_fixTimeUntilLaserFire[i] = (System.Single) fdaToFrame.m_fixTimeUntilLaserFire[i];
+				}
+				else
+				{
+					ifdInterpolatedFrameData.m_fixTimeUntilLaserFire[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixTimeUntilLaserFire[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixTimeUntilLaserFire[i]) * fInterpolation));
+						
+				}
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixTimeUntilNextFire.Length ; i++)
 			{

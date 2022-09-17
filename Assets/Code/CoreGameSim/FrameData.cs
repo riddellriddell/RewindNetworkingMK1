@@ -112,10 +112,18 @@ namespace Sim
 
         [FrameDataInterpilationTypeAttribute(typeof(float))]
         [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixShipHealth[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
+        public Fix[] m_fixTimeUntilLaserFire;
+
+        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixShipHealth[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixTimeUntilNextFire;
 
         public byte[] LazerFireIndex { get => m_bLazerFireIndex; set => m_bLazerFireIndex = value; }
-        public Fix[] TimeUntilNextFire { get => m_fixTimeUntilNextFire; set => m_fixTimeUntilNextFire = value; }
+        
+        public Fix[] TimeUntilLaserFire { get => m_fixTimeUntilLaserFire; set => m_fixTimeUntilLaserFire = value; }
+
+
+        public Fix[] TimeUntilLaserReset { get => m_fixTimeUntilNextFire; set => m_fixTimeUntilNextFire = value; }
 
         #endregion
 
@@ -239,11 +247,13 @@ namespace Sim
 
                 m_bLazerFireIndex = fdaTargetData.m_bLazerFireIndex.Clone() as byte[];
                 m_fixTimeUntilNextFire = fdaTargetData.m_fixTimeUntilNextFire.Clone() as Fix[];
+                m_fixTimeUntilLaserFire = fdaTargetData.m_fixTimeUntilLaserFire.Clone() as Fix[];
             }
             else
             {
                 Array.Copy(fdaTargetData.m_bLazerFireIndex, m_bLazerFireIndex, fdaTargetData.m_bLazerFireIndex.Length);
                 Array.Copy(fdaTargetData.m_fixTimeUntilNextFire, m_fixTimeUntilNextFire, fdaTargetData.m_fixTimeUntilNextFire.Length);
+                Array.Copy(fdaTargetData.m_fixTimeUntilLaserFire, m_fixTimeUntilLaserFire, fdaTargetData.m_fixTimeUntilLaserFire.Length);
             }
             #endregion
 
@@ -319,6 +329,7 @@ namespace Sim
 
             #region IShipWeaponFrameData
             bWasASuccess &= ByteStream.Serialize(wbsByteStream, ref m_bLazerFireIndex, m_lPeersAssignedToSlot.Length);
+            bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixTimeUntilLaserFire, m_lPeersAssignedToSlot.Length);
             bWasASuccess &= FixSerialization.Serialize(wbsByteStream, ref m_fixTimeUntilNextFire, m_lPeersAssignedToSlot.Length);
             #endregion
 
@@ -385,6 +396,8 @@ namespace Sim
 
             #region IShipWeaponFrameData
             bWasASuccess &= ByteStream.Serialize(rbsReadByteStream, ref m_bLazerFireIndex, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= FixSerialization.Serialize(rbsReadByteStream, ref m_fixTimeUntilLaserFire, m_lPeersAssignedToSlot.Length);
 
             bWasASuccess &= FixSerialization.Serialize(rbsReadByteStream, ref m_fixTimeUntilNextFire, m_lPeersAssignedToSlot.Length);
             #endregion

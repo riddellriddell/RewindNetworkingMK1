@@ -103,11 +103,15 @@ namespace Sim
 
         public Fix m_fixAutoFireConeRangeSqr;
 
+        public Fix m_fixShotsChargeTime;
+
         public Fix m_fixTimeBetweenShots;
 
         public Fix AutofireCone => m_fixAutofireCone;
 
         public Fix AutoFireConeRangeSqr => m_fixAutoFireConeRangeSqr;
+
+        public Fix ShotsChargeTime => m_fixShotsChargeTime;
 
         public Fix TimeBetweenShots => m_fixTimeBetweenShots;
         #endregion
@@ -129,6 +133,7 @@ namespace Sim
         public Fix LazerDamage => m_fixLazerDamage;
 
         public Fix LazerSize => m_fixLazerSize;
+
 
         #endregion
 

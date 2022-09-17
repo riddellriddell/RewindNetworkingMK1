@@ -1,0 +1,46 @@
+﻿ 
+ 
+//#@ import namespace="Networking"  
+//#@ import namespace="UnityEngine" 
+//#@ import namespace="Sim" 
+
+
+		// localAddress
+
+		// assembly1.ToString()
+
+		// assembly1.GetExportedTypes().Length
+
+		// assembly2.ToString()
+
+		// assembly2.GetExportedTypes().Length
+
+		// assembly3.ToString()
+
+		// assembly3.GetExportedTypes().Length
+		
+		
+
+	
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace Networking 
+{ 
+	
+
+    public partial class PacketFactoryGen
+    {
+		public enum PacketTypes()
+		{
+		}
+
+		public Packet DecodePacket()
+		{
+			
+		}
+
+
+	}
+}

@@ -59,6 +59,9 @@ MonoBehaviour:
   m_fixTimeBetweenShots:
     Int: 1
     Dec_To_3_Places: 0
+  m_fixShotsChargeTime:
+    Int: 0
+    Dec_To_3_Places: 250
   m_fixLazerLife:
     Int: 2
     Dec_To_3_Places: 0
