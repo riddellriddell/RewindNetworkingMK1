@@ -1,4 +1,7 @@
-﻿using System.Collections;
+﻿using SharedTypes;
+using Utility;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -6,7 +9,7 @@ namespace Sim
 {
     public class SimProcessManager<TFrameData, TConstData, TSettingsData> where TFrameData: IFrameData
     {
-        public bool m_bCheckForDeSync;
+        public bool m_bCheckForDeSync = false;
 
         protected  SortedList<int, ISimProcess<TFrameData, TConstData, TSettingsData>> m_spcSimProcesses = new SortedList<int, ISimProcess<TFrameData, TConstData, TSettingsData>>();
 
@@ -27,20 +30,60 @@ namespace Sim
             //copy existing frame data into new frame data
             fdaOutFrameData.ResetToState(fdaBaseFrameData);
 
+            byte[] bStartHash = new byte[8];
+            byte[] bOldStartHashShort = new byte[4];
+            byte[] bOldStartHash = new byte[8];
+            //check that both states are the same
+            fdaBaseFrameData.GetHash(bOldStartHash);
+            fdaBaseFrameData.GetHash(bOldStartHashShort);
+            fdaOutFrameData.GetHash(bStartHash);
+
+
+            if (!HashTools.CompareHashes(bStartHash, bOldStartHash))
+            {
+                //throw error
+                Debug.LogError($"Error game state copy did not work correctly");
+            }
+
+
+            //hash inputs 
+            IPeerInputFrameData ifdOutFrameDataInput = (IPeerInputFrameData)fdaOutFrameData;
+
+            if (m_bCheckForDeSync)
+            {
+                for(int i = 0; i < objInputs.Length; i++)
+                {
+                    byte[] bSingleInputHash = objInputs[i].GetHash();
+
+                    byte[] bExistingInputHash = ifdOutFrameDataInput.InputHash;
+
+                    HashTools.MergeHashes(ref bExistingInputHash, bSingleInputHash);
+
+                    ifdOutFrameDataInput.InputHash = bExistingInputHash;
+                }
+            }
+
+           
+
             for (int i = 0; i < m_spcSimProcesses.Count; i++)
             {
-
                 bool bProcessSuccelssfull = m_spcSimProcesses.Values[i].ProcessFrameData(iTick, sdaSettingsData, cdaConstData, fdaBaseFrameData, objInputs, ref fdaOutFrameData);
 
                 //check if process ran successfully 
                 if(bProcessSuccelssfull == false)
                 {
                     //throw error
+                    Debug.LogError($"Error happened applying sim process {m_spcSimProcesses.Values[i].ProcessName}");
                 }
 
                 if(m_bCheckForDeSync)
                 {
+                    byte[] bHash = new byte[4];
+
+                    fdaOutFrameData.GetHash(bHash);
+
                     //log desync values 
+                    DataHashValidation.LogDataHash(bOldStartHashShort, (byte)i, iTick, bHash, m_spcSimProcesses.Values[i].ProcessName);
                 }
 
             }

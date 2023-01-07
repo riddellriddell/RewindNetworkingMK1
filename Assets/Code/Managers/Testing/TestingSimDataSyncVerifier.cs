@@ -1,4 +1,5 @@
 ﻿using Networking;
+using SharedTypes;
 using Sim;
 using System;
 using System.Collections;
@@ -19,11 +20,21 @@ public class TestingSimDataSyncVerifier<TFrameData> : BaseDataSyncVerifier<uint,
 
         long lHash = 0;
 
-        using (MD5 md5 = MD5.Create())
+        //using (MD5 md5 = MD5.Create())
+        //{
+        //    lHash = BitConverter.ToInt64(md5.ComputeHash(wbsNetworking.GetData()), 0);
+        //}
+
+        byte[] bInputHash = ((IPeerInputFrameData)fdaData).InputHash;
+
+        if(bInputHash.Length < 8)
         {
-            lHash = BitConverter.ToInt64(md5.ComputeHash(wbsNetworking.GetData()), 0);
+            Debug.LogError("input hash wrong size");
         }
 
+        lHash = BitConverter.ToInt64(bInputHash);
+
+        //store the hash for the entire state for checking later
         RegisterData(lHash, fdaData, iTick, iID);
 
         CleanUpOldEntries(iTick - (uint)(iTrackingWindowSize));

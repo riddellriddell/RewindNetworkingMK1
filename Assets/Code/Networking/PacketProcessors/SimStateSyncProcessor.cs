@@ -953,11 +953,40 @@ namespace Networking
                     //send data segment to peer 
                     SimSegmentSyncDataPacket ssdSegmentData = ParentConnection.m_cifPacketFactory.CreateType<SimSegmentSyncDataPacket>(SimSegmentSyncDataPacket.TypeID);
 
+                    //add hash of data 
+                    ssdSegmentData.m_lSegmentHash = lDataHash;
+
+                    //add segment tick
+                    ssdSegmentData.m_lTickOfGameState = m_dtmTimeOfOutSimState.Ticks;
+
                     //create destination array
                     ssdSegmentData.m_bSegmentData = new byte[iCount];
 
                     //fill segment data array
                     Array.Copy(m_bSimDataAtPeerRequest, iStart, ssdSegmentData.m_bSegmentData, 0, iCount);
+
+                    //TODO::remove this or wrap it in a define 
+                    //check that the data segment actually hashes to the correct value
+                    using (MD5 md5Hash = MD5.Create())
+                    {
+                                              //where to start generating the hash from
+                        int iOffset = i * m_tParentPacketProcessor.MaxSegmentSize;
+                        
+                        //bytes to use in hash generation
+                        int iDataToSendCount = Math.Min(m_bSimDataAtPeerRequest.Length - iOffset, m_tParentPacketProcessor.MaxSegmentSize);
+
+                        //generate hash
+                        byte[] bHash = md5Hash.ComputeHash(m_bSimDataAtPeerRequest, iOffset, iDataToSendCount);
+
+                        //convert hash to long for convienience 
+                        long lHashOfDataToSend = BitConverter.ToInt64(bHash, 0) ^ i;
+
+                        if(lHashOfDataToSend != lDataHash)
+                        {
+                            Debug.LogError($"The Hash map for peer is incorrect and the data has a hash of {lHashOfDataToSend} at time {m_dtmTimeOfOutSimState} which does not match the target hash of {lDataHash} that the peer {ParentConnection.m_lUserUniqueID} requested");
+                        }
+          
+                    }
 
                     //send data tp peer
                     ParentConnection.QueuePacketToSend(ssdSegmentData);

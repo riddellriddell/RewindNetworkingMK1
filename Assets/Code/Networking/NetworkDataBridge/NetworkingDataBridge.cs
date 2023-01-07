@@ -239,11 +239,11 @@ namespace Networking
             }
         }
 
-        public object[] GetMessagesFromData(DateTime dtmStartTime, DateTime dtmEndTime)
+        public IInput[] GetMessagesFromData(DateTime dtmStartTime, DateTime dtmEndTime)
         {
             GetIndexesBetweenTimes(dtmStartTime, dtmEndTime, out int iStartIndex, out int iEndIndex);
 
-            object[] objMessages = new object[(iEndIndex - iStartIndex) + 1];
+            IInput[] objMessages = new IInput[(iEndIndex - iStartIndex) + 1];
 
             for (int i = 0; i < objMessages.Length; i++)
             {
