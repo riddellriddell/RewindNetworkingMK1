@@ -66,13 +66,20 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
     //if there are no items in list this function returns false and an index of 0
     //if all items in list are less than key then this function reutrns false and 
     //and index of max value
-    public bool TryGetFirstIndexGreaterThan(in TKey Key, out int iIndex)
+    public bool BinaryTryGetFirstIndexGreaterThan(in TKey Key, out int iIndex)
     {
+        bool bSlowResult = TryGetFirstIndexGreaterThan(Key, out int iSlowIndex);
+
         //check if there are any values in the array
         if (m_iCount == 0)
         {
             //return index for empty list 
             iIndex = 0;
+
+            if (bSlowResult == true || iSlowIndex != iIndex)
+            {
+                Debug.LogError("Binary search did not match slow linear search");
+            }
 
             return false;
         }
@@ -82,6 +89,11 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
         {
             //return index for no value greater than key
             iIndex = int.MaxValue;
+
+            if (bSlowResult == true || iSlowIndex != iIndex)
+            {
+                Debug.LogError("Binary search did not match slow linear search");
+            }
 
             return false;
         }
@@ -107,14 +119,17 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
 
         iIndex = iSearchWindowMax;
 
+        if (bSlowResult == false || iSlowIndex != iIndex)
+        {
+            Debug.LogError("Binary search did not match slow linear search");
+        }
+
         return true;
     }
 
-    public bool TryGetFirstIndexGreaterThan(in TKey Key, out int iIndex, out bool bCollision, out int iCollisionIndex)
+    //a slow version of the search used to make sure the above function works correctly
+    public bool TryGetFirstIndexGreaterThan(in TKey Key, out int iIndex)
     {
-        iCollisionIndex = 0;
-        bCollision = false;
-
         //check if there are any values in the array
         if (m_iCount == 0)
         {
@@ -125,10 +140,63 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
         }
 
         //check if new value is past end list 
+        if (Compare(m_keyKeys[m_iQueueEnter], Key) < 1)
+        {
+            //return index for no value greater than key
+            iIndex = int.MaxValue;
+
+            return false;
+        }
+
+        iIndex = m_iCount - 1;
+
+        //perform linear sarch on remaining values 
+        for (int i = 0; i < m_iCount; i++)
+        {
+            int iCompareResult = Compare(m_keyKeys[UnsafeRemapIndex(i)], Key);
+
+            if (iCompareResult > 0)
+            {
+                iIndex = i;
+
+                break;
+            }
+        }
+
+        return true;
+    }
+
+    public bool BinaryTryGetFirstIndexGreaterThan(in TKey Key, out int iIndex, out bool bCollision, out int iCollisionIndex)
+    {
+        bool bSlowResult = TryGetFirstIndexGreaterThan(Key, out int iSlowIndex, out bool bSlowCollision, out int iSlowCollisionIndex);
+
+        iCollisionIndex = 0;
+        bCollision = false;
+
+        //check if there are any values in the array
+        if (m_iCount == 0)
+        {
+            //return index for empty list 
+            iIndex = 0;
+
+            if (bSlowResult == true || iSlowIndex != iIndex || bSlowCollision != bCollision || iSlowCollisionIndex != iCollisionIndex)
+            {
+                Debug.LogError("Binary search did not match slow linear search");
+            }
+
+            return false;
+        }
+
+        //check if new value is past end list 
         if (Compare(m_keyKeys[m_iQueueEnter], Key) < 0)
         {
             //return index for no value greater than key
             iIndex = int.MaxValue;
+
+            if (bSlowResult == true || iSlowIndex != iIndex || bSlowCollision != bCollision || iSlowCollisionIndex != iCollisionIndex)
+            {
+                Debug.LogError("Binary search did not match slow linear search");
+            }
 
             return false;
         }
@@ -162,14 +230,20 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
 
         iIndex = iSearchWindowMax;
 
+        if (bSlowResult == false || iSlowIndex != iIndex || bSlowCollision != bCollision || iSlowCollisionIndex != iCollisionIndex)
+        {
+            Debug.LogError("Binary search did not match slow linear search");
+        }
+
         return true;
     }
 
-    //find first index less than key
-    //if there are no items in list this funciton returns false and and index of 0
-    //if all items in list are greater than key this function returns false and an index of min value
-    public bool TryGetFirstIndexLessThan(in TKey Key, out int iIndex)
+    //a slow version of the search used to make sure the above function works correctly
+    public bool TryGetFirstIndexGreaterThan(in TKey Key, out int iIndex, out bool bCollision, out int iCollisionIndex)
     {
+        iCollisionIndex = int.MaxValue;
+        bCollision = false;
+
         //check if there are any values in the array
         if (m_iCount == 0)
         {
@@ -180,10 +254,69 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
         }
 
         //check if new value is past end list 
+        if (Compare(m_keyKeys[m_iQueueEnter], Key) < 1)
+        {
+            //return index for no value greater than key
+            iIndex = int.MaxValue;
+
+            return false;
+        }
+
+        iIndex = m_iCount - 1;
+
+        //perform binary sarch on remaining values 
+        for (int i = 0; i < m_iCount; i++)
+        {
+            int iCompareResult = Compare(m_keyKeys[UnsafeRemapIndex(i)], Key);
+
+            if (iCompareResult == 0)
+            {
+                iCollisionIndex = i;
+                bCollision = true;
+            }
+
+            if (iCompareResult > 0)
+            {
+                iIndex = i;
+
+                break;
+            }
+        }
+
+        return true;
+    }
+
+    //find first index less than key
+    //if there are no items in list this funciton returns false and and index of 0
+    //if all items in list are greater than key this function returns false and an index of min value
+    public bool BinaryTryGetFirstIndexLessThan(in TKey Key, out int iIndex)
+    {
+        bool bSlowResult = TryGetFirstIndexLessThan(Key, out int iSlowIndex);
+
+        //check if there are any values in the array
+        if (m_iCount == 0)
+        {
+            //return index for empty list 
+            iIndex = 0;
+
+            if(bSlowResult == true || iSlowIndex != iIndex)
+            {
+                Debug.LogError("Binary search did not match slow linear search");
+            }
+
+            return false;
+        }
+
+        //check if new value is past end list 
         if (Compare(m_keyKeys[m_iQueueExit], Key) > 0)
         {
             //return index for no value less than key
             iIndex = int.MinValue;
+
+            if (bSlowResult == true || iSlowIndex != iIndex)
+            {
+                Debug.LogError("Binary search did not match slow linear search");
+            }
 
             return false;
         }
@@ -209,14 +342,16 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
 
         iIndex = iSearchWindowMax;
 
+        if (bSlowResult == false || iSlowIndex != iIndex)
+        {
+            Debug.LogError("Binary search did not match slow linear search");
+        }
+
         return true;
     }
 
-    public bool TryGetFirstIndexLessThan(in TKey Key, out int iIndex, out bool bCollision, out int iCollisionIndex)
+    public bool TryGetFirstIndexLessThan(in TKey Key, out int iIndex)
     {
-        iCollisionIndex = 0;
-        bCollision = false;
-
         //check if there are any values in the array
         if (m_iCount == 0)
         {
@@ -227,10 +362,63 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
         }
 
         //check if new value is past end list 
-        if (Compare(m_keyKeys[0], Key) > 0)
+        if (Compare(m_keyKeys[m_iQueueExit], Key) > -1)
+        {
+            //return index for no value less than key
+            iIndex = int.MinValue;
+
+            return false;
+        }
+
+        iIndex = m_iCount - 1;
+
+        // linear search
+        for (int i = m_iCount - 1; i >= 0; i--)
+        {
+            int iCompareResult = Compare(m_keyKeys[UnsafeRemapIndex(i)], Key);
+
+            if (iCompareResult < 0)
+            {
+                iIndex = i;
+
+                break;
+            }
+        }
+
+        return true;
+    }
+
+    public bool BinaryTryGetFirstIndexLessThan(in TKey Key, out int iIndex, out bool bCollision, out int iCollisionIndex)
+    {
+        bool bSlowResult = TryGetFirstIndexLessThan(Key, out int iSlowIndex, out bool bSlowCollision, out int iSlowCollisionIndex);
+
+        iCollisionIndex = 0;
+        bCollision = false;
+
+        //check if there are any values in the array
+        if (m_iCount == 0)
+        {
+            //return index for empty list 
+            iIndex = 0;
+
+            if(bSlowResult == true || iSlowIndex != iIndex || bSlowCollision != bCollision || iSlowCollisionIndex != iCollisionIndex)
+            {
+                Debug.LogError("Binary search did not match slow linear search");
+            }
+
+            return false;
+        }
+
+        //check if new value is past end list 
+        if (Compare(m_keyKeys[m_iQueueExit], Key) > 0)
         {
             //return index for no value greater than key
             iIndex = int.MinValue;
+
+            if (bSlowResult == true || iSlowIndex != iIndex || bSlowCollision != bCollision || iSlowCollisionIndex != iCollisionIndex)
+            {
+                Debug.LogError("Binary search did not match slow linear search");
+            }
 
             return false;
         }
@@ -264,12 +452,66 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
 
         iIndex = iSearchWindowMax;
 
+        if (bSlowResult == false || iSlowIndex != iIndex || bSlowCollision != bCollision || iSlowCollisionIndex != iCollisionIndex)
+        {
+            Debug.LogError("Binary search did not match slow linear search");
+        }
+
+        return true;
+    }
+
+    //a slow version of the search used to make sure the above function works correctly
+    public bool TryGetFirstIndexLessThan(in TKey Key, out int iIndex, out bool bCollision, out int iCollisionIndex)
+    {
+        iCollisionIndex = int.MinValue;
+        bCollision = false;
+
+        //check if there are any values in the array
+        if (m_iCount == 0)
+        {
+            //return index for empty list 
+            iIndex = 0;
+
+            return false;
+        }
+
+        //check if new value is past end list 
+        if (Compare(m_keyKeys[m_iQueueExit], Key) > -1)
+        {
+            //return index for no value greater than key
+            iIndex = int.MinValue;
+
+            return false;
+        }
+
+        iIndex = m_iCount -1;
+
+        //perform binary sarch on remaining values 
+        for (int i = m_iCount -1; i >=0; i--)
+        {
+            int iCompareResult = Compare(m_keyKeys[UnsafeRemapIndex(i)], Key);
+
+            if (iCompareResult == 0)
+            {
+                iCollisionIndex = i;
+                bCollision = true;
+            }
+
+            if (iCompareResult < 0)
+            {
+                iIndex = i;
+
+                break;
+            }
+        }
+
         return true;
     }
 
     //performs binary search for key returns false if not found 
-    public bool TryGetIndexOf(in TKey Key, out int iIndex)
+    public bool BinaryTryGetIndexOf(in TKey Key, out int iIndex)
     {
+        bool bResult = false;
         int iSearchWindowMin = 0;
         int iSearchWindowMax = m_iCount - 1;
 
@@ -290,13 +532,46 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
             else
             {
                 iIndex = iMid;
+                bResult = true;
+
+                if(TryGetIndexOf(Key, out int iSlowIndexSuccess) != bResult)
+                {
+                    Debug.LogError("Error in search function slow search did not find target!");
+                }
+
+                return bResult;
+            }
+        }
+
+        iIndex = 0;
+        bResult = false;
+
+        if (TryGetIndexOf(Key, out int iSlowIndexFail) != bResult)
+        {
+            Debug.LogError("Error in search function slow search found target !");
+        }
+
+        return bResult;
+    }
+
+    //a slow version of the search used to make sure the above function works correctly
+    public bool TryGetIndexOf(in TKey Key, out int iIndex)
+    {
+        for (int i = 0; i < m_iCount; i++)
+        {
+            int iTrueIndex = UnsafeRemapIndex(i);
+
+            int iCompareResult = Compare(m_keyKeys[iTrueIndex], Key);
+
+            if (iCompareResult == 0)
+            {
+                iIndex = i;
 
                 return true;
             }
         }
 
         iIndex = 0;
-
         return false;
     }
 
@@ -446,7 +721,7 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
             m_valValues[iAddressToClear] = default(TValue);
         }
 
-        m_iQueueExit = RemapIndex(iIndex -1);
+        m_iQueueEnter = RemapIndex(iIndex -1);
         m_iCount = iIndex;
     }
 

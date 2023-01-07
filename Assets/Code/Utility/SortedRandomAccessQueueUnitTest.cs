@@ -258,6 +258,8 @@ public class SortedRandomAccessQueueUnitTest : MonoBehaviour
         CheckClearUpToInclnuding();
 
         CheckPurgeInsert();
+
+        CheckBetweenDates();
     }
 
     public void FillQueueWithSeries(SortedRandomAccessQueue<int, int> m_srqSortedRandomAccessQueue, int iNumberOfItems, int iStartIndex)
@@ -415,4 +417,71 @@ public class SortedRandomAccessQueueUnitTest : MonoBehaviour
         return true;
     }
 
+
+    public bool CheckBetweenDates()
+    {
+        Debug.Log("starting Find Index Test");
+
+        SortedRandomAccessQueue<int, int> squSortedQueue1 = new SortedRandomAccessQueue<int, int>();
+
+        FillQueueWithSeries(squSortedQueue1, 10, 0);
+
+        PrintOutQueueValues(squSortedQueue1);
+
+        //get item at entrance and exit
+        Debug.Log($"sort value at enqueue { squSortedQueue1.PeakKeyEnqueue()}");
+        Debug.Log($"sort value at dequeue { squSortedQueue1.PeakKeyDequeue()}");
+
+        //run simple test for items in bounds
+
+
+        {
+            bool bTestResult = squSortedQueue1.TryGetFirstIndexGreaterThan(5, out int iTestIndex);
+
+            if (bTestResult == false || iTestIndex != 6)
+            {
+                Debug.LogError($"Incorrect result from find greater. returned result {bTestResult} and index {iTestIndex}");
+
+                return false;
+            }
+        }
+
+        {
+            bool bTestResult = squSortedQueue1.TryGetFirstIndexLessThan(5, out int iTestIndex);
+
+            if (bTestResult == false || iTestIndex != 4)
+            {
+                Debug.LogError($"Incorrect result from find less returned result {bTestResult} and index {iTestIndex}");
+
+                return false;
+            }
+        }
+
+        { 
+            //run out of bounds test 
+            bool bTestResult = squSortedQueue1.TryGetFirstIndexGreaterThan(9, out int iTestIndex);
+
+            if (bTestResult == true || iTestIndex != int.MaxValue)
+            {
+                Debug.LogError($"Incorrect result from find greater. returned result {bTestResult} and index {iTestIndex}");
+
+                return false;
+            }
+        }
+
+        {
+            bool bTestResult = squSortedQueue1.TryGetFirstIndexLessThan(0, out int iTestIndex);
+
+            if (bTestResult == true || iTestIndex != int.MinValue)
+            {
+                Debug.LogError($"Incorrect result from find less returned result {bTestResult} and index {iTestIndex}");
+
+                return false;
+            }
+        }
+
+        Debug.Log("Find index test finished Successfully");
+
+        return true;
+    }
 }
