@@ -1,4 +1,5 @@
 ﻿using FixedPointy;
+using SharedTypes;
 
 namespace Sim
 {
@@ -59,7 +60,7 @@ namespace Sim
             return true;
         }
 
-        public bool ProcessFrameData(uint iTick, in TSettingsData staSettingsData, in TConstData cdaConstantData, in TFrameData fdaInFrameData, in object[] objInputs, ref TFrameData fdaOutFrameData)
+        public bool ProcessFrameData(uint iTick, in TSettingsData staSettingsData, in TConstData cdaConstantData, in TFrameData fdaInFrameData, in IInput[] objInputs, ref TFrameData fdaOutFrameData)
         {
             //loop through all ships 
             for (int i = 0; i < staSettingsData.MaxPlayers; i++)

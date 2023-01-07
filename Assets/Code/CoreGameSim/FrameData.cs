@@ -37,8 +37,13 @@ namespace Sim
         [FrameDataInterpilationTypeAttribute(typeof(int), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
         public byte[] m_bInput;
 
+        [FrameDataInterpilationTypeAttribute(typeof(int), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
+        public byte[] m_iInputHash;
+
         #region IPeerInputFrameData
         public byte[] PeerInput { get => m_bInput; set => m_bInput = value; }
+
+        public byte[] InputHash { get => m_iInputHash; set => m_iInputHash = value; }
         #endregion
         #endregion
 
@@ -182,13 +187,23 @@ namespace Sim
             #endregion
 
             #region IPeerInputFrameData
-            if (m_bInput == null || m_bInput.Length != fdaTargetData.m_lPeersAssignedToSlot.Length)
+            if (m_bInput == null || m_bInput.Length != fdaTargetData.m_bInput.Length)
             {
                 m_bInput = fdaTargetData.m_bInput.Clone() as byte[];
             }
             else
             {
-                Array.Copy(fdaTargetData.m_bInput, m_bInput, fdaTargetData.m_lPeersAssignedToSlot.Length);
+                Array.Copy(fdaTargetData.m_bInput, m_bInput, fdaTargetData.m_bInput.Length);
+            }
+
+
+            if (m_iInputHash == null || m_iInputHash.Length != fdaTargetData.m_iInputHash.Length)
+            {
+                m_iInputHash = fdaTargetData.m_iInputHash.Clone() as byte[];
+            }
+            else
+            {
+                Array.Copy(fdaTargetData.m_iInputHash, m_iInputHash, fdaTargetData.m_iInputHash.Length);
             }
             #endregion
 
@@ -296,6 +311,8 @@ namespace Sim
 
             bWasASuccess &= ByteStream.Serialize(wbsByteStream, ref m_bInput, m_lPeersAssignedToSlot.Length);
 
+            bWasASuccess &= ByteStream.Serialize(wbsByteStream, ref m_iInputHash, 8);
+
             #endregion
 
             #region IShipRespawnFrameData
@@ -361,6 +378,8 @@ namespace Sim
             #region IPeerInputFrameData
 
             bWasASuccess &= ByteStream.Serialize(rbsReadByteStream, ref m_bInput, m_lPeersAssignedToSlot.Length);
+
+            bWasASuccess &= ByteStream.Serialize(rbsReadByteStream, ref m_iInputHash, 8);
 
             #endregion
 
@@ -428,6 +447,8 @@ namespace Sim
 
             iSize += ByteStream.DataSize(m_bInput, m_lPeersAssignedToSlot.Length);
 
+            iSize += ByteStream.DataSize(m_iInputHash, 8);
+
             #endregion
 
             #region IShipRespawnFrameData
@@ -488,10 +509,7 @@ namespace Sim
 
             byte[] bHash = md5.ComputeHash(wbsWriteStream.GetData());
 
-            for (int i = 0; i < bOutput.Length; i++)
-            {
-                bOutput[i] = bHash[i % bHash.Length];
-            }
+            HashTools.MergeHashes(ref bOutput, bHash);
         }
 
     }

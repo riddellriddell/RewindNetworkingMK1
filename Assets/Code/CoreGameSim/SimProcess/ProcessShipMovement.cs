@@ -1,4 +1,5 @@
 ﻿using FixedPointy;
+using SharedTypes;
 using Utility;
 
 namespace Sim
@@ -22,7 +23,7 @@ namespace Sim
 
         public string ProcessName { get; } = "Ship Movement";
 
-        public bool ProcessFrameData(uint iTick, in TSettingsData sdaSettingsData, in TConstData cdaConstantData, in TFrameData fdaInFrameData, in object[] objInputs, ref TFrameData fdaOutFrameData)
+        public bool ProcessFrameData(uint iTick, in TSettingsData sdaSettingsData, in TConstData cdaConstantData, in TFrameData fdaInFrameData, in IInput[] objInputs, ref TFrameData fdaOutFrameData)
         {
             for (int i = 0; i < sdaSettingsData.MaxPlayers; i++)
             {

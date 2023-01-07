@@ -1,4 +1,6 @@
-﻿namespace Sim
+﻿using SharedTypes;
+
+namespace Sim
 {
     public interface ISimProcess<TFrameData, TConstData, TSettingsData>
     {
@@ -6,7 +8,7 @@
 
         string ProcessName { get; }
 
-        bool ProcessFrameData(uint iTick, in TSettingsData sdaSettingsData, in TConstData cdaConstantData, in TFrameData fdaInFrameData, in object[] objInputs, ref TFrameData fdaOutFrameData);
+        bool ProcessFrameData(uint iTick, in TSettingsData sdaSettingsData, in TConstData cdaConstantData, in TFrameData fdaInFrameData, in IInput[] objInputs, ref TFrameData fdaOutFrameData);
 
     }
 }

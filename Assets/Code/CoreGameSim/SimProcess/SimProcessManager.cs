@@ -22,7 +22,7 @@ namespace Sim
             m_sspSimSetupProcesses.Add(sspSetupProcess.Priority, sspSetupProcess);
         }
 
-        public void ProcessFrameData(uint iTick, in TSettingsData sdaSettingsData, in TConstData cdaConstData, in TFrameData fdaBaseFrameData, in object[] objInputs, ref TFrameData fdaOutFrameData)
+        public void ProcessFrameData(uint iTick, in TSettingsData sdaSettingsData, in TConstData cdaConstData, in TFrameData fdaBaseFrameData, in IInput[] objInputs, ref TFrameData fdaOutFrameData)
         {
             //copy existing frame data into new frame data
             fdaOutFrameData.ResetToState(fdaBaseFrameData);

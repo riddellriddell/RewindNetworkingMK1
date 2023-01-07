@@ -1,12 +1,16 @@
 ﻿
 using ProjectSharedTypes;
 using SharedTypes;
+using System;
+using Utility;
 
 namespace Sim
 {
     public interface IPeerInputFrameData
     {
         byte[] PeerInput { get; set; }
+
+        byte[] InputHash { get; set; }
     }
 
     public class ProcessPeerInputs<TFrameData, TConstData, TSettingsData> :
@@ -25,11 +29,22 @@ namespace Sim
         public bool ApplySetupProcess(uint iTick, in TSettingsData sdaSettingsData, long lFirstPeerID, ref TFrameData fdaFrameData)
         {
             fdaFrameData.PeerInput = new byte[sdaSettingsData.MaxPlayers];
+            fdaFrameData.InputHash = new byte[8];
+
+            for (int i = 0; i < fdaFrameData.PeerInput.Length; i++)
+            {
+                fdaFrameData.PeerInput[i] = 0;
+            }
+
+            for (int i = 0; i < fdaFrameData.InputHash.Length; i++)
+            {
+                fdaFrameData.InputHash[i] = 0;
+            }
 
             return true;
         }
 
-        public bool ProcessFrameData(uint iTick, in TSettingsData sdaSettingsData, in TConstData cdaConstantData, in TFrameData fdaInFrameData, in object[] objInputs, ref TFrameData fdaOutFrameData)
+        public bool ProcessFrameData(uint iTick, in TSettingsData sdaSettingsData, in TConstData cdaConstantData, in TFrameData fdaInFrameData, in IInput[] objInputs, ref TFrameData fdaOutFrameData)
         {
             //reset all input events for new tick
             for(int i = 0; i < sdaSettingsData.MaxPlayers; i++)
@@ -61,6 +76,22 @@ namespace Sim
                 }
                 
             }
+
+            //get existing hash
+            byte[] bTickBytes = BitConverter.GetBytes((long)iTick);
+
+            byte[] bExistingHash = fdaOutFrameData.InputHash;
+
+            HashTools.MergeHashes(ref bExistingHash, bTickBytes);
+
+            //combine all the hashes
+            for (int i = 0; i < objInputs.Length; i++)
+            {
+                IInput iptInput = objInputs[i];
+                HashTools.MergeHashes(ref bExistingHash, iptInput.GetHash());
+            }
+
+            fdaOutFrameData.InputHash = bExistingHash;
 
             return true;
         }

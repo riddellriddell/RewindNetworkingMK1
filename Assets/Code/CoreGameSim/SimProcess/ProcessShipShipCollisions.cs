@@ -1,4 +1,5 @@
 ﻿using FixedPointy;
+using SharedTypes;
 
 namespace Sim
 {
@@ -21,7 +22,7 @@ namespace Sim
 
         public string ProcessName => "Process ship ship collisions";
 
-        public bool ProcessFrameData(uint iTick, in TSettingsData sdaSettingsData, in TConstData cdaConstantData, in TFrameData fdaInFrameData, in object[] objInputs, ref TFrameData fdaOutFrameData)
+        public bool ProcessFrameData(uint iTick, in TSettingsData sdaSettingsData, in TConstData cdaConstantData, in TFrameData fdaInFrameData, in IInput[] objInputs, ref TFrameData fdaOutFrameData)
         {
             CollisionDetectionHelper<TFrameData, TSettingsData>.DetectCollision(fdaOutFrameData.ShipPositionX, fdaOutFrameData.ShipPositionY, sdaSettingsData.ShipSize, fdaOutFrameData, sdaSettingsData, FilterDeadShips, ShipShipCollisionResponse);
 
