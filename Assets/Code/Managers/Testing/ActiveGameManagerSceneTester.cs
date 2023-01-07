@@ -138,6 +138,9 @@ namespace GameManagers
         public int m_iBaseChainLinkIndex;
 
         [SerializeField]
+        public int m_iHeadChainLinkIndex;
+
+        [SerializeField]
         public int m_iGlobalMessagingChannelIndex;
 
         [SerializeField]
@@ -328,7 +331,9 @@ namespace GameManagers
 
                 //get the index of the base link
                 m_iBaseChainLinkIndex = (int)gmpGlobalMessagingProcessor.m_chmChainManager.m_chlChainBase.m_iLinkIndex;
+                m_iHeadChainLinkIndex = (int)gmpGlobalMessagingProcessor.m_chmChainManager.m_chlBestChainHead.m_iLinkIndex;
 
+                //try and get what channel this local peer is assigned to, this is debug only
                 if (gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(m_agmActiveGameManager.m_ncnNetworkConnection.m_lPeerID, out int iIndex))
                 {
                     m_iGlobalMessagingChannelIndex = iIndex;
