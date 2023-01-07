@@ -236,6 +236,8 @@ namespace GameManagers
                 NewPeerID();
             }
 
+            Debug.Log($"Get player id for divice_id {m_strUniqueDeviceID}");
+
             m_wbiWebInterface.GetPlayerID(m_strUniqueDeviceID);
 
 
@@ -251,10 +253,13 @@ namespace GameManagers
                 yield break;
             }
 
+            Debug.Log($"player id:{m_wbiWebInterface.UserID}, Player Key:{m_wbiWebInterface.UserKey} fetched for divice_id {m_strUniqueDeviceID}");
+
             m_agmActiveGameManager?.OnCleanup();
 
             m_cdaConstSimData = new ConstData(m_mgsMapSettingsDataInderface);
 
+            //setup game
             m_agmActiveGameManager = new ActiveGameManager(
                 m_sdiSettingsDataInderface.ConvertToSettingsData(), 
                 m_ecsErrorCorrectionSettings,
@@ -335,12 +340,14 @@ namespace GameManagers
 
                 m_gmsGlobalMessagingState = new List<ActiveGameManagerSceneTesterGlobalMessageChannel>();
 
+                //loop through all the channels
                 for (int i = 0; i < gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels.Count; i++)
                 {
                     GlobalMessageChannelState gcsChannelState = gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[i];
 
                     int iVotes = 0;
 
+                    //for a given chanel check what its votes are on all the other channels
                     for (int j = 0; j < gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels.Count; j++)
                     {
                         GlobalMessageChannelState gcsVotingChannel = gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[j];
@@ -348,13 +355,16 @@ namespace GameManagers
                         if (gcsVotingChannel.m_staState == GlobalMessageChannelState.State.Assigned ||
                             gcsVotingChannel.m_staState == GlobalMessageChannelState.State.VoteKick)
                         {
-                            //if(gcsVotingChannel.m_chvVotes[i].m_lPeerID == gcsChannelState.m_lChannelPeer)
-                            //{
-                            if (gcsVotingChannel.m_chvVotes[i].IsActive(tnpTimeProcessor.NetworkTime, gmpGlobalMessagingProcessor.m_chmChainManager.VoteTimeout) == true)
+                            //if the vote is for the channel
+                            //TODO:: not sure this if is needed, this will limit votes from other chaneels to only the votes that effect this channel?
+                            if(gcsVotingChannel.m_chvVotes[i].m_lPeerID == gcsChannelState.m_lChannelPeer)
                             {
-                                iVotes++;
+                                if (gcsVotingChannel.m_chvVotes[i].IsActive(tnpTimeProcessor.NetworkTime, gmpGlobalMessagingProcessor.m_chmChainManager.VoteTimeout) == true)
+                                {
+                                    //
+                                    iVotes++;
+                                }
                             }
-                            //}
                         }
 
                     }
