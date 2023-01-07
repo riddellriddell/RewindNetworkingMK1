@@ -44,11 +44,25 @@ namespace GameManagers
             {
                 ByteStream.Serialize(wbsByteStream, ref m_iInput);
             }
+
+            public byte[] GetHash()
+            {
+                byte[] bOut = BitConverter.GetBytes((long)TypeID);
+
+                byte[] bInputHash = BitConverter.GetBytes((long)m_iInput);
+
+                for(int i = 0; i < bInputHash.Length; i++)
+                {
+                    bOut[i % bOut.Length] = (byte)(bOut[i % bOut.Length] ^ bInputHash[i]);
+                }
+
+                return bOut;
+            }
         }
         #endregion
 
         //the minimum time between new message creation to avoid message spam
-        public static TimeSpan s_tspMinTimeBetweenMessages = TimeSpan.FromSeconds(1f / 60f);
+        public static TimeSpan s_tspMinTimeBetweenMessages =   TimeSpan.FromSeconds(1f / 60f);
 
         //the time the last input message was created 
         public DateTime m_dtmTimeOfLastInputMessageCreation;
@@ -78,10 +92,11 @@ namespace GameManagers
         {
             if (m_bDirtyInputState)
             {
-                //if (DateTime.UtcNow - m_dtmTimeOfLastInputMessageCreation > s_tspMinTimeBetweenMessages)
-                //{
+                //limit the rate of message creation for perfomance reasons?
+                if (DateTime.UtcNow - m_dtmTimeOfLastInputMessageCreation > s_tspMinTimeBetweenMessages)
+                {
                     CreateUserInputMessage();
-                //}
+                }
             }
         }
 
