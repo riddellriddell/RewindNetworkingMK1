@@ -24,6 +24,8 @@ namespace Networking
 
         #endregion
         #region Voting
+
+        //the amount of time a vote lasts and peers can make a vote before it times out the results disgarded
         public TimeSpan VoteTimeout { get; private set; }
 
         #endregion
@@ -182,11 +184,13 @@ namespace Networking
 
             while(chlGetLinksTo.m_chlParentChainLink != chlFromSharedBase)
             {
+                //early out if this chain has hit the base link or is the fist link in the chain
                 if(chlGetLinksTo.m_chlParentChainLink == null )
                 {
                     return false;
                 }
 
+                //walk back up the chain, steping the newest link back until a shared link is found
                 if(chlFromSharedBase == null || chlGetLinksTo.m_chlParentChainLink.m_iLinkIndex > chlFromSharedBase.m_iLinkIndex)
                 {
                     chlGetLinksTo = chlGetLinksTo.m_chlParentChainLink;
@@ -205,6 +209,29 @@ namespace Networking
         public void ApplyChangesToSimMessageBuffer(long lLocalPeer, bool bIsActive, List<ChainLink> chlLinkChanges, NetworkingDataBridge ndbNetworkingDataBridge)
         {
             GlobalMessagingState gsmMessageState = chlLinkChanges[chlLinkChanges.Count - 1].m_chlParentChainLink.m_gmsState.Clone() as GlobalMessagingState;
+
+            ChainLink chlParentLinkWithMessage = chlLinkChanges[chlLinkChanges.Count - 1].m_chlParentChainLink;
+
+            //get the end of the parent chain link to clear our any messages in the buffer that fall between the old and new chain links
+            while (chlParentLinkWithMessage != null)
+            {
+                if(chlParentLinkWithMessage.m_pmnMessages.Count > 0)
+                {
+                    SortingValue svaLastMessage = chlParentLinkWithMessage.m_pmnMessages[chlParentLinkWithMessage.m_pmnMessages.Count - 1].m_svaMessageSortingValue;
+            
+                    //make sure the sim reprocess the message queue starting from the end of the last chain
+                    ndbNetworkingDataBridge.UpdateProcessedTimeOnNewMessageAdded(svaLastMessage);
+            
+                    //remove all  the messages after the parent chain last message
+                    ndbNetworkingDataBridge.m_squInMessageQueue.ClearFrom(svaLastMessage);
+            
+                    break;
+                }
+                else
+                {
+                    chlParentLinkWithMessage = chlParentLinkWithMessage.m_chlParentChainLink;
+                }
+            }
 
             //loop through all the new chain links and apply the changes to the sim message buffer 
             for (int i = chlLinkChanges.Count -1; i  > -1; i--)
@@ -728,10 +755,15 @@ namespace Networking
 
             //apply messages from new branch to sim messages 
             ApplyChangesToSimMessageBuffer(lLocalPeerID, bActivePeer, chlNewBranchLinks, ndbNetworkingDataBridge);
-            
 
             //set new best chain head
             m_chlBestChainHead = chlNewLink;
+
+
+            //TODO::FIX THIS, the number of global messages does not match the number of messages in the sim buffer. global messages needs to be filtered to exclude voting join leave messages 
+            //check if any inputs have snuck in to the sim buffer that are not in the active chain 
+            //ChainBaseStateVerifier.ValidateSimMessaageBufferMatchesUpToLink(m_chlBestChainHead, ndbNetworkDataBridge, lLocalPeerID);
+
 
             //remove old links from the chain 
             UpdateBaseLink(lLocalPeerID, bActivePeer, gmbGlobalMessageBuffer, ndbNetworkingDataBridge);
@@ -771,7 +803,7 @@ namespace Networking
             //check if connected to base
             if (chlLink.m_bIsConnectedToBase == false)
             {
-                return 0;
+                return int.MinValue;
             }
 
             //check if there was any messages in the same time period that were missed 
@@ -874,6 +906,8 @@ namespace Networking
             DoRebase(lLocalPeerID, bActivePeer, chlNewBase, gmbGlobalMessageBuffer, ndbNetworkDataBridge);
         }
 
+        //check if a chain link is valid enough to turn into the base link
+        //this is done by checking if a link has enough parents, is old enough and enough peers aggree on it
         protected bool IsValidBaseLink(ChainLink chlBaseCandidate, ChainLink chlCurrentHead)
         {
             //check if it has enough acks 
@@ -927,6 +961,11 @@ namespace Networking
         protected void DoRebase(long lLocalPeerID, bool bActivePeer, ChainLink chlNewBase,GlobalMessageBuffer gmbMessageBuffer, NetworkingDataBridge ndbNetworkDataBridge)
         {
             //debug testing
+
+            //TODO::FIX THIS, the number of global messages does not match the number of messages in the sim buffer. global messages needs to be filtered to exclude voting join leave messages 
+            //check if any inputs have snuck in to the sim buffer that are not in the active chain 
+            //ChainBaseStateVerifier.ValidateSimMessaageBufferMatchesUpToLink(m_chlBestChainHead, ndbNetworkDataBridge, lLocalPeerID);
+
             //check if base states match 
             ChainBaseStateVerifier.RegisterAllStatesUpToLink(chlNewBase, lLocalPeerID);
 
