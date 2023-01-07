@@ -253,16 +253,49 @@ namespace Networking
             return objMessages;
         }
 
+
+        public SortingValue[] GetSortValuesFromData(DateTime dtmStartTime, DateTime dtmEndTime)
+        {
+            GetIndexesBetweenTimes(dtmStartTime, dtmEndTime, out int iStartIndex, out int iEndIndex);
+
+            SortingValue[] svaSortValues = new SortingValue[(iEndIndex - iStartIndex) + 1];
+
+            for (int i = 0; i < svaSortValues.Length; i++)
+            {
+                svaSortValues[i] = m_squInMessageQueue.GetKeyAtIndex(iStartIndex + i);
+
+                //TODO::Wrap this in #defines or something, this should not run on server
+                //loop through sorting values and try and back calculate the target tick
+                DateTime dtmTimeOfInput = new DateTime((long)svaSortValues[i].m_lSortValueA);
+
+                if (dtmStartTime.Ticks >= dtmTimeOfInput.Ticks)
+                {
+                    Debug.LogError("this input should have been in last tick");
+                }
+
+                if (dtmEndTime.Ticks < dtmTimeOfInput.Ticks)
+                {
+                    Debug.LogError("this input should have been in next tick");
+                }
+            }
+
+            return svaSortValues;
+        }
+
         public void UpdateProcessedMessageTime(DateTime dtmStartTimeExclusive, DateTime dtmEndTimeInclusive)
         {
             SortingValue svaFrom = new SortingValue((ulong)dtmStartTimeExclusive.Ticks, ulong.MaxValue);
             SortingValue svaTo = new SortingValue((ulong)dtmEndTimeInclusive.Ticks + 1, ulong.MinValue);
 
+            //if the time processed up to is less than the start range of the values processed then 
+            //dont update the processed up to value as there might be a message in the gap between 
+            //what has been processed in the past and this update
             if(m_svaSimProcessedMessagesUpTo.CompareTo(svaFrom) <= 0 )
             {
                 return;
             }
 
+            //check that this is actually consuming new inputs
             if(m_svaSimProcessedMessagesUpTo.CompareTo(svaTo) >= 0)
             {
                 return;
