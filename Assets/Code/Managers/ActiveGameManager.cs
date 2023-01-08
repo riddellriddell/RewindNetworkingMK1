@@ -108,9 +108,6 @@ namespace GameManagers
         protected float m_fGettingSimStateTimeOut = 240f;
         protected DateTime m_dtmGettingSimStateStart;
 
-        //the amount of time ahead of the current network time to schedule a fetch for the game state 
-        protected TimeSpan m_fSimStateLeadTime = TimeSpan.FromSeconds(0.1f);
-
         public ActiveGameManager(
             SimProcessorSettings sdaSimSettingsData, 
             InterpolationErrorCorrectionSettingsGen ecsInterpolationErrorCorrectionSettings, 
@@ -364,8 +361,15 @@ namespace GameManagers
                 }
             }
 
-            //check if a full state has been fetched 
-            if (m_ndbDataBridge.m_bHasSimDataBeenProcessedBySim == true)
+            //check that state was synced successfully 
+            if (m_sssStateSyncProcessor.m_bIsFullStateSynced == true && m_sssStateSyncProcessor.m_staState == SimStateSyncNetworkProcessor.State.SyncFailed)
+            {
+                Debug.LogError("something went wrong, some how we have a full sate but ther was an error with the sync");
+                bHasFetchedSimState = false;
+            }
+
+            //this gets set to false when there is data on the bridge ready for the sim to process
+            if (m_ndbDataBridge.m_bIsThereDataOnBridgeForSimToInitWith == false)
             {
                 bHasFetchedSimState = false;
             }
@@ -374,8 +378,6 @@ namespace GameManagers
             if (bHasFetchedSimState)
             {
                 //set sim state using fetched state 
-
-
                 //transition to running normal game
                 EnterRunningGame();
 
@@ -559,10 +561,14 @@ namespace GameManagers
                 DateTime dtmCurrentTime = m_tnpTimeManager.NetworkTime;
 
                 //get latency to worst connection 
-                TimeSpan tspWorstLatency = m_tnpTimeManager.LargetsRTT;
+                TimeSpan tspWorstLatency = m_tnpTimeManager.LargetsRTT.TotalSeconds < m_ncsNetworkConnectionSettings.m_fStartSimStateMaxLagCompensation ?
+                    m_tnpTimeManager.LargetsRTT : TimeSpan.FromSeconds(m_ncsNetworkConnectionSettings.m_fStartSimStateMaxLagCompensation);
+
+                //how far in the future should we try and get a sim state
+                TimeSpan tspStateLeadTime = tspWorstLatency + TimeSpan.FromSeconds(m_ncsNetworkConnectionSettings.m_fStartSimStateRequestLeadTime);
 
                 //calculate a time that the request will reach all peers before the peer has discarded the data 
-                DateTime dtmSimStateRequestTime = dtmCurrentTime + tspWorstLatency + m_fSimStateLeadTime;
+                DateTime dtmSimStateRequestTime = dtmCurrentTime + tspStateLeadTime;
 
                 //get list of trusted peers
                 List<long> tupActivePeerList = m_ngpGlobalMessagingProcessor.m_chmChainManager.m_chlBestChainHead.m_gmsState.GetActivePeerIDs();
