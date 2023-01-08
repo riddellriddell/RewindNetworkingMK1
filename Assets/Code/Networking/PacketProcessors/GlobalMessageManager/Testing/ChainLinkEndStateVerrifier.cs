@@ -32,7 +32,10 @@ namespace Networking
             ulong lKey = 0;
             lKey += chlLink.m_iLinkIndex;
             lKey = lKey << sizeof(uint);
-            lKey += (ulong)Math.Max(0,Math.Min(chlLink.m_lPeerID,uint.MinValue));
+
+            ulong peerIdAsLong = (ulong)Math.Max(0, chlLink.m_lPeerID) + (ulong)long.MaxValue - (ulong)Math.Max(0, -chlLink.m_lPeerID);
+
+            lKey += peerIdAsLong % UInt32.MaxValue;
 
             //calculate link end state hash 
             long lChainLinkHash = 0;

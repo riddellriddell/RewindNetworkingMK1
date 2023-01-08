@@ -35,6 +35,69 @@ namespace Networking
             }
         }
 
+        public static void ValidateSimMessaageBufferMatchesUpToLink(ChainLink chlLink, NetworkingDataBridge ndmDataBridge, long lPeerUpdatingBase)
+        {
+            SortingValue svlOldSortValue = SortingValue.MaxValue;
+            SortingValue svlNewSortValue = SortingValue.MinValue;
+
+            ulong lMessagesCounted = 0;
+            ulong iMessagesReportedAtEndOfNewest = chlLink.m_lChainMessageCount;
+            ulong iMessagesReportedAtStartOfOldest = chlLink.m_lChainMessageCount;
+
+            //get the oldest chain link
+            while (chlLink.m_chlParentChainLink != null)
+            {
+                iMessagesReportedAtStartOfOldest = chlLink.m_lChainMessageCount - (ulong)chlLink.m_pmnMessages.Count;
+
+                if (chlLink.m_pmnMessages.Count > 0)
+                {
+                    lMessagesCounted++;
+
+                    //try get the newest value if the newest value has not yet been calculated
+                    if (svlNewSortValue.CompareTo(SortingValue.MinValue) == 0)
+                    {
+                        svlNewSortValue = chlLink.m_pmnMessages[chlLink.m_pmnMessages.Count - 1].m_svaMessageSortingValue;
+                    }
+
+
+                    svlOldSortValue = chlLink.m_pmnMessages[0].m_svaMessageSortingValue;
+
+                    for(int i = 0; i < chlLink.m_pmnMessages.Count; i++)
+                    {
+                        if(svlOldSortValue.CompareTo(chlLink.m_pmnMessages[i].m_svaMessageSortingValue) > 0 || svlNewSortValue.CompareTo(chlLink.m_pmnMessages[i].m_svaMessageSortingValue) < 0)
+                        {
+                            Debug.LogError($"Peer: {lPeerUpdatingBase} Chain Link Message List Not Sorted");
+                        }
+                    }
+                }
+
+                chlLink = chlLink.m_chlParentChainLink;
+            }
+
+            ulong lReportedMessageCount = iMessagesReportedAtEndOfNewest - iMessagesReportedAtStartOfOldest;
+
+            if(lReportedMessageCount != lMessagesCounted)
+            {
+                Debug.LogError($"Peer: {lPeerUpdatingBase} Error when comparing reported chain lenghts to count lenght. reproted length {lReportedMessageCount}, Counted Length {lMessagesCounted}");
+            }
+
+            //get the number of messages in the buffer sent to the sim
+            ndmDataBridge.m_squInMessageQueue.TryGetFirstIndexGreaterThan(svlOldSortValue, out int iNextStartIndex, out bool bStartCollision, out int iStartCollisionIndex);
+            ndmDataBridge.m_squInMessageQueue.TryGetFirstIndexLessThan(svlNewSortValue, out int iNextEndIndex, out bool bEndCollision, out int iEndCollisionIndex);
+
+            if ((bStartCollision == false || bEndCollision == false) && lReportedMessageCount > 0)
+            {
+                Debug.LogError($"Peer: {lPeerUpdatingBase} Start or end messages in chain were not found in sim message buffer");
+            }
+
+            long lMessagesInBuffer = iEndCollisionIndex - iStartCollisionIndex;
+
+            if (lReportedMessageCount > 0 && lReportedMessageCount != (ulong)lMessagesInBuffer)
+            {
+                Debug.LogError($"Peer: {lPeerUpdatingBase} The number of messages in the message buffer: {lMessagesInBuffer} dont match the number of messages in the chain links over the same time {lReportedMessageCount}");
+            }
+        }
+
         public static void RegisterState(GlobalMessagingState gmdState,uint iIndex, long lPeerRegistering)
         {
 
