@@ -648,6 +648,10 @@ namespace GameManagers
             //create network data bridge
             m_ndbDataBridge = new NetworkingDataBridge();
 
+            //set the local peer id this is for debug only 
+            m_ndbDataBridge.m_lLocalPeerID = m_winWebInterface.UserID;
+
+
             //add network processors
             m_tnpTimeManager = new TimeNetworkProcessor(m_ndbDataBridge);
             m_ncnNetworkConnection.AddPacketProcessor(m_tnpTimeManager);

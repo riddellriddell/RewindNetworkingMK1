@@ -52,6 +52,11 @@ namespace Networking
         //no messages this old or older are alowed in the message buffer
         public SortingValue m_svaOldestMessageToStoreInBuffer;
 
+        //TODO::Wrap this in a #define
+        //DO Not Use In Simulation code
+        //this is only for use when debugging
+        public long m_lLocalPeerID;
+
         //returns an array of requests between the start time and the end time including times a the same time as the start and excluding items at the end time 
         public List<Tuple<DateTime, long>> GetRequestsForTimePeriod(DateTime dtmStartTimeExclusive, DateTime dtmEndTimeInclusive)
         {
