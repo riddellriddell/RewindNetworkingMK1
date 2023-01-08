@@ -125,20 +125,40 @@ namespace Networking
         {
             get
             {
-                return ByteStream.DataSize(m_bSegmentData);
+                int iSize = 0;
+
+                iSize += sizeof(long); //hash
+
+                iSize += sizeof(long); //tick
+
+                iSize += ByteStream.DataSize(m_bSegmentData); //data
+
+                return iSize;
+
+
             }
         }
+
+        public long m_lSegmentHash;
+
+        public long m_lTickOfGameState;
 
         public byte[] m_bSegmentData;
 
         public override void DecodePacket(ReadByteStream rbsByteStream)
         {
+            ByteStream.Serialize(rbsByteStream, ref m_lSegmentHash);
+            ByteStream.Serialize(rbsByteStream, ref m_lTickOfGameState);
             ByteStream.Serialize(rbsByteStream, ref m_bSegmentData);
+
         }
 
         public override void EncodePacket(WriteByteStream wbsByteStream)
         {
+            ByteStream.Serialize(wbsByteStream, ref m_lSegmentHash);
+            ByteStream.Serialize(wbsByteStream, ref m_lTickOfGameState);
             ByteStream.Serialize(wbsByteStream, ref m_bSegmentData);
+
         }
     }
 }
