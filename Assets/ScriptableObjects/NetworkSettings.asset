@@ -15,7 +15,7 @@ MonoBehaviour:
   m_iMaxBytesToSend: 1000
   m_iMaxPackestInFlight: 100
   m_fConnectionTimeOutTime: 5
-  m_fConnectionEstablishTimeOut: 30
+  m_fConnectionEstablishTimeOut: 40
   m_fMaxTimeBetweenMessages: 0.5
   m_fTimeLerpSpeed: 0.2
   m_fMaxLerpDistance: 10
@@ -25,6 +25,8 @@ MonoBehaviour:
   m_fStateRequestTimeOut: 10
   m_fSegmentRequestTimeOut: 2
   m_fMaxFailedRequestPercent: 0.5
+  m_fStartSimStateRequestLeadTime: 0.5
+  m_fStartSimStateMaxLagCompensation: 0.6
   m_fGatewayAnounceRate: 3
   m_fGatewayTimeout: 5
   s_iStartBufferSize: 2000

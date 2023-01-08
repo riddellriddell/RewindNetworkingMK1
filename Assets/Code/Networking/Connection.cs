@@ -42,6 +42,7 @@ namespace Networking
         }
 
         //a unique id used to identify a player before game starts
+        //this is the id of the peer this connection is connecting too
         public long m_lUserUniqueID;
 
         // the max number of bytes to send at once

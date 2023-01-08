@@ -44,6 +44,9 @@ namespace Networking
         public int m_iMaxSegmentSize = 300;
 
         [SerializeField]
+        public float m_fMinStateDeliveryTime = 5f;
+
+        [SerializeField]
         public float m_fStateRequestTimeOut = 10f;
 
         [SerializeField]
@@ -51,6 +54,12 @@ namespace Networking
 
         [SerializeField]
         public float m_fMaxFailedRequestPercent = 0.5f;
+
+        [SerializeField]
+        public float m_fStartSimStateRequestLeadTime = 0.1f;
+
+        [SerializeField]
+        public float m_fStartSimStateMaxLagCompensation = 0.6f;
 
         //--------------- Network Gateway Manager -----------
         [SerializeField]

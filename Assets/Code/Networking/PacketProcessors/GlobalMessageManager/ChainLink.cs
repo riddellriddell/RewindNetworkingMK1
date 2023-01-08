@@ -36,6 +36,7 @@ namespace Networking
         public Byte[] m_bPayload;
 
         //value used to sort chain links 
+        //this is not the same as the sorting value used by the sim message buffer
         public SortingValue m_svaChainSortingValue;
 
         //the global messaging state at the end of processing this message

@@ -152,6 +152,7 @@ namespace Networking
 
             OldConnectionFilterPadding = TimeSpan.FromSeconds(ncsSettings.m_fOldConnectionFilterPadding);
         }   
+        
         public override void Update()
         {
             base.Update();
