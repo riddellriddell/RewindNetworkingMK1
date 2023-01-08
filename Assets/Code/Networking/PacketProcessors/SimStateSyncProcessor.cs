@@ -10,7 +10,15 @@ namespace Networking
         //the maximum size a single segment of the sim state will be
         public int MaxSegmentSize { get; private set; }
 
+        //if all active peers agree on a state there should be no chance for the state to be changed by another input
+        //so we can end the state fetch early but just in case we want to not finalize the state before this time
+        public TimeSpan MinStateDeliveryTime { get; private set; }
+
+        //how long from deciding on a state hash to fetch to when all data for that state has been delivered
         public TimeSpan StateRequestTimeOut { get; private set; }
+
+        //how long each peer has to return a state segment assigned to them, this is to stop one peer not returning a segment for ages
+        //and holding up
         public TimeSpan SegmentRequestTimeOut { get; private set; }
 
         public float MaxFailedRequestPercent { get; private set; }
@@ -68,7 +76,11 @@ namespace Networking
 
         //the time by which this request needs to be filled on not filled 
         public DateTime m_dtmRequestTimeOut;
-        
+
+        //if all peers agree on the state hash then this time is set to MinStateDeliveryTime in the future
+        //and if all peers still agree at that time then the state is considerd delivered 
+        public DateTime m_dtmEarlyStateDeliveryTime;
+
         //when will the next request for in data time out
         public DateTime m_dtmTimeOfNextInDataTimeOut;
 
@@ -80,6 +92,10 @@ namespace Networking
 
         //network time tracker
         public TimeNetworkProcessor m_tnpNetworkTime;
+
+        //the global messaging processor
+        //this is used to check if the local player is clasified as an authorative peer
+        public NetworkGlobalMessengerProcessor m_gmpGlobalMessageProcessor;
 
         //data structure for transfering information between the networking layer and the sim managment components
         public NetworkingDataBridge m_ndbNetworkDataBridge;
@@ -95,6 +111,7 @@ namespace Networking
 
             MaxSegmentSize = ncsSettings.m_iMaxSegmentSize;
             StateRequestTimeOut = TimeSpan.FromSeconds(ncsSettings.m_fStateRequestTimeOut);
+            MinStateDeliveryTime = TimeSpan.FromSeconds(ncsSettings.m_fMinStateDeliveryTime);
             SegmentRequestTimeOut = TimeSpan.FromSeconds(ncsSettings.m_fSegmentRequestTimeOut);
             MaxFailedRequestPercent = ncsSettings.m_fMaxFailedRequestPercent;
         }
@@ -111,10 +128,12 @@ namespace Networking
             {
                 m_bIsRequestedOutDataDirty = false;
 
+                //tell the sim manager the timestamps for the requested data and what peers want that data
                 m_ndbNetworkDataBridge.m_tupActiveRequestedDataAtTimeForPeers = GetRequestedTimeOfSimStates();
             }
 
             //check if any new states have been added to the data bridge 
+            //this happens when state data exists for a request at a time
             if (m_ndbNetworkDataBridge.m_tupDataAtTimeForPeers.Count > 0)
             {
                 Debug.Log("SimStateSync:: Festching Data For Peers From Network Data Bridge");
@@ -137,6 +156,14 @@ namespace Networking
                 return;
             }
 
+            //check the percent of peers that agree on the state at a tick
+            CheckForEarlyStateSync();
+
+            if (m_staState != State.GettingStateData)
+            {
+                return;
+            }
+
             //check if state sync has timed out 
             UpdateTimeOutState();
 
@@ -145,13 +172,14 @@ namespace Networking
                 return;
             }
 
+            //TODO:: 5/11/22 remove this if not in use. at the moment we are not tracking if a peer does not have a state 
             //check if not enough peers dont have state for time
-            UpdatePeerState();
+            //UpdatePeerState();
 
-            if (m_staState != State.GettingStateData)
-            {
-                return;
-            }
+            //if (m_staState != State.GettingStateData)
+            //{
+            //    return;
+            //}
 
             //update peer hash states 
             if (m_bIsConnectedPeerStateHashDirty)
@@ -164,6 +192,7 @@ namespace Networking
                     //clear out existing data and restart sourcing sim data segments 
                     ResetSimDataOnHashChange();
 
+                    //flag that new segment download requests need to be sent out
                     m_bIsStateSegmentAsignmentDirty = true;
                 }
             }
@@ -180,7 +209,6 @@ namespace Networking
                 //mark segment assignemnt as nolonger dirty 
                 m_bIsStateSegmentAsignmentDirty = false;
             }
-
 
         }
 
@@ -212,7 +240,13 @@ namespace Networking
             {
                 SimSegmentSyncDataPacket ssdSegmentData = pktInputPacket as SimSegmentSyncDataPacket;
 
-                OnRecieveSegment(ref ssdSegmentData.m_bSegmentData, lFromUserID);
+                //DO SOME BASIC VALIDATION
+                if(m_dtmTimeOfAgreedState.Ticks != ssdSegmentData.m_lTickOfGameState)
+                {
+                    Debug.LogError($"The state sent by peer{lFromUserID} is for tick {ssdSegmentData.m_lTickOfGameState} but the request is for time {m_dtmTimeOfAgreedState.Ticks}");
+                }
+
+                OnRecieveSegment(ref ssdSegmentData.m_bSegmentData, ssdSegmentData.m_lSegmentHash, lFromUserID);
 
                 return null;
             }
@@ -237,6 +271,8 @@ namespace Networking
                     m_staState = State.SyncFailed;
                     m_ndbNetworkDataBridge.m_sssSimStartStateSyncStatus = m_staState;
 
+                    Debug.LogError("Sync failed, did not download all segments before time ran out");
+
                     return;
                 }
 
@@ -248,6 +284,8 @@ namespace Networking
                     m_staState = State.SyncFailed;
                     m_ndbNetworkDataBridge.m_sssSimStartStateSyncStatus = m_staState;
 
+                    Debug.LogError("Sync failed, final synchronizations was not stable, not enough peers egreed with final state");
+
                     return;
                 }
 
@@ -255,30 +293,71 @@ namespace Networking
                 m_ndbNetworkDataBridge.m_sssSimStartStateSyncStatus = m_staState;
             }
         }
-
-        //check peers to see if peers have state available 
-        public void UpdatePeerState()
+        
+        //check if the state has been recieved from all peers and they all agree on the state so there is no need to wait any longer
+        public void CheckForEarlyStateSync()
         {
-            int iFailedRequests = 0;
+            //how many peers should have the same state hash to early complete connection 
+            int number_of_required_matches = m_lAuthorativePeers.Count;
 
-            for (int i = 0; i < m_lAuthorativePeers.Count; i++)
+            //check if local peer counts as an authorative peer 
+           if(m_lAuthorativePeers.Contains(ParentNetworkConnection.m_lPeerID))
+           {
+                //don't count the local peer for the number of peers that need to have the same state
+                number_of_required_matches -= 1;
+           }
+
+            //check if full state was downloaded 
+            if (m_sPendingSegments.Count == 0 && m_iPeersWithSimHash >= number_of_required_matches)
             {
-                if (ChildConnectionProcessors.TryGetValue(m_lAuthorativePeers[i], out SimStateSyncConnectionProcessor sscStateSync))
+                //wait for a fixed period of time in case a peer changes their mind about the state;
+                if (m_dtmEarlyStateDeliveryTime > m_tnpNetworkTime.BaseTime)
                 {
-                    if (sscStateSync.m_istInState == SimStateSyncConnectionProcessor.InState.NotAvailable)
+                    //clean up peers
+                    foreach (SimStateSyncConnectionProcessor sscSyncConnection in ChildConnectionProcessors.Values)
                     {
-                        iFailedRequests++;
+                        sscSyncConnection.CleanUpRecievingState();
                     }
+
+                    Debug.Log("State synced early");
+
+                    //show that state is synced 
+                    m_staState = State.StateSynced;
+                    m_ndbNetworkDataBridge.m_sssSimStartStateSyncStatus = m_staState;
                 }
             }
-
-            int iMaxNumberOfFailedRequests = Mathf.CeilToInt(m_lAuthorativePeers.Count * MaxFailedRequestPercent);
-
-            if (iFailedRequests >= iMaxNumberOfFailedRequests)
+            else
             {
-                m_staState = State.SyncFailed;
+                //reset time since all peers have agreed 
+                m_dtmEarlyStateDeliveryTime = m_tnpNetworkTime.BaseTime + MinStateDeliveryTime;
             }
         }
+
+        //check peers to see if peers have state available 
+        //TODO:: this currently does not do anything because the ony sync states used are not requested and recieved 
+        //public void UpdatePeerState()
+        //{
+        //    int iFailedRequests = 0;
+        //
+        //    for (int i = 0; i < m_lAuthorativePeers.Count; i++)
+        //    {
+        //        if (ChildConnectionProcessors.TryGetValue(m_lAuthorativePeers[i], out SimStateSyncConnectionProcessor sscStateSync))
+        //        {
+        //            if (sscStateSync.m_istInState == SimStateSyncConnectionProcessor.InState.NotAvailable)
+        //            {
+        //                iFailedRequests++;
+        //            }
+        //        }
+        //    }
+        //
+        //    int iMaxNumberOfFailedRequests = Mathf.CeilToInt(m_lAuthorativePeers.Count * MaxFailedRequestPercent);
+        //
+        //    if (iFailedRequests >= iMaxNumberOfFailedRequests)
+        //    {
+        //        Debug.LogError("Not enough peers have state available, sync failed" );
+        //        m_staState = State.SyncFailed;
+        //    }
+        //}
 
         //check if connection is on the list of authorative peers
         public bool IsPeerInAuthorativeList(Connection conConnection)
@@ -318,7 +397,7 @@ namespace Networking
 
             m_iSimStateSize = 0;
 
-            m_bIsConnectedPeerStateHashDirty = true;
+            m_bIsConnectedPeerStateHashDirty = false;
 
             //send request to peers for data 
             for (int i = 0; i < m_lAuthorativePeers.Count; i++)
@@ -333,9 +412,8 @@ namespace Networking
             }
 
             //tell network data bride data syncing has started 
-
             m_ndbNetworkDataBridge.m_sssSimStartStateSyncStatus = m_staState;
-            m_ndbNetworkDataBridge.m_bHasSimDataBeenProcessedBySim = true;
+            m_ndbNetworkDataBridge.m_bIsThereDataOnBridgeForSimToInitWith = false;
             m_ndbNetworkDataBridge.m_dtmSimStateSyncRequestTime = m_dtmTimeOfAgreedState;
 
         }
@@ -345,6 +423,8 @@ namespace Networking
         {
             List<Tuple<long, SimStateSyncConnectionProcessor>> lHashOptions = new List<Tuple<long, SimStateSyncConnectionProcessor>>(m_lAuthorativePeers.Count);
 
+            //loop through all the peers and find the ones that have sent a hash map
+            //add the hashes to an array
             for (int i = 0; i < m_lAuthorativePeers.Count; i++)
             {
                 if (ChildConnectionProcessors.TryGetValue(m_lAuthorativePeers[i], out SimStateSyncConnectionProcessor sscStateSync))
@@ -396,6 +476,7 @@ namespace Networking
             if (m_lAgreedSimHash == lCommonStateHash)
             {
                 //active hash has not changed
+                Debug.Log("Common hash has not changed");
                 return false;
             }
 
@@ -469,7 +550,7 @@ namespace Networking
 
         //when data is recieved this funciton works out what segment it belongs to and 
         //copies the data into the state byte array
-        public void OnRecieveSegment(ref byte[] bData, long lPeer)
+        public void OnRecieveSegment(ref byte[] bData, long lHashOfData, long lPeer)
         {
             //check if state not syncing 
             if (m_staState != State.GettingStateData)
@@ -481,6 +562,7 @@ namespace Networking
             if (bData.Length > MaxSegmentSize)
             {
                 //bad segment size 
+                Debug.LogError($"Sim state segement too big? corrupted or hack attempt from peer{lPeer}?");
 
                 //TODO: Throw an error of some kind and mayb trigger a kick action
                 return;
@@ -512,7 +594,21 @@ namespace Networking
             //check if a segment was found 
             if (sDataSegment == ushort.MaxValue)
             {
+                //is the hash of the message a match to anything
+                int iHashIndex = -1;
+
+                //check if hash matcher anything
+                for (ushort i = 0; i < m_lSimDataSegmentsHash.Length; i++)
+                {
+                    if (m_lSimDataSegmentsHash[i] == (lHashOfData))
+                    {
+                        iHashIndex = i;
+                        break;
+                    }
+                }
+
                 //data does not belong to current sim state 
+                Debug.LogError($"Sim state segement from peer{lPeer} with hash {lSegmentHash} does not belong to target sim state but the message hash of {lHashOfData} can be found in the hash map at index {iHashIndex}");
 
                 return;
             }
@@ -521,6 +617,7 @@ namespace Networking
             if (m_sPendingSegments.Contains(sDataSegment) == false)
             {
                 // data segment already recieved
+                Debug.LogError($"Sim state segement from peer{lPeer} already recieved");
 
                 return;
             }
@@ -544,11 +641,13 @@ namespace Networking
             //check if all data segments have been recieved 
             if (m_sPendingSegments.Count == 0)
             {
+                //log all states recieved
+                Debug.Log($"All stim state segements recieved for state at time:{m_dtmTimeOfAgreedState}");
+
                 m_bIsFullStateSynced = true;
 
                 //update the data in the sim segment buffer 
                 m_ndbNetworkDataBridge.UpdateSimStateAtTime(m_dtmTimeOfAgreedState, m_bSimState);
-
 
                 //TODO: fire some kind of event telling sim to get new state 
             }
@@ -657,6 +756,7 @@ namespace Networking
             }
         }
 
+        //get a list of all the times for all the requestd sim states and the peers that requested them
         public List<Tuple<DateTime, long>> GetRequestedTimeOfSimStates()
         {
             List<Tuple<DateTime, long>> dtmSimTimes = new List<Tuple<DateTime, long>>();
@@ -689,6 +789,7 @@ namespace Networking
         {         
             DateTime dtmTimeOutTime = dtmTimeOfRequest + this.StateRequestTimeOut;
 
+            //update the time of the next state time out
             if (m_dtmTimeOfNextOutDataTimeOut > dtmTimeOutTime)
             {
                 m_dtmTimeOfNextOutDataTimeOut = dtmTimeOutTime;
@@ -698,6 +799,7 @@ namespace Networking
 
             Debug.Log("SimStateSync:: adding new request for sim data to network data bridge");
 
+            //add the time of the data request to the data bridge so the sim manager knows when to copy out sim state 
             m_ndbNetworkDataBridge.m_tupNewRequestedDataAtTimeForPeers.Add(new Tuple<DateTime, long>(dtmTimeOfRequest, lNewRequestFromPeerID));
         }
     }
@@ -706,16 +808,20 @@ namespace Networking
     {
         public enum OutState
         {
-            NotRequested,
-            Pending,
-            Active
+            NotRequested, //no request has beeen made yet
+            Pending, //there is a request for a state but that state has not been generated yet
+            Active //a request has been made and this peer has the data
         }
 
         public enum InState
         {
             NotRequested,
-            Pending,
-            NotAvailable,
+            
+            //TODO:: remvoe these if they are never used at the moment the instate is initalized to not requested and 
+            //only set to received once a state has arrived 
+            //Pending,
+            //NotAvailable,
+            
             Recieved
         }
 
@@ -929,7 +1035,6 @@ namespace Networking
 
             //send hash map of game state at time
             ParentConnection.QueuePacketToSend(shmStateHashMap);
-
         }
 
         public void OnRequestDataSegment(long lDataHash)
@@ -938,6 +1043,7 @@ namespace Networking
             if (m_ostOutState == OutState.NotRequested)
             {
                 //send not available reply? 
+                Debug.LogError("Sim sync mode not requested no sim state has been stored and no hashmap calculated");
 
                 return;
             }
@@ -1029,6 +1135,9 @@ namespace Networking
 
         }
 
+        //check if this connection has an out bound state request
+        //check if the request has timed out and if it hasn't 
+        //update the time of next request time out
         public void UpdateOutDataRequestTimeOut(ref DateTime dtmTimeOfNextRequestTimeOut, DateTime dtmCurrentTime)
         {
             if (m_ostOutState == OutState.NotRequested)
@@ -1100,11 +1209,13 @@ namespace Networking
             //check if still syncing 
             if (m_tParentPacketProcessor.m_staState != SimStateSyncNetworkProcessor.State.GettingStateData)
             {
+                Debug.LogWarning("Recieved state hash after sync state left getting data state");
                 return;
             }
 
             if (m_lInSimDataSegmentsHash == null || m_lInSimDataSegmentsHash.Length != lSimHash.Length)
             {
+                Debug.Log($"initalizing hash map array to lenght {lSimHash.Length}");
                 m_lInSimDataSegmentsHash = new long[lSimHash.Length];
             }
 
@@ -1126,18 +1237,23 @@ namespace Networking
             m_istInState = InState.Recieved;
 
             //clear any assigned segments 
-            m_sRequestedSegment = ushort.MaxValue;
+            //this is in a function just to make it easier to debug
+            if (m_sRequestedSegment != ushort.MaxValue)
+            {
+                m_sRequestedSegment = ushort.MaxValue;
+            }
 
             //flag parent state to update best state 
             m_tParentPacketProcessor.m_bIsConnectedPeerStateHashDirty = true;
         }
 
+        //requests data from a peer to be delivered by a certain time
         public void OnAssignSegment(ushort sSegmentIndex, DateTime dtmTimeOutTime)
         {
             if (m_lInSimDataSegmentsHash.Length <= sSegmentIndex)
             {
                 //requested out of bounds segment 
-
+                Debug.LogError($"Segment request for index:{sSegmentIndex} is for data that does not exist in the hash map");
                 return;
             }
 
