@@ -1,17 +1,18 @@
 ﻿using SharedTypes;
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Networking
 {
     //this class acts as a bridge for other classes to send and recieve data through the networking layer
-    public class NetworkingDataBridge : ISimTimeProvider
+    public class NetworkingDataBridge : ISimTimeProvider, ILocalPeerProvider
     {       
         //queue of all the outbound messages 
         public List<GlobalMessageBase> m_gmbOutMessageBuffer = new List<GlobalMessageBase>();
 
         //queue of all the inbound messages 
-        public SortedRandomAccessQueue<SortingValue, object> m_squInMessageQueue = new SortedRandomAccessQueue<SortingValue, object>();
+        public SortedRandomAccessQueue<SortingValue, IInput> m_squInMessageQueue = new SortedRandomAccessQueue<SortingValue, IInput>();
                
         //the time of the synchronization sync 
         public DateTime m_dtmSimStateSyncRequestTime = DateTime.MaxValue ;
@@ -23,7 +24,7 @@ namespace Networking
         public byte[] m_bSimState = new byte[0];
 
         //has the data from the bridge been coppied into the sim for use
-        public bool m_bHasSimDataBeenProcessedBySim = true;
+        public bool m_bIsThereDataOnBridgeForSimToInitWith = false;
 
         //what data the peers on the network are requesting  
         public List<Tuple<DateTime, long>> m_tupActiveRequestedDataAtTimeForPeers = new List<Tuple<DateTime, long>>();
@@ -226,13 +227,13 @@ namespace Networking
 
             bSimData.CopyTo(m_bSimState, 0);
 
-            m_bHasSimDataBeenProcessedBySim = false;
+            m_bIsThereDataOnBridgeForSimToInitWith = true;
         }
 
-        public void GetIndexesBetweenTimes(DateTime dtmStartTime, DateTime dtmEndTime, out int iStartIndex, out int iEndIndex)
+        public void GetIndexesBetweenTimes(DateTime dtmStartTimeExclusive, DateTime dtmEndTimeInclusive, out int iStartIndex, out int iEndIndex)
         {
-            SortingValue svaStartValue = new SortingValue((ulong)dtmStartTime.Ticks, ulong.MaxValue);
-            SortingValue svaEndValue = new SortingValue((ulong)dtmEndTime.Ticks + 1, ulong.MinValue);
+            SortingValue svaStartValue = new SortingValue((ulong)dtmStartTimeExclusive.Ticks, ulong.MaxValue);
+            SortingValue svaEndValue = new SortingValue((ulong)dtmEndTimeInclusive.Ticks + 1, ulong.MinValue);
 
             bool bStartIndexFound = m_squInMessageQueue.TryGetFirstIndexGreaterThan(svaStartValue, out iStartIndex);
             bool bEndIndexFound = m_squInMessageQueue.TryGetFirstIndexLessThan(svaEndValue, out iEndIndex);
@@ -342,10 +343,13 @@ namespace Networking
         {
             while(m_squInMessageQueue.Count > 0 && m_squInMessageQueue.PeakKeyDequeue().CompareTo(svaOldesValidTime) < 1)
             {
-                m_squInMessageQueue.Dequeue(out SortingValue svaKey, out Object oObject);
+                m_squInMessageQueue.Dequeue(out SortingValue svaKey, out IInput oObject);
             }
         }
 
-
+        public long GetLocalPeerID()
+        {
+            return m_lLocalPeerID;
+        }
     }
 }
