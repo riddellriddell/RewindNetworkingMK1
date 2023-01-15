@@ -65,16 +65,6 @@ namespace SimDataInterpolation
 			}
 
 			//loop throuhg all variables and calculate the difference 
-			for(int i = 0 ; i < ifdOldFrameData.m_fixShipHealth.Length; i++)
-			{
-				ifdOldFrameData.m_fixShipHealthErrorOffset[i] += (System.Single) (ifdNewFrameData.m_fixShipHealth[i] - ifdOldFrameData.m_fixShipHealth[i]);
-			}
-
-			for(int i = 0 ; i < ifdOldFrameData.m_fixShipHealDelayTimeOut.Length; i++)
-			{
-				ifdOldFrameData.m_fixShipHealDelayTimeOutErrorOffset[i] += (System.Single) (ifdNewFrameData.m_fixShipHealDelayTimeOut[i] - ifdOldFrameData.m_fixShipHealDelayTimeOut[i]);
-			}
-
 			for(int i = 0 ; i < ifdOldFrameData.m_fixTimeUntilRespawn.Length; i++)
 			{
 				ifdOldFrameData.m_fixTimeUntilRespawnErrorOffset[i] += (System.Single) (ifdNewFrameData.m_fixTimeUntilRespawn[i] - ifdOldFrameData.m_fixTimeUntilRespawn[i]);
@@ -147,16 +137,6 @@ namespace SimDataInterpolation
 		public InterpolatedFrameDataGen CalculateOffsetInterpolationData(InterpolatedFrameDataGen ifdFrameData)
 		{
 					//loop throuhg all variables and calculate the difference 
-			for(int i = 0 ; i < ifdFrameData.m_fixShipHealth.Length; i++)
-			{
-				ifdFrameData.m_fixShipHealthErrorAdjusted[i] = (System.Single)(ifdFrameData.m_fixShipHealth[i] - ifdFrameData.m_fixShipHealthErrorOffset[i]);
-			}
-
-			for(int i = 0 ; i < ifdFrameData.m_fixShipHealDelayTimeOut.Length; i++)
-			{
-				ifdFrameData.m_fixShipHealDelayTimeOutErrorAdjusted[i] = (System.Single)(ifdFrameData.m_fixShipHealDelayTimeOut[i] - ifdFrameData.m_fixShipHealDelayTimeOutErrorOffset[i]);
-			}
-
 			for(int i = 0 ; i < ifdFrameData.m_fixTimeUntilRespawn.Length; i++)
 			{
 				ifdFrameData.m_fixTimeUntilRespawnErrorAdjusted[i] = (System.Single)(ifdFrameData.m_fixTimeUntilRespawn[i] - ifdFrameData.m_fixTimeUntilRespawnErrorOffset[i]);
@@ -227,16 +207,6 @@ namespace SimDataInterpolation
 
 		public  InterpolatedFrameDataGen ReduceOffsets(InterpolatedFrameDataGen ifdFrameData, float fDeltaTime, InterpolationErrorCorrectionSettingsGen ecsErrorCorrectionSetting)
 		{
-			for(int i = 0 ; i < ifdFrameData.m_fixShipHealth.Length; i++)
-			{
-				ifdFrameData.m_fixShipHealthErrorOffset[i] *= CalculateErrorScalingAmount(ifdFrameData.m_fixShipHealthErrorOffset[i],fDeltaTime,ecsErrorCorrectionSetting.m_fixShipHealthErrorCorrectionSetting );
-			}
-
-			for(int i = 0 ; i < ifdFrameData.m_fixShipHealDelayTimeOut.Length; i++)
-			{
-				ifdFrameData.m_fixShipHealDelayTimeOutErrorOffset[i] *= CalculateErrorScalingAmount(ifdFrameData.m_fixShipHealDelayTimeOutErrorOffset[i],fDeltaTime,ecsErrorCorrectionSetting.m_fixShipHealDelayTimeOutErrorCorrectionSetting );
-			}
-
 			for(int i = 0 ; i < ifdFrameData.m_fixTimeUntilRespawn.Length; i++)
 			{
 				ifdFrameData.m_fixTimeUntilRespawnErrorOffset[i] *= CalculateErrorScalingAmount(ifdFrameData.m_fixTimeUntilRespawnErrorOffset[i],fDeltaTime,ecsErrorCorrectionSetting.m_fixTimeUntilRespawnErrorCorrectionSetting );
@@ -321,31 +291,23 @@ namespace SimDataInterpolation
 					ifdInterpolatedFrameData.m_bInput[i] = (System.Int32) fdaToFrame.m_bInput[i];
 
 			}
+			for(int i = 0 ; i < ifdInterpolatedFrameData.m_iInputHash.Length ; i++)
+			{
+
+					ifdInterpolatedFrameData.m_iInputHash[i] = (System.Int32) fdaToFrame.m_iInputHash[i];
+
+			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipHealth.Length ; i++)
 			{
 
-				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
-				{
 					ifdInterpolatedFrameData.m_fixShipHealth[i] = (System.Single) fdaToFrame.m_fixShipHealth[i];
-				}
-				else
-				{
-					ifdInterpolatedFrameData.m_fixShipHealth[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixShipHealth[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixShipHealth[i]) * fInterpolation));
-						
-				}
+
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_fixShipHealDelayTimeOut.Length ; i++)
 			{
 
-				if((fdaFromFrame.m_fixShipHealth[i] <= Fix.Zero) == true)
-				{
 					ifdInterpolatedFrameData.m_fixShipHealDelayTimeOut[i] = (System.Single) fdaToFrame.m_fixShipHealDelayTimeOut[i];
-				}
-				else
-				{
-					ifdInterpolatedFrameData.m_fixShipHealDelayTimeOut[i] = (System.Single)( ((System.Single)(fdaFromFrame.m_fixShipHealDelayTimeOut[i]) * (1 - fInterpolation)) +  ((System.Single)(fdaToFrame.m_fixShipHealDelayTimeOut[i]) * fInterpolation));
-						
-				}
+
 			}
 			for(int i = 0 ; i < ifdInterpolatedFrameData.m_bShipLastDamagedBy.Length ; i++)
 			{

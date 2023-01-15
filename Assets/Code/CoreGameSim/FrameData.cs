@@ -50,11 +50,11 @@ namespace Sim
         #region Health
 
         //list of all the ship Healths 
-        [FrameDataInterpilationTypeAttribute(typeof(float), FrameDataInterpilationTypeAttribute.InterpolationType.Linear)]
+        [FrameDataInterpilationTypeAttribute(typeof(float), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
         [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData,"m_fixShipHealth[i]","<=",FrameDataInterpolationBreakAttribute.DataSource.CustomData,"Fix.Zero",true)]
         public Fix[] m_fixShipHealth;
 
-        [FrameDataInterpilationTypeAttribute(typeof(float))]
+        [FrameDataInterpilationTypeAttribute(typeof(float), FrameDataInterpilationTypeAttribute.InterpolationType.None)]
         [FrameDataInterpolationBreak(FrameDataInterpolationBreakAttribute.DataSource.OldFrameData, "m_fixShipHealth[i]", "<=", FrameDataInterpolationBreakAttribute.DataSource.CustomData, "Fix.Zero", true)]
         public Fix[] m_fixShipHealDelayTimeOut;
 

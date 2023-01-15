@@ -32,6 +32,8 @@ namespace GameStateView
 
         public float m_fShakeRestitution;
 
+        public float m_fShakeOnHealthChangeGreaterThan;
+
         protected float m_fLastHealth;
         
         protected float m_fShakeForce;
@@ -62,7 +64,7 @@ namespace GameStateView
             }
 
             //check for damage
-            if(m_fLastHealth > ifdFrameData.m_fixShipHealth[iPeerIndex])
+            if(m_fLastHealth > (ifdFrameData.m_fixShipHealth[iPeerIndex] + m_fShakeOnHealthChangeGreaterThan))
             {
                 AddShakeForce(m_fShakeFoceForDamage);
             }

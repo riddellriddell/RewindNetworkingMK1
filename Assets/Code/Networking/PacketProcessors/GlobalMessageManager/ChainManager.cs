@@ -206,6 +206,10 @@ namespace Networking
             return true;
         }
 
+        //TODO::this forces the processed up to point back to the start of the message chain even if all the messages are the same
+        //the m_svaSimProcessedMessagesUpTo should only change if the chain link has different messages than the buffer
+        //the new chain links should only clear the buffer up to the end of the last chain link. the extra links at the end that do not fall within a chain link should not be 
+        //cleared
         public void ApplyChangesToSimMessageBuffer(long lLocalPeer, bool bIsActive, List<ChainLink> chlLinkChanges, NetworkingDataBridge ndbNetworkingDataBridge)
         {
             GlobalMessagingState gsmMessageState = chlLinkChanges[chlLinkChanges.Count - 1].m_chlParentChainLink.m_gmsState.Clone() as GlobalMessagingState;
@@ -218,12 +222,21 @@ namespace Networking
                 if(chlParentLinkWithMessage.m_pmnMessages.Count > 0)
                 {
                     SortingValue svaLastMessage = chlParentLinkWithMessage.m_pmnMessages[chlParentLinkWithMessage.m_pmnMessages.Count - 1].m_svaMessageSortingValue;
-            
+
+                    SortingValue svaOldestSyncState = ndbNetworkingDataBridge.m_svaOldestActiveSimTime;
+
+                    SortingValue svaOldestConfirmedMessage = SortingValue.Max( svaLastMessage, svaOldestSyncState);
+
+                    if (m_chlChainBase.m_gmsState.m_svaLastMessageSortValue.CompareTo(svaOldestConfirmedMessage) >= 0)
+                    {
+                        Debug.LogError("Trying to set the last new message added earlier than the end of the base state");
+                    }
+
                     //make sure the sim reprocess the message queue starting from the end of the last chain
-                    ndbNetworkingDataBridge.UpdateProcessedTimeOnNewMessageAdded(svaLastMessage);
+                    ndbNetworkingDataBridge.UpdateProcessedTimeOnNewMessageAdded(svaOldestConfirmedMessage);
             
                     //remove all  the messages after the parent chain last message
-                    ndbNetworkingDataBridge.m_squInMessageQueue.ClearFrom(svaLastMessage);
+                    ndbNetworkingDataBridge.m_squInMessageQueue.ClearFrom(svaOldestConfirmedMessage);
             
                     break;
                 }
@@ -988,8 +1001,13 @@ namespace Networking
             //remove old messages
             gmbMessageBuffer.RemoveItemsUpTo(m_gmsChainStartState.m_svaLastMessageSortValue);
 
+            if(m_chlChainBase.m_pmnMessages.Count != 0 && m_chlChainBase.m_gmsState.m_svaLastMessageSortValue.CompareTo(m_chlChainBase.m_pmnMessages[m_chlChainBase.m_pmnMessages.Count -1].m_svaMessageSortingValue) != 0 )
+            {
+                Debug.LogError("Chain state sort value and newest chain message dont have the same sort value");
+            }
+
             //update the comfirmed message time 
-            ndbNetworkDataBridge.SetValidatedMesageBaseTime( m_chlChainBase.m_gmsState.m_svaLastMessageSortValue);
+            ndbNetworkDataBridge.SetValidatedMesageBaseTime(m_chlChainBase.m_gmsState.m_svaLastMessageSortValue);
 
             //recalculate if linked to base 
             foreach (ChainLink chlLink in ChainLinks.Values)

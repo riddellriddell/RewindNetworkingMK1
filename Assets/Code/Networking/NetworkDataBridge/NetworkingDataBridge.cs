@@ -15,7 +15,7 @@ namespace Networking
         public SortedRandomAccessQueue<SortingValue, IInput> m_squInMessageQueue = new SortedRandomAccessQueue<SortingValue, IInput>();
                
         //the time of the synchronization sync 
-        public DateTime m_dtmSimStateSyncRequestTime = DateTime.MaxValue ;
+        public DateTime m_dtmSimStateSyncRequestTime = DateTime.MaxValue;
 
         //the state of the sim synchronization 
         public SimStateSyncNetworkProcessor.State m_sssSimStartStateSyncStatus = SimStateSyncNetworkProcessor.State.None;
@@ -48,7 +48,7 @@ namespace Networking
         public SortingValue m_svaOldestActiveSimTime = SortingValue.MinValue;
 
         //indicates the sim has processed all the messages up to this message
-        public SortingValue m_svaSimProcessedMessagesUpTo = SortingValue.MinValue;
+        public SortingValue m_svaSimProcessedMessagesUpToAndIncluding = SortingValue.MinValue;
 
         //no messages this old or older are alowed in the message buffer
         public SortingValue m_svaOldestMessageToStoreInBuffer;
@@ -146,7 +146,7 @@ namespace Networking
             if( svaTime.CompareTo(m_svaOldestMessageToStoreInBuffer) < 0 )
             {
                 m_squInMessageQueue.Clear();
-                m_svaSimProcessedMessagesUpTo = m_svaOldestMessageToStoreInBuffer;
+                m_svaSimProcessedMessagesUpToAndIncluding = m_svaOldestMessageToStoreInBuffer;
             }
             else
             {
@@ -160,7 +160,7 @@ namespace Networking
             if (svaTime.CompareTo(m_svaOldestMessageToStoreInBuffer) < 0)
             {
                 m_squInMessageQueue.Clear();
-                m_svaSimProcessedMessagesUpTo = m_svaOldestMessageToStoreInBuffer;
+                m_svaSimProcessedMessagesUpToAndIncluding = m_svaOldestMessageToStoreInBuffer;
             }
             else
             {
@@ -169,11 +169,13 @@ namespace Networking
             }
         }
 
+        //update the oldest message that is yet to be processed by the sim
         public void UpdateProcessedTimeOnNewMessageAdded(SortingValue svaNewMessageTime)
         {
-            if(svaNewMessageTime.CompareTo(m_svaSimProcessedMessagesUpTo) < 0)
+            //check that the new time is less than the old processed up to time but is later than the state sync
+            if(svaNewMessageTime.CompareTo(m_svaSimProcessedMessagesUpToAndIncluding) < 0 && svaNewMessageTime.CompareTo(m_svaOldestActiveSimTime) > 0)
             {
-                m_svaSimProcessedMessagesUpTo = svaNewMessageTime;
+                m_svaSimProcessedMessagesUpToAndIncluding = svaNewMessageTime;
             }
         }
 
@@ -194,7 +196,7 @@ namespace Networking
 
         public void SetProcessedMessagesUpToTime(SortingValue svaProcessedMessagesUpTo)
         {
-            m_svaSimProcessedMessagesUpTo = svaProcessedMessagesUpTo;
+            m_svaSimProcessedMessagesUpToAndIncluding = svaProcessedMessagesUpTo;
 
             UpdateMessageTimeOut();
         }
@@ -290,24 +292,25 @@ namespace Networking
 
         public void UpdateProcessedMessageTime(DateTime dtmStartTimeExclusive, DateTime dtmEndTimeInclusive)
         {
+            //TODO::I think this might be wrong but I don't have time to check
             SortingValue svaFrom = new SortingValue((ulong)dtmStartTimeExclusive.Ticks, ulong.MaxValue);
             SortingValue svaTo = new SortingValue((ulong)dtmEndTimeInclusive.Ticks + 1, ulong.MinValue);
 
             //if the time processed up to is less than the start range of the values processed then 
             //dont update the processed up to value as there might be a message in the gap between 
             //what has been processed in the past and this update
-            if(m_svaSimProcessedMessagesUpTo.CompareTo(svaFrom) <= 0 )
+            if(m_svaSimProcessedMessagesUpToAndIncluding.CompareTo(svaFrom) < 0 )
             {
                 return;
             }
 
             //check that this is actually consuming new inputs
-            if(m_svaSimProcessedMessagesUpTo.CompareTo(svaTo) >= 0)
+            if(m_svaSimProcessedMessagesUpToAndIncluding.CompareTo(svaTo) > 0)
             {
                 return;
             }
 
-            m_svaSimProcessedMessagesUpTo = svaTo;
+            m_svaSimProcessedMessagesUpToAndIncluding = svaTo;
         }
 
         //calculate the oldest time messages are needed
@@ -319,9 +322,9 @@ namespace Networking
 
             SortingValue svaOldestValidTime = m_svaConfirmedMessageTime;
 
-            if (svaOldestValidTime.CompareTo(m_svaSimProcessedMessagesUpTo) > 0)
+            if (svaOldestValidTime.CompareTo(m_svaSimProcessedMessagesUpToAndIncluding) > 0)
             {
-                svaOldestValidTime = m_svaSimProcessedMessagesUpTo;
+                svaOldestValidTime = m_svaSimProcessedMessagesUpToAndIncluding;
             }
 
             if (svaOldestValidTime.CompareTo(m_svaOldestActiveSimTime) < 1)

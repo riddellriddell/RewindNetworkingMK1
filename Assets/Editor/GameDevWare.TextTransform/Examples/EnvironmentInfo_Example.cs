@@ -14,7 +14,7 @@ namespace Assets.Editor.GameDevWare.TextTranform.Examples
 {
 	public static class BuildParameters
 	{
-		public static readonly DateTime Time = new DateTime(637965000067784589, DateTimeKind.Utc);
+		public static readonly DateTime Time = new DateTime(638093643193072226, DateTimeKind.Utc);
 		public static readonly string UnityVersion = "2021.3.8f1";
 		public static readonly string UnityPlatform = "WindowsEditor";
 		public static readonly string OSVersion = "Microsoft Windows NT 10.0.19044.0";

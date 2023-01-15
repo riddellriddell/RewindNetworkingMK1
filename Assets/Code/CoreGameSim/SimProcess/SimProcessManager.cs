@@ -11,6 +11,8 @@ namespace Sim
     {
         public bool m_bCheckForDeSync = false;
 
+        public bool m_bHashFrameData = false;
+
         protected  SortedList<int, ISimProcess<TFrameData, TConstData, TSettingsData>> m_spcSimProcesses = new SortedList<int, ISimProcess<TFrameData, TConstData, TSettingsData>>();
 
         protected SortedList<int, ISimSetupProcesses<TFrameData, TSettingsData>> m_sspSimSetupProcesses = new SortedList<int, ISimSetupProcesses<TFrameData, TSettingsData>>(); 
@@ -33,17 +35,23 @@ namespace Sim
             byte[] bStartHash = new byte[8];
             byte[] bOldStartHashShort = new byte[4];
             byte[] bOldStartHash = new byte[8];
-            //check that both states are the same
-            fdaBaseFrameData.GetHash(bOldStartHash);
-            fdaBaseFrameData.GetHash(bOldStartHashShort);
-            fdaOutFrameData.GetHash(bStartHash);
 
-
-            if (!HashTools.CompareHashes(bStartHash, bOldStartHash))
+            if (m_bHashFrameData || m_bCheckForDeSync)
             {
-                //throw error
-                Debug.LogError($"Error game state copy did not work correctly");
+                //check that both states are the same
+                fdaBaseFrameData.GetHash(bOldStartHash);
+                fdaBaseFrameData.GetHash(bOldStartHashShort);
+                fdaOutFrameData.GetHash(bStartHash);
+
+
+                if (!HashTools.CompareHashes(bStartHash, bOldStartHash))
+                {
+                    //throw error
+                    Debug.LogError($"Error game state copy did not work correctly");
+                }
             }
+
+
 
 
             //hash inputs 

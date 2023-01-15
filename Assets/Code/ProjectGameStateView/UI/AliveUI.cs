@@ -29,8 +29,12 @@ namespace GameViewUI
         public AnimationCurve m_amcTakeDamageCurve;
 
         public AnimationCurve m_amcLowHealthCurve;
-        
+
+        public MobileInputUI m_mipMobileInput;
+
         public float m_fLowHealthLevel;
+
+        public float m_fHealthChangeEpsilon = float.Epsilon;
 
         protected float m_fTimeSinceTakeDamage;
 
@@ -55,7 +59,7 @@ namespace GameViewUI
             m_txtHealthState.color = Color.clear;
 
             //flash waiting for heal
-            if (ifdFrameData.m_fixShipHealDelayTimeOutErrorAdjusted[iPeerIndex] > 0)
+            if (ifdFrameData.m_fixShipHealDelayTimeOut[iPeerIndex] > 0)
             {
                 //flash waiting for healing 
                 float fHealingCycle = Time.timeSinceLevelLoad % m_amcWaitingForHealFlash.keys[m_amcWaitingForHealFlash.keys.Length - 1].time;
@@ -66,21 +70,25 @@ namespace GameViewUI
             }
 
             //check for damage
-            if (fHealth < m_fLastHealth)
+            if (fHealth < m_fLastHealth - m_fHealthChangeEpsilon)
             {
                 m_fTimeSinceTakeDamage = 0;
 
                 m_txtHealthState.color = m_colTakeDamageColour;
             }
-            else if (fHealth > m_fLastHealth)
+            
+            //TODO:: pass in settings to get better data in output
+            if (fHealth < 100 && ifdFrameData.m_fixShipHealDelayTimeOut[iPeerIndex] <= 0)
             {
                 //flash Healing
                 float fHealingCycle = Time.timeSinceLevelLoad % m_amcHelthTextHealingFlash.keys[m_amcHelthTextHealingFlash.keys.Length - 1].time;
 
                 m_txtHealthState.color = new Color(m_colHealing.r, m_colHealing.g, m_colHealing.b, m_amcHelthTextHealingFlash.Evaluate(fHealingCycle));
 
-                m_txtHealthState.text = "Repairing"; 
+                m_txtHealthState.text = "Repairing";
+
             }
+
 
             //update screen border 
             m_objTakeDamageWarning.color = Color.clear;
@@ -102,6 +110,7 @@ namespace GameViewUI
             }
 
             m_fLastHealth = fHealth;
+
         }
 
         public void OnExitState()

@@ -425,23 +425,23 @@ namespace GameManagers
             {
                 InterpolatedFrameDataGen ifdInterpolatedFrameData = m_agmActiveGameManager.m_fimFrameDataInterpolationManager.m_ifdSmoothedInterpolatedFrameData;
 
-                if (ifdInterpolatedFrameData.m_fixShipHealthErrorOffset != null)
+                if (ifdInterpolatedFrameData.m_fixShipHealth != null)
                 {
-                    if (m_sstSimState.m_fShipHealth.Length != ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length)
+                    if (m_sstSimState.m_fShipHealth.Length != ifdInterpolatedFrameData.m_fixShipHealth.Length)
                     {
                         m_sstSimState.m_lPeersAssignedToSlot = new long[ifdInterpolatedFrameData.m_lPeersAssignedToSlot.Length];
-                        m_sstSimState.m_fShipHealth = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
-                        m_sstSimState.m_fShipSpawnCountdown = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
-                        m_sstSimState.m_fShipPosX = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
-                        m_sstSimState.m_fShipPosY = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
-                        m_sstSimState.m_fShipVelocityX = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
-                        m_sstSimState.m_fShipVelocityY = new float[ifdInterpolatedFrameData.m_fixShipHealthErrorAdjusted.Length];
+                        m_sstSimState.m_fShipHealth = new float[ifdInterpolatedFrameData.m_fixShipHealth.Length];
+                        m_sstSimState.m_fShipSpawnCountdown = new float[ifdInterpolatedFrameData.m_fixShipHealth.Length];
+                        m_sstSimState.m_fShipPosX = new float[ifdInterpolatedFrameData.m_fixShipHealth.Length];
+                        m_sstSimState.m_fShipPosY = new float[ifdInterpolatedFrameData.m_fixShipHealth.Length];
+                        m_sstSimState.m_fShipVelocityX = new float[ifdInterpolatedFrameData.m_fixShipHealth.Length];
+                        m_sstSimState.m_fShipVelocityY = new float[ifdInterpolatedFrameData.m_fixShipHealth.Length];
                         m_sstSimState.m_fShipRotation = new float[ifdInterpolatedFrameData.m_fixShipBaseAngleErrorAdjusted.Length];
                         m_sstSimState.m_fShipWeaponChargeUp = new float[ifdInterpolatedFrameData.m_fixTimeUntilLaserFireErrorAdjusted.Length];
                         m_sstSimState.m_fShipWeaponCoolDown = new float[ifdInterpolatedFrameData.m_fixTimeUntilNextFireErrorAdjusted.Length];
                     }
 
-                    for (int i = 0; i < ifdInterpolatedFrameData.m_fixShipHealthErrorOffset.Length; i++)
+                    for (int i = 0; i < ifdInterpolatedFrameData.m_fixShipHealth.Length; i++)
                     {
                         m_sstSimState.m_lPeersAssignedToSlot[i] = ifdInterpolatedFrameData.m_lPeersAssignedToSlot[i];
                         m_sstSimState.m_fShipHealth[i] = ifdInterpolatedFrameData.m_fixShipHealth[i];

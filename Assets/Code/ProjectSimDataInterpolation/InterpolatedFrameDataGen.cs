@@ -11,18 +11,9 @@ namespace SimDataInterpolation
 	{
 		public System.Int64[] m_lPeersAssignedToSlot;
 		public System.Int32[] m_bInput;
+		public System.Int32[] m_iInputHash;
 		public System.Single[] m_fixShipHealth;
-																																									
-		public System.Single[] m_fixShipHealthErrorOffset; 
-
-		public System.Single[] m_fixShipHealthErrorAdjusted;
-
 		public System.Single[] m_fixShipHealDelayTimeOut;
-																																									
-		public System.Single[] m_fixShipHealDelayTimeOutErrorOffset; 
-
-		public System.Single[] m_fixShipHealDelayTimeOutErrorAdjusted;
-
 		public System.Byte[] m_bShipLastDamagedBy;
 		public System.Single[] m_fixTimeUntilRespawn;
 																																									
@@ -122,15 +113,17 @@ namespace SimDataInterpolation
 			}
 
 			
+			if(m_iInputHash == null || m_iInputHash.Length != fdaFrameData.m_iInputHash.Length)
+			{
+				m_iInputHash = new System.Int32[fdaFrameData.m_iInputHash.Length] ;
+
+			}
+
+			
 			if(m_fixShipHealth == null || m_fixShipHealth.Length != fdaFrameData.m_fixShipHealth.Length)
 			{
 				m_fixShipHealth = new System.Single[fdaFrameData.m_fixShipHealth.Length] ;
 
-																																									
-				m_fixShipHealthErrorOffset = new System.Single[fdaFrameData.m_fixShipHealth.Length] ;
-
-				m_fixShipHealthErrorAdjusted = new System.Single[fdaFrameData.m_fixShipHealth.Length] ;
-			
 			}
 
 			
@@ -138,11 +131,6 @@ namespace SimDataInterpolation
 			{
 				m_fixShipHealDelayTimeOut = new System.Single[fdaFrameData.m_fixShipHealDelayTimeOut.Length] ;
 
-																																									
-				m_fixShipHealDelayTimeOutErrorOffset = new System.Single[fdaFrameData.m_fixShipHealDelayTimeOut.Length] ;
-
-				m_fixShipHealDelayTimeOutErrorAdjusted = new System.Single[fdaFrameData.m_fixShipHealDelayTimeOut.Length] ;
-			
 			}
 
 			

@@ -207,6 +207,10 @@ namespace Networking
 
         public static FakeWebAPI Instance { get; private set; } = null;
 
+
+        [SerializeField]
+        public DebugLoggingLevel dllLogLevel = DebugLoggingLevel.None;
+
         //variables
 
         //the standard delay between making a request and getting an answer
@@ -307,7 +311,7 @@ namespace Networking
             //try get user
             UserIDDetails strUserDetails = m_fdbFakeDatabase.GetUserIDWithCredentials(strLoginCredentials);
 
-            Debug.Log($"get user account with credentials: {strLoginCredentials} returned : {strUserDetails} ");
+            if (LogHelp.LogVerbose(dllLogLevel)) Debug.Log($"get user account with credentials: {strLoginCredentials} returned : {strUserDetails} ");
 
             //return success
             actGetUserCallback?.Invoke(true, JsonUtility.ToJson(strUserDetails));
@@ -341,7 +345,7 @@ namespace Networking
             //check if message request was properly formed
             if (gmdGetMessageRequest.m_lUserKey == 0 || gmdGetMessageRequest.m_lUserID == 0)
             {
-                Debug.LogError($"Failed to parse user details : {strUserDetails}");
+                if (LogHelp.LogError(dllLogLevel)) Debug.LogError($"Failed to parse user details : {strUserDetails}");
 
                 //return error result
                 actGetMessagesCallback?.Invoke(false, m_strServerErrorResponse);
@@ -354,7 +358,7 @@ namespace Networking
 
             if(uidUserDetails.m_lUserKey != gmdGetMessageRequest.m_lUserKey)
             {
-                Debug.LogError($"User access key incorrect  Request:{strUserDetails} User Key: {gmdGetMessageRequest.m_lUserKey}");
+                if (LogHelp.LogError(dllLogLevel)) Debug.LogError($"User access key incorrect  Request:{strUserDetails} User Key: {gmdGetMessageRequest.m_lUserKey}");
 
                 //return error result
                 actGetMessagesCallback?.Invoke(false, m_strServerErrorResponse);
@@ -372,7 +376,7 @@ namespace Networking
             //serialize result 
             string strResult = JsonUtility.ToJson(gmrReturn);
 
-            Debug.Log($"Get Delete Messages with ID: {strUserDetails} returned: {strResult}");
+            if (LogHelp.LogVerbose(dllLogLevel)) Debug.Log($"Get Delete Messages with ID: {strUserDetails} returned: {strResult}");
 
             actGetMessagesCallback?.Invoke(true, strResult);
         }

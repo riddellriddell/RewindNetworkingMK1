@@ -29,6 +29,7 @@ Transform:
   m_LocalRotation: {x: 0.58778524, y: 0, z: 0, w: 0.809017}
   m_LocalPosition: {x: 0, y: 7.49, z: -2.56}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5226561676925031998}
   m_Father: {fileID: 5226561676535796058}
@@ -121,6 +122,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5226561676071521701}
   m_Father: {fileID: 0}
@@ -202,9 +204,10 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   m_fShakeProcession: 1
-  m_fShakeFoceForDamage: 1
+  m_fShakeFoceForDamage: 5
   m_fShakeForceMultiplyer: 0.05
-  m_fShakeRestitution: 6
+  m_fShakeRestitution: 3
+  m_fShakeOnHealthChangeGreaterThan: 0.01
 --- !u!1001 &2281292369742368019
 PrefabInstance:
   m_ObjectHideFlags: 0

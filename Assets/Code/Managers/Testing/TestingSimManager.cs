@@ -73,7 +73,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
 
     public List<Tuple<DateTime, long>> m_tupNewDataRequests = new List<Tuple<DateTime, long>>();
 
-    //the sim tick the latest state is based off
+    //the most recent tick that has had its game state calculated
     public uint m_iSimHeadTick = 0;
 
     //how many inputs occured during the head state tick, this is used to check if new inputs have been createad and a new head state needs to be calculated 
@@ -81,7 +81,16 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
 
     //TODO remobe this value, this is a testing value to check the sim has a stat on frist update
     public bool m_bFirstUpdate = true;
-    
+
+    //the tick the data for the player was synced this is used to block updating game ticks earlier than the first game state
+    public uint m_iTickOfStateSync = uint.MinValue;
+
+    //should the debug tool track input usage
+    public bool m_bLogInputUsage = false;
+
+    //check if the final frame data for a tick matches for all peers
+    public bool m_bVerifyFrameData = false;
+
     public TestingSimManager(TConstData cdaSimConstantData, TSettingsData sdaSimSettingsData, NetworkingDataBridge ndbNetworkingDataBridge,SimProcessManager<TFrameData, TConstData, TSettingsData> spmSimProcessManager)
     {
         m_cdaConstantData = cdaSimConstantData;
@@ -92,6 +101,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
 
     public void InitalizeAsFirstPeer(long lPeerID)
     {
+        //get the start time for the simulation
         m_iSimHeadTick = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetCurrentSimTime()) - 1;
 
         m_iNumberOfInputsInHeadSateCalculation = 0;
@@ -116,10 +126,10 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
         m_ndbNetworkingDataBridge.SetOldestActiveSimTime(new SortingValue((ulong)(dtmSimStartTime.Ticks), ulong.MaxValue));
 
         //for debugging set the first time to track inputs from
-        TestInputUsage.SetFirstInstance(m_iSimHeadTick, m_ndbNetworkingDataBridge.GetLocalPeerID());
+        if(m_bLogInputUsage) TestInputUsage.SetFirstInstance(m_iSimHeadTick, m_ndbNetworkingDataBridge.GetLocalPeerID());
 
         //set processed messages time to the earliest possible time as no processing has been done since
-        m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo = m_ndbNetworkingDataBridge.m_svaOldestActiveSimTime.NextSortValue();
+        m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpToAndIncluding = m_ndbNetworkingDataBridge.m_svaOldestActiveSimTime;
 
     }
 
@@ -135,7 +145,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
         m_ndbNetworkingDataBridge.SetOldestActiveSimTime( new SortingValue(0, ulong.MaxValue));
 
         //set processed messages time to the earliest possible time as no processing has been done since
-        m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo = m_ndbNetworkingDataBridge.m_svaOldestActiveSimTime.NextSortValue();
+        m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpToAndIncluding = m_ndbNetworkingDataBridge.m_svaOldestActiveSimTime;
 
         m_iSimHeadTick = 0;
 
@@ -148,7 +158,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
         if (m_ndbNetworkingDataBridge.m_bIsThereDataOnBridgeForSimToInitWith == true)
         {
             //get the tick for the target state
-            uint iSimDataTick = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.m_dtmSimStateSyncRequestTime);
+            m_iTickOfStateSync = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.m_dtmSimStateSyncRequestTime);
 
             byte[] bSimData = m_ndbNetworkingDataBridge.m_bSimState;
 
@@ -166,7 +176,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
 
             //get start index of all threads working on data older than new data 
             //because list is sorted in reverse order the compare opperator has to be reversed 
-            if (m_iActiveBodyProcessingTicks.TryGetFirstIndexGreaterThan(iSimDataTick + 1, out int iOutdatedThreadStartIndex))
+            if (m_iActiveBodyProcessingTicks.TryGetFirstIndexGreaterThan(m_iTickOfStateSync + 1, out int iOutdatedThreadStartIndex))
             {
                 for (int i = iOutdatedThreadStartIndex; i > -1; i--)
                 {
@@ -182,21 +192,21 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
             //get lock on sim state buffer
 
             //set sim state 
-            if (m_fdaSimStateBuffer.Count > 0 && iSimDataTick <= m_fdaSimStateBuffer.HeadIndex && iSimDataTick >= m_fdaSimStateBuffer.BaseIndex)
+            if (m_fdaSimStateBuffer.Count > 0 && m_iTickOfStateSync <= m_fdaSimStateBuffer.HeadIndex && m_iTickOfStateSync >= m_fdaSimStateBuffer.BaseIndex)
             {
                 Debug.Log($"adding sim state sent over data bridge into active game");
 
                 //if there is already a full sim buffer keep the existing data for a smooth update 
 
                 //return the old state to the pool 
-                m_fopFrameDataObjectPool.ReturnFrameData(m_fdaSimStateBuffer[iSimDataTick]);
+                m_fopFrameDataObjectPool.ReturnFrameData(m_fdaSimStateBuffer[m_iTickOfStateSync]);
 
                 //set the new frame
-                m_fdaSimStateBuffer[iSimDataTick] = fdaState;
+                m_fdaSimStateBuffer[m_iTickOfStateSync] = fdaState;
 
                 //reset the sim head to the new frame of data
                 //todo check if this is correct
-                if (m_iSimHeadTick == iSimDataTick)
+                if (m_iSimHeadTick == m_iTickOfStateSync)
                 {
                     m_iNumberOfInputsInHeadSateCalculation = 0;
                 }
@@ -205,22 +215,22 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
             {
                 //if the existing data is out of data reset the state buffer to only have the target state 
                 m_fdaSimStateBuffer.Clear();
-                m_fdaSimStateBuffer.SetNewBaseIndex(iSimDataTick);
+                m_fdaSimStateBuffer.SetNewBaseIndex(m_iTickOfStateSync);
                 m_fdaSimStateBuffer.Enqueue(fdaState);
-                m_iSimHeadTick = iSimDataTick;
+                m_iSimHeadTick = m_iTickOfStateSync;
                 m_iNumberOfInputsInHeadSateCalculation = 0;
 
                 //for debugging set the first time to track inputs from
-                TestInputUsage.SetFirstInstance(m_iSimHeadTick, m_ndbNetworkingDataBridge.GetLocalPeerID());
+                if (m_bLogInputUsage) TestInputUsage.SetFirstInstance(m_iSimHeadTick, m_ndbNetworkingDataBridge.GetLocalPeerID());
             }
 
-            DateTime dtmStartOfState = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.GetCurrentSimTime(), iSimDataTick);
+            DateTime dtmTickTimeOfFirstState = ConvertSimTickToDateTime(m_ndbNetworkingDataBridge.GetCurrentSimTime(), m_iTickOfStateSync);
 
             //sim messages older or equal to this have been processed / are not needed / there are not the resources to compute
-            m_ndbNetworkingDataBridge.SetOldestActiveSimTime(new SortingValue((ulong)dtmStartOfState.Ticks, ulong.MaxValue));
+            m_ndbNetworkingDataBridge.SetOldestActiveSimTime(new SortingValue((ulong)dtmTickTimeOfFirstState.Ticks, ulong.MaxValue));
 
             //all messages from this start time need to be reprocessed
-            m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo = m_ndbNetworkingDataBridge.m_svaOldestActiveSimTime.NextSortValue();
+            m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpToAndIncluding = m_ndbNetworkingDataBridge.m_svaOldestActiveSimTime;
 
             // inform network data buffer that sim data has been fetched 
             m_ndbNetworkingDataBridge.m_bIsThereDataOnBridgeForSimToInitWith = false;
@@ -229,7 +239,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
             //release lock on thread buffer
 
             //do hash check on the data
-            TestingSimDataSyncVerifier<TFrameData>.VerifyData(iSimDataTick,ref fdaState, 1, (int)m_sdaSettingsData.TicksPerSecond * 4);
+            if(m_bVerifyFrameData) TestingSimDataSyncVerifier<TFrameData>.VerifyData(m_iTickOfStateSync, ref fdaState, 1, (int)m_sdaSettingsData.TicksPerSecond * 4);
         }
 
         //unlock network in sim data values 
@@ -342,10 +352,14 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
 
         if (ShouldReprocessAll())
         {
-            //get tick to reprocess from
-            DateTime dtmTimeOfLastProcessedInput = new DateTime((long)m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo.m_lSortValueA);
+            //get the earliest possible time of an unprocessed massage
+            DateTime dtmEarliestPossibleTimeOfAnUnprocessedMessage = new DateTime((long)m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpToAndIncluding.NextSortValue().m_lSortValueA);
 
-            uint iBaseTickToProcessFrom = ConvertDateTimeToTick(dtmTimeOfLastProcessedInput) - 1;
+            //the last tick that has been fully processed before unprocessed messages could exist
+            uint iNewestFullyProcessedTick = ConvertDateTimeToTick(dtmEarliestPossibleTimeOfAnUnprocessedMessage) - 1;
+
+            //get the tick to update from but dont go earlier than the fist game state synced
+            uint iBaseTickToProcessFrom = Math.Max(m_iTickOfStateSync, iNewestFullyProcessedTick);
 
             RunStateUpdateAll(iBaseTickToProcessFrom);
         }
@@ -448,7 +462,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
     //check if a new input needs to be processed 
     public bool ShouldReprocessBodyThreaded()
     {
-        DateTime dtmTimeOfLastProcessedInput = new DateTime((long)(m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo.m_lSortValueA));
+        DateTime dtmTimeOfLastProcessedInput = new DateTime((long)(m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpToAndIncluding.m_lSortValueA));
 
         //get lock on thread buffer
 
@@ -471,7 +485,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
     //check if a new input needs to be processed 
     public bool ShouldReprocessBody()
     {
-        DateTime dtmTimeOfLastProcessedInput = new DateTime((long)(m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo.m_lSortValueA));
+        DateTime dtmTimeOfLastProcessedInput = new DateTime((long)(m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpToAndIncluding.m_lSortValueA));
 
         //check if the input falls before the last update
         if (dtmTimeOfLastProcessedInput < ConvertSimTickToDateTime(dtmTimeOfLastProcessedInput, m_iSimHeadTick -1))
@@ -485,7 +499,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
     //check if a new input needs to be processed 
     public bool ShouldReprocessAll()
     {
-        DateTime dtmTimeOfLastProcessedInput = new DateTime((long)(m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpTo.m_lSortValueA));
+        DateTime dtmTimeOfLastProcessedInput = new DateTime((long)(m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpToAndIncluding.m_lSortValueA));
 
         //calculate what the head tick should be
         uint iTargetHeadTick = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetCurrentSimTime());
@@ -688,15 +702,18 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
 
     public void RunStateUpdateAll(uint iBaseTick)
     {
+        //the tick at the current point in time
+        uint iCurrentSimTick = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetCurrentSimTime()) + 1;
+
         //update until current time
-        while (iBaseTick <= ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetCurrentSimTime()))
+        while (iBaseTick <= iCurrentSimTick)
         {
             RunStateUpdateForBaseTick(iBaseTick);
 
             //advance to the next tick
             iBaseTick++;
 
-            //set the most recently processed tick
+            //set the most recent tick that has had its game state calculated
             m_iSimHeadTick = Math.Max(iBaseTick, m_iSimHeadTick);
         }
     }
@@ -751,7 +768,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
             }
 
 
-            TestInputUsage.RegisterInputUsage(svaMessageSortValues[i], BitConverter.ToInt64(objMessages[i].GetHash()), iNextTick, m_ndbNetworkingDataBridge.GetLocalPeerID(), lInputCreatorPeerID, bIsConnectionChangeMessage);
+            if (m_bLogInputUsage) TestInputUsage.RegisterInputUsage(svaMessageSortValues[i], BitConverter.ToInt64(objMessages[i].GetHash()), iNextTick, m_ndbNetworkingDataBridge.GetLocalPeerID(), lInputCreatorPeerID, bIsConnectionChangeMessage);
         }
         
 
@@ -809,27 +826,32 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
     {
         //protect against errors on startup 
         long lValidUpTo = (long)(m_ndbNetworkingDataBridge.m_svaConfirmedMessageTime.m_lSortValueA) - 1;
+        long lProcessedUpToAndIncludingTimeTick = (long)(m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpToAndIncluding.m_lSortValueA) - 1;
 
-        if(lValidUpTo < 0)
+        if (lValidUpTo < 0)
         {
             return;
         }
 
         //get the validated time from network data bridge 
         DateTime dtmValidatedUpTo = new DateTime(lValidUpTo);
+        DateTime dtmProcessedUpTo = new DateTime(lProcessedUpToAndIncludingTimeTick);
 
-        uint iIndexOfOldestUnconfirmedState = ConvertDateTimeToTick(dtmValidatedUpTo);
+        DateTime dtmOldesTimeStillNeeded = (dtmProcessedUpTo > dtmValidatedUpTo ? dtmValidatedUpTo : dtmProcessedUpTo );
+
+        uint iIndexOfOldestStateStillNeeded = ConvertDateTimeToTick(dtmOldesTimeStillNeeded);
+
 
         //protect against errors on startup with initalised min values
-        if(iIndexOfOldestUnconfirmedState == 0)
+        if (iIndexOfOldestStateStillNeeded == 0)
         {
             return;
         }
 
-        uint iOldestConfirmedState = iIndexOfOldestUnconfirmedState - 1;
+        uint iOldestConfirmedState = iIndexOfOldestStateStillNeeded - 1;
 
         //for debugging finalize usage of this ticks inputs 
-        TestInputUsage.OnStateFinalized(iOldestConfirmedState, m_ndbNetworkingDataBridge.GetLocalPeerID(), this);
+        if (m_bLogInputUsage) TestInputUsage.OnStateFinalized(iOldestConfirmedState, m_ndbNetworkingDataBridge.GetLocalPeerID(), this);
 
         // remove all states that are not going to change and are not going to be used again in a state update 
         while (m_fdaSimStateBuffer.Count > 1 && m_fdaSimStateBuffer.BaseIndex < iOldestConfirmedState)
@@ -838,9 +860,9 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
                       
             TFrameData fdaOldState = m_fdaSimStateBuffer.Dequeue();
 
-            TestingSimDataSyncVerifier<TFrameData>.VerifyData(iDequeueTick,ref fdaOldState, 0, (int)m_sdaSettingsData.TicksPerSecond * 4);
+            if (m_bVerifyFrameData)  TestingSimDataSyncVerifier<TFrameData>.VerifyData(iDequeueTick,ref fdaOldState, 0, (int)m_sdaSettingsData.TicksPerSecond * 4);
 
-            DataHashValidation.ClearDataBefore(iDequeueTick);
+            if(m_spmSimProcessManager.m_bCheckForDeSync)  DataHashValidation.ClearDataBefore(iDequeueTick);
         }
     }
 

@@ -16,11 +16,11 @@ public class GameStartupUI : MonoBehaviour
 
     public void OnEnterState()
     {
-        gameObject.SetActive(true);
+        gameObject?.SetActive(true);
     }
 
     public void OnExitState()
     {
-        gameObject.SetActive(false);
+        gameObject?.SetActive(false);
     }
 }

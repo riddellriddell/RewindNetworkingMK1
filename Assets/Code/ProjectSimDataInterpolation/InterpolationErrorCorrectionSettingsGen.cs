@@ -14,10 +14,6 @@ namespace SimDataInterpolation
     public class InterpolationErrorCorrectionSettingsGen : InterpolationErrorCorrectionSettingsBase
     {
 		
-		public ErrorCorrectionSetting m_fixShipHealthErrorCorrectionSetting; 
-		
-		public ErrorCorrectionSetting m_fixShipHealDelayTimeOutErrorCorrectionSetting; 
-		
 		public ErrorCorrectionSetting m_fixTimeUntilRespawnErrorCorrectionSetting; 
 		
 		public ErrorCorrectionSetting m_fixShipPosXErrorCorrectionSetting; 
