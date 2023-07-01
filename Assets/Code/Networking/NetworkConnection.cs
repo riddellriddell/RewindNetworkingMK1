@@ -259,6 +259,23 @@ namespace Networking
             }
         }
 
+        /// <summary>
+        /// returns true if all connection attempts have failed
+        /// </summary>
+        /// <returns></returns>
+        public bool HaveAllConnectionsFailed()
+        {
+            foreach(var kvpKeyValue in ConnectionList)
+            {
+                if(kvpKeyValue.Value.Status != Connection.ConnectionStatus.Disconnected)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         public void SendPacket(long lPlayerID, DataPacket pktPacket)
         {
             //get connection for ID

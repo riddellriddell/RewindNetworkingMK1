@@ -119,17 +119,22 @@ namespace Networking
             }
 
             //update gateway 
-            public bool SetGateway(long lUserID, long lAccessKey, int iStatus, int iRemainingSlots)
+            public bool SetGateway(long lUserID, long lAccessKey, int iRemainingSlots, int iGameType, int iFlags, string strGameState)
             {
                 Gateway gtwNewGate = new Gateway()
                 {
                     m_lUserID = lUserID,
                     m_lUserKey = lAccessKey,
                     m_dtmLastActiveTime = DateTime.UtcNow.Ticks,
-                    m_staGameState = new SimStatus()
+                    m_staGateState = new SimStatus()
                     {
                         m_iRemainingSlots = iRemainingSlots,
-                        m_iSimStatus = iStatus
+                    },
+                    m_lGameType = iGameType,
+                    m_lFlags = iFlags,
+                    m_gstGameState = new GameState()
+                    {
+                        m_strGameState = strGameState
                     }
                 };
 
@@ -149,21 +154,36 @@ namespace Networking
                 return null;
             }
 
+            public bool CheckFlags(Gateway gtwGate, long iGameType, long iFlags)
+            {
+                if(gtwGate.m_lGameType != iGameType)
+                {
+                    return false;
+                }
+
+                if((gtwGate.m_lFlags & iFlags) != iFlags)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
             //search for gateway
-            public Gateway? SearchForGateway(long lUserID)
+            public Gateway? SearchForGateway(long iGameType, long iFlags)
             {
                 RemoveOldGates();
 
                 foreach (Gateway gtwGate in m_gtwGateways.Values)
                 {
-                    //check if not currently running own gate
-                    if (gtwGate.m_lUserID == lUserID)
+                    //check if there are empty player slots
+                    if (gtwGate.m_staGateState.m_iRemainingSlots <= 0)
                     {
                         continue;
                     }
 
                     //check if there are empty player slots
-                    if (gtwGate.m_staGameState.m_iRemainingSlots <= 0)
+                    if (!CheckFlags(gtwGate, iGameType, iFlags))
                     {
                         continue;
                     }
@@ -174,6 +194,35 @@ namespace Networking
                 //no gate found
                 return null;
             }
+
+            public Gateway[] SearchForGatewayList(long iGameType, long iFlags)
+            {
+                RemoveOldGates();
+
+                List<Gateway> validGates = new List<Gateway>();
+
+                foreach (Gateway gtwGate in m_gtwGateways.Values)
+                {
+
+                    //check if there are empty player slots
+                    if (gtwGate.m_staGateState.m_iRemainingSlots <= 0)
+                    {
+                        continue;
+                    }
+
+                    //check if there are empty player slots
+                    if (!CheckFlags(gtwGate, iGameType, iFlags))
+                    {
+                        continue;
+                    }
+
+                    validGates.Add(gtwGate);
+                }
+
+                //no gate found
+                return validGates.ToArray();
+            }
+
 
             //check if string identifier already exists in user id list
             protected bool DoesIdentifierExist(string strLoginCredentials)
@@ -190,9 +239,7 @@ namespace Networking
                 {
                     TimeSpan tspTimeSinceLastUpdate = DateTime.UtcNow - new DateTime(gtwGate.m_dtmLastActiveTime);
 
-                    if (tspTimeSinceLastUpdate.Seconds > s_fGatewayTimeOut
-                        || gtwGate.m_staGameState.m_iSimStatus == (int)SimStatus.State.Broken
-                        || gtwGate.m_staGameState.m_iSimStatus == (int)SimStatus.State.Closed)
+                    if (tspTimeSinceLastUpdate.Seconds > s_fGatewayTimeOut)
                     {
                         lGatesToRemove.Add(gtwGate.m_lUserID);
                     }
@@ -279,9 +326,14 @@ namespace Networking
             StartCoroutine(InternalSetGateway(strSetGatewayCommand, actGatewayUpdateCallback));
         }
 
-        public void SearchForGateway(string strUserID, Action<bool, string> actSearchForGateCallback)
+        public void SearchForGateway(string strGatewayRequest, Action<bool, string> actSearchForGateCallback)
         {
-            StartCoroutine(InternalSearchForGateway(strUserID, actSearchForGateCallback));
+            StartCoroutine(InternalSearchForGateway(strGatewayRequest, actSearchForGateCallback));
+        }
+
+        public void SearchForGatewayList(string strUserID, Action<bool, string> actSearchForGateCallback)
+        {
+            StartCoroutine(InternalSearchForGatewayList(strUserID, actSearchForGateCallback));
         }
 
         protected IEnumerator InternalGetUserWithLoginCredentials(string strLoginCredentials, Action<bool, string> actGetUserCallback)
@@ -460,7 +512,13 @@ namespace Networking
             }
 
             //try and find the target gateway
-            if (m_fdbFakeDatabase.SetGateway(ugcUpdateGateCommand.m_lUserID, ugcUpdateGateCommand.m_lUserKey, ugcUpdateGateCommand.m_staGameState.m_iSimStatus, ugcUpdateGateCommand.m_staGameState.m_iRemainingSlots) == false)
+            if (m_fdbFakeDatabase.SetGateway(
+                ugcUpdateGateCommand.m_lUserID, 
+                ugcUpdateGateCommand.m_lUserKey,
+                ugcUpdateGateCommand.m_gwsGateState.m_iRemainingSlots, 
+                ugcUpdateGateCommand.m_iGameType, 
+                ugcUpdateGateCommand.m_iFlags, 
+                ugcUpdateGateCommand.m_gstGameState.m_strGameState) == false)
             {
                 //return error result
                 actSetGateway?.Invoke(false, m_strServerErrorResponse);
@@ -494,10 +552,9 @@ namespace Networking
                 yield break;
             }
 
-            //get user id
-            UserIDDetails uadUserDetails = m_fdbFakeDatabase.m_uicUserIDs[long.Parse(strGatewayDetails)];
+            GetGatewayRequest gwrRequest = JsonUtility.FromJson<GetGatewayRequest>(strGatewayDetails);
 
-            Gateway? gtwGate = m_fdbFakeDatabase.SearchForGateway(uadUserDetails.m_lUserID);
+            Gateway? gtwGate = m_fdbFakeDatabase.SearchForGateway(gwrRequest.m_lGameType,gwrRequest.m_lFlags);
 
             if (gtwGate.HasValue == false)
             {
@@ -506,10 +563,66 @@ namespace Networking
                 yield break;
             }
 
-            SearchForGatewayReturn sgrReturnValue = new SearchForGatewayReturn()
+            SearchForGatewayReturn sgrReturnValue = new SearchForGatewayReturn
             {
-                m_lGateOwnerUserID = gtwGate.Value.m_lUserID
+                m_lGateOwnerUserID = gtwGate.Value.m_lUserID,
+                m_gwsGateState = gtwGate.Value.m_staGateState,
+                m_lGameFlags = gtwGate.Value.m_lFlags,
+                m_lGameState = gtwGate.Value.m_gstGameState
             };
+
+            string strGateReturnValue = JsonUtility.ToJson(sgrReturnValue);
+
+            actSearchCallback?.Invoke(true, strGateReturnValue);
+        }
+
+        protected IEnumerator InternalSearchForGatewayList(string strGatewayDetails, Action<bool, string> actSearchCallback)
+        {
+            //check for timeout 
+            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
+            {
+                yield return new WaitForSeconds(m_fTimeOutTime);
+
+                actSearchCallback?.Invoke(false, m_strTimeOutResponse);
+
+                yield break;
+            }
+
+            yield return new WaitForSeconds(m_fLatncy);
+
+            //check if user could not be created due to conflicts / bad connection or other conflicts
+            if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
+            {
+                //return error result
+                actSearchCallback?.Invoke(false, m_strServerErrorResponse);
+
+                yield break;
+            }
+
+            //get user id
+            GetGatewayRequest gwrRequest = JsonUtility.FromJson<GetGatewayRequest>(strGatewayDetails);
+
+            Gateway[] gtwGate = m_fdbFakeDatabase.SearchForGatewayList(gwrRequest.m_lGameType, gwrRequest.m_lFlags);
+
+            if (gtwGate.Length == 0)
+            {
+                actSearchCallback?.Invoke(false, m_strItemDoesNoteExistResponse);
+
+                yield break;
+            }
+
+            SearchForGatewayReturn[] sgrReturnValue = new SearchForGatewayReturn[gtwGate.Length];
+
+            for(int i = 0; i < gtwGate.Length; i++)
+            {
+                sgrReturnValue[i] = new SearchForGatewayReturn
+                {
+                    m_lGateOwnerUserID = gtwGate[i].m_lUserID,
+                    m_gwsGateState = gtwGate[i].m_staGateState,
+                    m_lGameFlags = gtwGate[i].m_lFlags,
+                    m_lGameState = gtwGate[i].m_gstGameState
+                };
+            }
 
             string strGateReturnValue = JsonUtility.ToJson(sgrReturnValue);
 

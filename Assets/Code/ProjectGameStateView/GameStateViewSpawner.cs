@@ -10,7 +10,7 @@ using Random = Unity.Mathematics.Random;
 
 namespace GameStateView
 {
-    public class GameStateViewSpawner : MonoBehaviour
+    /*public class GameStateViewSpawner : MonoBehaviour
     {
         public int m_iAsteroidRenderLayer;
 
@@ -131,11 +131,13 @@ namespace GameStateView
                     //}
 
                     //temp code until unity fix enabled disabled bug
-                    Vector3 vecLazerPos = m_emaEntityManager.GetComponentData<Translation>(m_entLazers[i]).Value;
+                    LocalTransform trnLaserTransform = m_emaEntityManager.GetComponentData<LocalTransform>(m_entLazers[i]);
+
+                    Vector3 vecLazerPos = trnLaserTransform.Position;
                     
                     if (vecLazerPos.x != 9000)
                     {
-                        Quaternion qtrLazerRot = m_emaEntityManager.GetComponentData<Rotation>(m_entLazers[i]).Value;
+                        Quaternion qtrLazerRot = trnLaserTransform.Rotation;
 
                         SpawnImpactEffect(
                             vecLazerPos,
@@ -145,12 +147,14 @@ namespace GameStateView
 
                         m_emaEntityManager.SetComponentData(
                             m_entLazers[i],
-                            new Translation()
+                            new LocalTransform()
                             {
-                                Value = new float3(
+                                Position = new float3(
                                 9000,
                                 9000,
-                                9000)
+                                9000),
+                                Rotation = qtrLazerRot,
+                                Scale = trnLaserTransform.Scale
                             }
                             );
                     }
@@ -166,7 +170,9 @@ namespace GameStateView
                     //    //spawn activation effect
                     //}
 
-                    Vector3 vecLazerPos = m_emaEntityManager.GetComponentData<Translation>(m_entLazers[i]).Value;
+                    LocalTransform trnLazerTransform = m_emaEntityManager.GetComponentData<LocalTransform>(m_entLazers[i]);
+
+                    Vector3 vecLazerPos = trnLazerTransform.Position;
                     if (vecLazerPos.x == 9000)
                     {
                         int iOwnerOfLazer = i / (m_entLazers.Length / m_entShips.Length);
@@ -174,22 +180,23 @@ namespace GameStateView
                         SpawnFireEffect(iOwnerOfLazer);
                     }
 
+                    float fRotation = Mathf.Atan2(ifdInterpolatedFrameData.m_fixLazerVelocityXErrorAdjusted[i], ifdInterpolatedFrameData.m_fixLazerVelocityYErrorAdjusted[i]);
+
                     //move to location
                     m_emaEntityManager.SetComponentData(
                         m_entLazers[i],
-                        new Translation()
+                        new LocalTransform()
                         {
-                            Value = new float3(
+                            Position = new float3(
                             ifdInterpolatedFrameData.m_fixLazerPositionXErrorAdjusted[i],
                             0,
-                            ifdInterpolatedFrameData.m_fixLazerPositionYErrorAdjusted[i])
+                            ifdInterpolatedFrameData.m_fixLazerPositionYErrorAdjusted[i]),
+                            Rotation = quaternion.Euler(0, fRotation, 0),
+                            Scale = trnLazerTransform.Scale
                         }
                         );
 
-                    float fRotation = Mathf.Atan2(ifdInterpolatedFrameData.m_fixLazerVelocityXErrorAdjusted[i], ifdInterpolatedFrameData.m_fixLazerVelocityYErrorAdjusted[i]);
 
-                    //rotate to angle 
-                    m_emaEntityManager.SetComponentData(m_entLazers[i], new Rotation() { Value = quaternion.Euler(0, fRotation, 0) });
                 }
 
                 //change lazer color for local vs non local players
@@ -215,8 +222,10 @@ namespace GameStateView
 
                     //temp code until unity fix enable and disable bugs
 
+                    LocalTransform trnLocalTransform = m_emaEntityManager.GetComponentData<LocalTransform>(m_entShips[i]);
+
                     //check if ship has already been hiden
-                    if (m_emaEntityManager.GetComponentData<Translation>(m_entShips[i]).Value.x != 9000)
+                    if (trnLocalTransform.Position.x != 9000)
                     {
                         //spawn destroy effect 
                         SpawnShipDieEffect(i);
@@ -224,12 +233,14 @@ namespace GameStateView
                         //move to location ourside world
                         m_emaEntityManager.SetComponentData(
                             m_entShips[i],
-                            new Translation()
+                            new LocalTransform()
                             {
-                                Value = new float3(
+                                Position = new float3(
                                 9000,
                                 9000,
-                                9000)
+                                9000),
+                                Scale = trnLocalTransform.Scale,
+                                Rotation = trnLocalTransform.Rotation
                             }
                             );
                     }
@@ -244,26 +255,28 @@ namespace GameStateView
                     //    //spawn activation effect
                     //}
 
-                    if (m_emaEntityManager.GetComponentData<Translation>(m_entShips[i]).Value.x == 9000)
+
+                    LocalTransform trnLocalTransform = m_emaEntityManager.GetComponentData<LocalTransform>(m_entShips[i]);
+
+
+                    if (trnLocalTransform.Position.x == 9000)
                     {
+                        float fRotation = Mathf.Deg2Rad * (-ifdInterpolatedFrameData.m_fixShipBaseAngleErrorAdjusted[i] + 90);
+
                         //move to location
                         m_emaEntityManager.SetComponentData(
                         m_entShips[i],
-                        new Translation()
+                        new LocalTransform()
                         {
-                            Value = new float3(
+                            Position = new float3(
                             ifdInterpolatedFrameData.m_fixShipPosXErrorAdjusted[i],
                             0,
-                            ifdInterpolatedFrameData.m_fixShipPosYErrorAdjusted[i])
+                            ifdInterpolatedFrameData.m_fixShipPosYErrorAdjusted[i]),
+                            Rotation = quaternion.Euler(0, fRotation, 0)
                         }
                         );
 
                         //float fRotation = Mathf.Atan2(ifdInterpolatedFrameData.m_fixShipVelocityXErrorAdjusted[i], ifdInterpolatedFrameData.m_fixShipVelocityYErrorAdjusted[i]);
-
-                        float fRotation = Mathf.Deg2Rad * (-ifdInterpolatedFrameData.m_fixShipBaseAngleErrorAdjusted[i] + 90);
-
-                        //rotate to angle 
-                        m_emaEntityManager.SetComponentData(m_entShips[i], new Rotation() { Value = quaternion.Euler(0, fRotation, 0) });
 
                         //spawn respawn effect
                         SpawnShipSpawnEffect(i);
@@ -294,24 +307,21 @@ namespace GameStateView
                             }
                         }
 
+                        float fRotation = Mathf.Deg2Rad * (-ifdInterpolatedFrameData.m_fixShipBaseAngleErrorAdjusted[i] + 90);
+
                         //move to location
                         m_emaEntityManager.SetComponentData(
                         m_entShips[i],
-                        new Translation()
+                        new LocalTransform()
                         {
-                            Value = new float3(
+                            Position = new float3(
                             ifdInterpolatedFrameData.m_fixShipPosXErrorAdjusted[i],
                             0,
-                            ifdInterpolatedFrameData.m_fixShipPosYErrorAdjusted[i])
+                            ifdInterpolatedFrameData.m_fixShipPosYErrorAdjusted[i]),
+                            Rotation = quaternion.Euler(0, fRotation, 0)
                         }
                         );
 
-                        //float fRotation = Mathf.Atan2(ifdInterpolatedFrameData.m_fixShipVelocityXErrorAdjusted[i], ifdInterpolatedFrameData.m_fixShipVelocityYErrorAdjusted[i]);
-
-                        float fRotation = Mathf.Deg2Rad * (-ifdInterpolatedFrameData.m_fixShipBaseAngleErrorAdjusted[i] + 90);
-
-                        //rotate to angle 
-                        m_emaEntityManager.SetComponentData(m_entShips[i], new Rotation() { Value = quaternion.Euler(0, fRotation, 0) });
                     }
 
                 }
@@ -668,4 +678,5 @@ namespace GameStateView
             }
         }
     }
+    */
 }

@@ -1,5 +1,6 @@
 {
     "name": "ProjectGameStateView",
+    "rootNamespace": "",
     "references": [
         "GUID:734d92eba21c94caba915361bd5ac177",
         "GUID:8819f35a0fc84499b990e90a4ca1911f",
@@ -10,7 +11,8 @@
         "GUID:b5793fa1138ae80418f70655af94a62b",
         "GUID:c305cedec0373d040a50b32efe39ad0d",
         "GUID:780f5b4b5d6549748a70526b117a388f",
-        "GUID:b268e4ad85465bc4186068a2a3dcd6fa"
+        "GUID:b268e4ad85465bc4186068a2a3dcd6fa",
+        "GUID:e0cd26848372d4e5c891c569017e11f1"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

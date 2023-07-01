@@ -97,11 +97,6 @@ namespace GameManagers
 
         public int m_iDefaultMaxGameSize = 6;
 
-        //the amount of time to wait to get gateway before timing out and starting again
-        protected float m_fGettingGatewayTimeout = 40f;
-
-        //the amount of time to wait before timing out a connection through a gateway
-        protected float m_fGatewayConnectionTimeout = 240f;
         protected DateTime m_dtmConnectThroughGateStart;
 
         //the timeout time for getting sim state from cluster
@@ -224,8 +219,14 @@ namespace GameManagers
             //set state to getting gateway
             State = ActiveGameState.GettingGateway;
 
+            GetGatewayRequest gwrGatewayRequest = new GetGatewayRequest()
+            {
+                m_lFlags = m_ncsNetworkConnectionSettings.m_lFlags,
+                m_lGameType = m_ncsNetworkConnectionSettings.m_lGameType
+            };
+
             //request gateway from webinterface
-            if (m_winWebInterface.SearchForGateway() == false)
+            if (m_winWebInterface.SearchForGateway(gwrGatewayRequest) == false)
             {
                 Debug.Log($"User:{m_winWebInterface.UserID} Encountered error when searching for gateway");
 
@@ -241,17 +242,17 @@ namespace GameManagers
         protected void UpdateGettingGateway()
         {
             //check if gateway found
-            if (m_winWebInterface.ExternalGatewayCommunicationStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Succedded)
+            if (m_winWebInterface.SearchForGatewayStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Succedded)
             {
                 //transition to connecting through gateway 
                 EnterConnectingThroughGateway();
 
                 return;
             }
-            else if (m_winWebInterface.ExternalGatewayCommunicationStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Failed &&
-               (m_winWebInterface.ExternalGatewayCommunicationStatus.ShouldRestart() == false || m_winWebInterface.NoGatewayExistsOnServer))
+            else if (m_winWebInterface.SearchForGatewayStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Failed &&
+               (m_winWebInterface.SearchForGatewayStatus.ShouldRestart() == false || m_winWebInterface.NoGatewayExistsOnServer))
             {
-                if(m_winWebInterface.ExternalGatewayCommunicationStatus.ShouldRestart() == false)
+                if(m_winWebInterface.SearchForGatewayStatus.ShouldRestart() == false)
                 {
                     Debug.Log($"User:{m_winWebInterface.UserID} could not get gateway");
                 }
@@ -305,9 +306,19 @@ namespace GameManagers
             //check for timeout 
             TimeSpan tspTimeSinceConnectionStart = DateTime.UtcNow - m_dtmConnectThroughGateStart;
 
-            if (tspTimeSinceConnectionStart.TotalSeconds > m_fGatewayConnectionTimeout)
+            //check if connection failed 
+
+            if (tspTimeSinceConnectionStart.TotalSeconds > m_ncsNetworkConnectionSettings.m_fGatewayConnectionTimeout || m_ncnNetworkConnection.HaveAllConnectionsFailed())
             {
-                Debug.Log("Connection attempt timed out");
+                if (tspTimeSinceConnectionStart.TotalSeconds > m_ncsNetworkConnectionSettings.m_fGatewayConnectionTimeout)
+                {
+                    Debug.Log("Connection through gateway attempt timed out");
+                }
+
+                if (m_ncnNetworkConnection.HaveAllConnectionsFailed())
+                {
+                    Debug.Log("Connection through gateway failed");
+                }
 
                 m_usmUIStateManager?.LogStartupEvent("Failed to connect to lead peer restarting connection process");
 
@@ -591,7 +602,6 @@ namespace GameManagers
                 SimStatus smsStatus = new SimStatus()
                 {
                     m_iRemainingSlots = 10,
-                    m_iSimStatus = (int)SimStatus.State.Lobby
                 };
 
                 m_winWebInterface.SetGateway(smsStatus);

@@ -8,6 +8,9 @@ namespace Networking
     [CreateAssetMenu(fileName = "NetworkSettings", menuName = "Network/Settings", order = 1)]
     public class NetworkConnectionSettings : ScriptableObject
     {
+        //----- initial network setup settings --------
+        
+
         //----- Network settings -----------------
         [SerializeField]
         public int m_iMaxBytesToSend = 1000;
@@ -60,6 +63,19 @@ namespace Networking
 
         [SerializeField]
         public float m_fStartSimStateMaxLagCompensation = 0.6f;
+
+        //--------------- Network Gateway Settings ----------
+        [SerializeField]
+        protected float m_fGettingGatewayTimeout = 40f;
+
+        [SerializeField]
+        public float m_fGatewayConnectionTimeout = 240.0f;
+
+        [SerializeField]
+        public long m_lGameType = 0;
+
+        [SerializeField]
+        public long m_lFlags = 0;
 
         //--------------- Network Gateway Manager -----------
         [SerializeField]

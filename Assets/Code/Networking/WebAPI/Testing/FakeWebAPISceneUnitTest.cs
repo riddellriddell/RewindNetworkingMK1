@@ -263,13 +263,15 @@ namespace Networking
             SetGatewayCommand ugwUpdateGatewayCommand = new SetGatewayCommand()
             {
 
-                m_staGameState = new SimStatus()
+                m_gwsGateState = new SimStatus()
                 {
                     m_iRemainingSlots = 2,
-                    m_iSimStatus = (int)SimStatus.State.Lobby
                 },
                 m_lUserID = strUser1ID,
-                m_lUserKey = strUser1Key
+                m_lUserKey = strUser1Key,
+                m_iGameType = 0,
+                m_iFlags = 0,
+                m_gstGameState = new GameState()
             };
 
             string strUpdateGatewayCommand = JsonUtility.ToJson(ugwUpdateGatewayCommand);
@@ -294,22 +296,28 @@ namespace Networking
 
             //----------- search for gateway ----------------------------------------------
 
-            string strUser2ID = "fghj";
+
+            GetGatewayRequest ggrGetGatewayRequest = new GetGatewayRequest();
+            ggrGetGatewayRequest.m_lFlags = 0;
+            ggrGetGatewayRequest.m_lGameType = 0;
+
+            //build requrest
+            string strRequest = JsonUtility.ToJson(ggrGetGatewayRequest);
 
             bLoop = true;
 
-            Debug.Log($"Searching for gateway for user: {strUser2ID}");
+            Debug.Log($"Searching for gateway with request: {strRequest}");
 
-            FakeWebAPI.Instance.SearchForGateway(strUser2ID, actWebAPICallback);
+            FakeWebAPI.Instance.SearchForGateway(strRequest, actWebAPICallback);
 
             while (bLoop)
             {
                 yield return null;
             }
 
-            Debug.Assert(bActionResult && strActionValue != string.Empty, $"Failed to find gateway for user {strUser2ID.ToString()} with result {strActionValue}");
+            Debug.Assert(bActionResult && strActionValue != string.Empty, $"Failed to find gateway for user {strRequest.ToString()} with result {strActionValue}");
 
-            Debug.Log($"gateway : {strActionValue} found for user: {strUser2ID.ToString()} ");
+            Debug.Log($"gateway : {strActionValue} found for user: {strRequest.ToString()} ");
         }
 
 #endif

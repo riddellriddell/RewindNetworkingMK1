@@ -88,7 +88,7 @@ namespace Networking
 
             Debug.Log("Starting gateway setup");
 
-            m_winWebInterface1.SetGateway(new SimStatus() { m_iRemainingSlots = 2, m_iSimStatus = (int)SimStatus.State.Lobby });
+            m_winWebInterface1.SetGateway(new SimStatus() { m_iRemainingSlots = 2});
 
             yield return new WaitForSeconds(5);
 
@@ -103,15 +103,21 @@ namespace Networking
 
             Debug.Log("Starting search for gateway");
 
-            m_winWebInterface2.SearchForGateway();
+            GetGatewayRequest gwrRequest = new GetGatewayRequest()
+            {
+                m_lGameType = 0,
+                m_lFlags = 0
+            };
+
+            m_winWebInterface2.SearchForGateway(gwrRequest);
 
             //wait for gateway to be found
-            while(m_winWebInterface2.ExternalGatewayCommunicationStatus.m_cmsStatus != WebInterface.WebAPICommunicationTracker.CommunctionStatus.Succedded)
+            while(m_winWebInterface2.SearchForGatewayStatus.m_cmsStatus != WebInterface.WebAPICommunicationTracker.CommunctionStatus.Succedded)
             {
                 yield return null;
             }
 
-            Debug.Assert(m_winWebInterface2.ExternalGatewayCommunicationStatus.m_cmsStatus != WebInterface.WebAPICommunicationTracker.CommunctionStatus.Failed);
+            Debug.Assert(m_winWebInterface2.SearchForGatewayStatus.m_cmsStatus != WebInterface.WebAPICommunicationTracker.CommunctionStatus.Failed);
 
             Debug.Log($"Found Gateway {m_winWebInterface2.ExternalGateway.Value.m_lGateOwnerUserID.ToString()} ");
         }

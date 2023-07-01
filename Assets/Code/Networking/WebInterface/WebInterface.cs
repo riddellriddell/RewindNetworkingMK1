@@ -20,7 +20,8 @@ namespace Networking
         public static string s_strGetMessageAddress = "https://us-central1-rollbacknetworkingprototype.cloudfunctions.net/GetMessagesForPeer";
         public static string s_strSetGatewayAddress = "https://us-central1-rollbacknetworkingprototype.cloudfunctions.net/SetGateway";
         public static string s_strGetGatewayAddress = "https://us-central1-rollbacknetworkingprototype.cloudfunctions.net/GetGateway";
-               
+        public static string s_strGetGatewayListAddress = "https://us-central1-rollbacknetworkingprototype.cloudfunctions.net/GetGatewayList";
+
         public struct WebAPICommunicationTracker
         {
             public enum CommunctionStatus
@@ -149,7 +150,7 @@ namespace Networking
 
         //should use the actual internet server or simulate locally 
         public bool TestLocally { get; set; } = false;
-               
+
         //the id of the player
         public long UserID { get; private set; }
 
@@ -157,7 +158,7 @@ namespace Networking
         public long UserKey { get; private set; }
 
         //when running coroutunes this is the object the routines will be run off
-        public MonoBehaviour CoroutineExecutionObject { get; private set; } 
+        public MonoBehaviour CoroutineExecutionObject { get; private set; }
 
         public WebAPICommunicationTracker PlayerIDCommunicationStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
 
@@ -185,8 +186,14 @@ namespace Networking
         public WebAPICommunicationTracker SetGatewayStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
         public float TimeBetweenGatewayUpdates { get; } = 5;
 
+
+        public GetGatewayRequest GetGatewayRequestData {  get; private set;}
         public SearchForGatewayReturn? ExternalGateway { get; private set; }
-        public WebAPICommunicationTracker ExternalGatewayCommunicationStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
+        public WebAPICommunicationTracker SearchForGatewayStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
+
+        public SearchForGatewayReturn[] ExternalGatewayList { get; private set; }
+        public WebAPICommunicationTracker SearchForGatewayListStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
+        
         public bool NoGatewayExistsOnServer { get; private set; } = false;
 
         protected string m_strUniqueDeviceIdentifier = string.Empty;
@@ -201,7 +208,6 @@ namespace Networking
             //check if get player ID needs restarting
             if (PlayerIDCommunicationStatus.ShouldRestart())
             {
-
                 //restart get player id
                 InternalStartGetPlayerID();
 
@@ -278,9 +284,14 @@ namespace Networking
             }
 
             //check if gateway serch needs restarting
-            if (ExternalGatewayCommunicationStatus.ShouldRestart())
+            if (SearchForGatewayStatus.ShouldRestart())
             {
                 InternalStartSearchForGateway();
+            }
+
+            if(SearchForGatewayListStatus.ShouldRestart())
+            {
+                InternalStartSearchForGatewayList();
             }
 
         }
@@ -388,7 +399,7 @@ namespace Networking
 
             LocalGatewaySimStatus = new SetGatewayCommand()
             {
-                m_staGameState = stsSimStatus,
+                m_gwsGateState = stsSimStatus,
                 m_lUserID = UserID,
                 m_lUserKey = UserKey
             };
@@ -418,7 +429,7 @@ namespace Networking
         /// Search for gateway returns false if already looking for gateway or player does not have an ID
         /// </summary>
         /// <returns></returns>
-        public bool SearchForGateway()
+        public bool SearchForGateway(GetGatewayRequest gwrGatewayRequest)
         {
             //check if has id
             if (PlayerIDCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Succedded)
@@ -429,22 +440,62 @@ namespace Networking
 
             //check if already searching for a gateway 
             if (
-                ExternalGatewayCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.NotStarted &&
-                ExternalGatewayCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Failed &&
-                ExternalGatewayCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled &&
-                ExternalGatewayCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Succedded)
+                SearchForGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.NotStarted &&
+                SearchForGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Failed &&
+                SearchForGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled &&
+                SearchForGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Succedded)
             {
                 Debug.Log("Starting search for gateway before previouse one has finished");
                 return false;
             }
 
-            ExternalGatewayCommunicationStatus = ExternalGatewayCommunicationStatus.Reset();
+            //set the data to request
+            GetGatewayRequestData = gwrGatewayRequest;
+
+            SearchForGatewayStatus = SearchForGatewayStatus.Reset();
 
             InternalStartSearchForGateway();
 
             return true;
 
         }
+
+
+        /// <summary>
+        /// Search for gateway returns false if already looking for gateway or player does not have an ID
+        /// </summary>
+        /// <returns></returns>
+        public bool SearchForGatewayList(GetGatewayRequest gwrGatewayRequest)
+        {
+            //check if has id
+            if (PlayerIDCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Succedded)
+            {
+                Debug.Log("User ID has not been fetched from server before looking for gateway");
+                return false;
+            }
+
+            //check if already searching for a gateway 
+            if (
+                SearchForGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.NotStarted &&
+                SearchForGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Failed &&
+                SearchForGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled &&
+                SearchForGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Succedded)
+            {
+                Debug.Log("Starting search for gateway before previouse one has finished");
+                return false;
+            }
+
+            //set the data to request
+            GetGatewayRequestData = gwrGatewayRequest;
+
+            SearchForGatewayStatus = SearchForGatewayStatus.Reset();
+
+            InternalStartSearchForGatewayList();
+
+            return true;
+
+        }
+
 
         protected IEnumerator WebRequest(string strAddress, string strBody, Action<bool,string> actCallback)
         {
@@ -689,18 +740,20 @@ namespace Networking
 
         protected void InternalStartSearchForGateway()
         {
-            ExternalGatewayCommunicationStatus = ExternalGatewayCommunicationStatus.StartNewAttempt();
+            SearchForGatewayStatus = SearchForGatewayStatus.StartNewAttempt();
 
             NoGatewayExistsOnServer = false;
 
             if (TestLocally)
             {
-                FakeWebAPI.Instance.SearchForGateway(UserID.ToString(), InternalOnFinishSearchForGateway);
+                //build requrest
+                string strRequest = JsonUtility.ToJson(GetGatewayRequestData);
+                FakeWebAPI.Instance.SearchForGateway(strRequest, InternalOnFinishSearchForGateway);
             }
             else
             {
                 //build requrest
-                string strRequest = $"{{ \"m_iUserID\":{UserID}}}";
+                string strRequest = JsonUtility.ToJson(GetGatewayRequestData);
 
                 CoroutineExecutionObject.StartCoroutine(WebRequest(s_strGetGatewayAddress, strRequest, InternalOnFinishSearchForGateway));
             }
@@ -708,7 +761,7 @@ namespace Networking
 
         protected void InternalOnFinishSearchForGateway(bool bWasSuccess, string strResult)
         {
-            if (ExternalGatewayCommunicationStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.Cancled)
+            if (SearchForGatewayStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.Cancled)
             {
                 return;
             }
@@ -721,7 +774,7 @@ namespace Networking
                     NoGatewayExistsOnServer = true;
                 }
 
-                ExternalGatewayCommunicationStatus = ExternalGatewayCommunicationStatus.CommunicationFailed();
+                SearchForGatewayStatus = SearchForGatewayStatus.CommunicationFailed();
 
                 return;
             }
@@ -733,14 +786,73 @@ namespace Networking
                 //decode external gate
                 ExternalGateway = JsonUtility.FromJson<SearchForGatewayReturn>(strResult);
 
-                ExternalGatewayCommunicationStatus = ExternalGatewayCommunicationStatus.CommunicationSuccessfull();
+                SearchForGatewayStatus = SearchForGatewayStatus.CommunicationSuccessfull();
 
                 NoGatewayExistsOnServer = false;
             }
             catch
             {
-                ExternalGatewayCommunicationStatus = ExternalGatewayCommunicationStatus.CommunicationFailed();
+                SearchForGatewayStatus = SearchForGatewayStatus.CommunicationFailed();
             }
         }
+
+        protected void InternalStartSearchForGatewayList()
+        {
+            SearchForGatewayStatus = SearchForGatewayStatus.StartNewAttempt();
+
+            NoGatewayExistsOnServer = false;
+
+            if (TestLocally)
+            {
+                FakeWebAPI.Instance.SearchForGatewayList(UserID.ToString(), InternalOnFinishSearchForGatewayList);
+            }
+            else
+            {
+                //build requrest
+                string strRequest = JsonUtility.ToJson(GetGatewayRequestData);
+
+                CoroutineExecutionObject.StartCoroutine(WebRequest(s_strGetGatewayListAddress, strRequest, InternalOnFinishSearchForGatewayList));
+            }
+        }
+
+        protected void InternalOnFinishSearchForGatewayList(bool bWasSuccess, string strResult)
+        {
+            if (SearchForGatewayStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.Cancled)
+            {
+                return;
+            }
+
+            if (bWasSuccess == false)
+            {
+                //check if the reason the conenction failed was because the server has no matching games
+                if (strResult.Contains("404"))
+                {
+                    ExternalGatewayList = new SearchForGatewayReturn[0];
+                    NoGatewayExistsOnServer = true;
+                }
+
+                SearchForGatewayStatus = SearchForGatewayStatus.CommunicationFailed();
+
+                return;
+            }
+
+            try
+            {
+                Debug.Log($"External Gateway: {strResult} found");
+
+                //decode external gate
+                ExternalGatewayList = JsonUtility.FromJson<SearchForGatewayReturn[]>(strResult);
+
+                SearchForGatewayStatus = SearchForGatewayStatus.CommunicationSuccessfull();
+
+                NoGatewayExistsOnServer = false;
+            }
+            catch
+            {
+                SearchForGatewayStatus = SearchForGatewayStatus.CommunicationFailed();
+            }
+        }
+
+
     }
 }
