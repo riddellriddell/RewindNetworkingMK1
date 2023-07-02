@@ -126,7 +126,7 @@ namespace Networking
                     m_lUserID = lUserID,
                     m_lUserKey = lAccessKey,
                     m_dtmLastActiveTime = DateTime.UtcNow.Ticks,
-                    m_staGateState = new SimStatus()
+                    m_gwsGateState = new GatewayState()
                     {
                         m_iRemainingSlots = iRemainingSlots,
                     },
@@ -177,7 +177,7 @@ namespace Networking
                 foreach (Gateway gtwGate in m_gtwGateways.Values)
                 {
                     //check if there are empty player slots
-                    if (gtwGate.m_staGateState.m_iRemainingSlots <= 0)
+                    if (gtwGate.m_gwsGateState.m_iRemainingSlots <= 0)
                     {
                         continue;
                     }
@@ -205,7 +205,7 @@ namespace Networking
                 {
 
                     //check if there are empty player slots
-                    if (gtwGate.m_staGateState.m_iRemainingSlots <= 0)
+                    if (gtwGate.m_gwsGateState.m_iRemainingSlots <= 0)
                     {
                         continue;
                     }
@@ -516,8 +516,8 @@ namespace Networking
                 ugcUpdateGateCommand.m_lUserID, 
                 ugcUpdateGateCommand.m_lUserKey,
                 ugcUpdateGateCommand.m_gwsGateState.m_iRemainingSlots, 
-                ugcUpdateGateCommand.m_iGameType, 
-                ugcUpdateGateCommand.m_iFlags, 
+                ugcUpdateGateCommand.m_lGameType, 
+                ugcUpdateGateCommand.m_lFlags, 
                 ugcUpdateGateCommand.m_gstGameState.m_strGameState) == false)
             {
                 //return error result
@@ -563,10 +563,10 @@ namespace Networking
                 yield break;
             }
 
-            SearchForGatewayReturn sgrReturnValue = new SearchForGatewayReturn
+            GatewayReturnDetails sgrReturnValue = new GatewayReturnDetails
             {
                 m_lGateOwnerUserID = gtwGate.Value.m_lUserID,
-                m_gwsGateState = gtwGate.Value.m_staGateState,
+                m_gwsGateState = gtwGate.Value.m_gwsGateState,
                 m_lGameFlags = gtwGate.Value.m_lFlags,
                 m_lGameState = gtwGate.Value.m_gstGameState
             };
@@ -611,14 +611,14 @@ namespace Networking
                 yield break;
             }
 
-            SearchForGatewayReturn[] sgrReturnValue = new SearchForGatewayReturn[gtwGate.Length];
+            GatewayReturnDetails[] sgrReturnValue = new GatewayReturnDetails[gtwGate.Length];
 
             for(int i = 0; i < gtwGate.Length; i++)
             {
-                sgrReturnValue[i] = new SearchForGatewayReturn
+                sgrReturnValue[i] = new GatewayReturnDetails
                 {
                     m_lGateOwnerUserID = gtwGate[i].m_lUserID,
-                    m_gwsGateState = gtwGate[i].m_staGateState,
+                    m_gwsGateState = gtwGate[i].m_gwsGateState,
                     m_lGameFlags = gtwGate[i].m_lFlags,
                     m_lGameState = gtwGate[i].m_gstGameState
                 };

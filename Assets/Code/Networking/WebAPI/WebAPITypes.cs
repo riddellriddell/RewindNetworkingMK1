@@ -60,7 +60,7 @@ namespace Networking
 
     //the active state of gate way
     [Serializable]
-    public struct SimStatus
+    public struct GatewayState
     {
         /// <summary>
         /// places in the game that are free for people to fill
@@ -69,6 +69,7 @@ namespace Networking
     }
 
     //the state of the sim
+    [Serializable]
     public struct GameState
     {
         public string m_strGameState;
@@ -86,7 +87,7 @@ namespace Networking
 
         public long m_dtmLastActiveTime;
 
-        public SimStatus m_staGateState;
+        public GatewayState m_gwsGateState;
 
         public long m_lGameType;
 
@@ -107,7 +108,7 @@ namespace Networking
 
         public long m_dtmLastActiveTime;
 
-        public SimStatus m_staGameState;
+        public GatewayState m_staGameState;
 
     }
     
@@ -143,9 +144,9 @@ namespace Networking
     {
         public long m_lUserID;
         public long m_lUserKey;
-        public SimStatus m_gwsGateState;
-        public int m_iGameType;
-        public int m_iFlags;
+        public GatewayState m_gwsGateState;
+        public int m_lGameType;
+        public int m_lFlags;
         public GameState m_gstGameState;
     }
     
@@ -157,12 +158,28 @@ namespace Networking
     }
 
     [Serializable]
-    public struct SearchForGatewayReturn
+    public struct GatewayReturnDetails
     {
         public long m_lGateOwnerUserID;
-        public SimStatus m_gwsGateState;
+        public GatewayState m_gwsGateState;
         public long m_lGameFlags;
         public GameState m_lGameState; //game specific deets
+
+    }
+
+
+    [Serializable]
+    public struct SearchForGatewayReturnSingle
+    {
+        public GatewayReturnDetails m_grdGateReturnData;
+
+    }
+
+
+    [Serializable]
+    public struct SearchForGatewayReturnList
+    {
+        public GatewayReturnDetails[] m_arrGateReturnData;
 
     }
 }

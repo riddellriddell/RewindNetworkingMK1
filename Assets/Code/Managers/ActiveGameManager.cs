@@ -276,6 +276,9 @@ namespace GameManagers
             //get the gateway peer
             long lConnectionID = m_winWebInterface.ExternalGateway.Value.m_lGateOwnerUserID;
 
+            Debug.Assert(lConnectionID != 0, "Gateway ID recieved from server appears to be invalid");
+
+
             //setup the peer to peer network to match the settings of the taget network
             m_ngpGlobalMessagingProcessor.Initalize(m_sdaSimSettingsData.MaxPlayers);
 
@@ -599,7 +602,7 @@ namespace GameManagers
             if (m_ngmGatewayManager.NeedsOpenGateway)
             {
                 //get sim state and use it to set gateway
-                SimStatus smsStatus = new SimStatus()
+                GatewayState smsStatus = new GatewayState()
                 {
                     m_iRemainingSlots = 10,
                 };

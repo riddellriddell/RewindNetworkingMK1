@@ -88,7 +88,7 @@ namespace Networking
 
             Debug.Log("Starting gateway setup");
 
-            m_winWebInterface1.SetGateway(new SimStatus() { m_iRemainingSlots = 2});
+            m_winWebInterface1.SetGateway(new GatewayState() { m_iRemainingSlots = 2});
 
             yield return new WaitForSeconds(5);
 

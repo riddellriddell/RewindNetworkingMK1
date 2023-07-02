@@ -263,14 +263,14 @@ namespace Networking
             SetGatewayCommand ugwUpdateGatewayCommand = new SetGatewayCommand()
             {
 
-                m_gwsGateState = new SimStatus()
+                m_gwsGateState = new GatewayState()
                 {
                     m_iRemainingSlots = 2,
                 },
                 m_lUserID = strUser1ID,
                 m_lUserKey = strUser1Key,
-                m_iGameType = 0,
-                m_iFlags = 0,
+                m_lGameType = 0,
+                m_lFlags = 0,
                 m_gstGameState = new GameState()
             };
 

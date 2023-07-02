@@ -188,10 +188,10 @@ namespace Networking
 
 
         public GetGatewayRequest GetGatewayRequestData {  get; private set;}
-        public SearchForGatewayReturn? ExternalGateway { get; private set; }
+        public GatewayReturnDetails? ExternalGateway { get; private set; }
         public WebAPICommunicationTracker SearchForGatewayStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
 
-        public SearchForGatewayReturn[] ExternalGatewayList { get; private set; }
+        public GatewayReturnDetails[] ExternalGatewayList { get; private set; }
         public WebAPICommunicationTracker SearchForGatewayListStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
         
         public bool NoGatewayExistsOnServer { get; private set; } = false;
@@ -389,7 +389,7 @@ namespace Networking
         }
 
         //create gateway
-        public bool SetGateway(SimStatus stsSimStatus)
+        public bool SetGateway(GatewayState stsSimStatus)
         {
             //check if has id
             if (PlayerIDCommunicationStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Succedded)
@@ -510,7 +510,7 @@ namespace Networking
 
                 if (www.isNetworkError || www.isHttpError)
                 {
-                    Debug.Log(www.error);
+                    Debug.Log(www.error + ", error info: "+ www.downloadHandler.text);
                     actCallback.Invoke(false, www.responseCode.ToString());
                 }
                 else
@@ -705,11 +705,13 @@ namespace Networking
 
         protected void InternalStartSetGateway()
         {
-            Debug.Log("Setting Gateway Status");
+
 
             SetGatewayStatus = SetGatewayStatus.StartNewAttempt();
 
             string strRequest = JsonUtility.ToJson(LocalGatewaySimStatus);
+
+            Debug.Log("Setting Gateway Status with string: " + strRequest);
 
             if (TestLocally)
             {
@@ -784,7 +786,7 @@ namespace Networking
                 Debug.Log($"External Gateway: {strResult} found");
 
                 //decode external gate
-                ExternalGateway = JsonUtility.FromJson<SearchForGatewayReturn>(strResult);
+                ExternalGateway = JsonUtility.FromJson<GatewayReturnDetails>(strResult);
 
                 SearchForGatewayStatus = SearchForGatewayStatus.CommunicationSuccessfull();
 
@@ -827,7 +829,7 @@ namespace Networking
                 //check if the reason the conenction failed was because the server has no matching games
                 if (strResult.Contains("404"))
                 {
-                    ExternalGatewayList = new SearchForGatewayReturn[0];
+                    ExternalGatewayList = new GatewayReturnDetails[0];
                     NoGatewayExistsOnServer = true;
                 }
 
@@ -841,7 +843,7 @@ namespace Networking
                 Debug.Log($"External Gateway: {strResult} found");
 
                 //decode external gate
-                ExternalGatewayList = JsonUtility.FromJson<SearchForGatewayReturn[]>(strResult);
+                ExternalGatewayList = JsonUtility.FromJson<GatewayReturnDetails[]>(strResult);
 
                 SearchForGatewayStatus = SearchForGatewayStatus.CommunicationSuccessfull();
 
