@@ -16,6 +16,10 @@ namespace GameManagers
     {
         public enum ActiveGameState
         {
+
+            //------------------- Match browser if using match brows option ---
+
+            //------------------- Entry point if auto playing -----------------
             GettingGateway,
 
             //------------------- If Existing Gateway was found ---------------
@@ -99,9 +103,10 @@ namespace GameManagers
 
         protected DateTime m_dtmConnectThroughGateStart;
 
-        //the timeout time for getting sim state from cluster
-        protected float m_fGettingSimStateTimeOut = 240f;
         protected DateTime m_dtmGettingSimStateStart;
+
+        //dictionary of all games this client has attempted to join but failed
+        protected Dictionary<long, int> m_dicConnectionAttempts;
 
         public ActiveGameManager(
             SimProcessorSettings sdaSimSettingsData, 
@@ -123,6 +128,8 @@ namespace GameManagers
             m_gsvGameStateView = gsvGameStateViewSpawner;
             m_usmUIStateManager = usmUIManager;
             m_gvcGameCamera = gvcGameViewCamera;
+
+            m_dicConnectionAttempts = new Dictionary<long, int>();
 
             //start the connection process
             EnterGettingGateway();
@@ -226,7 +233,7 @@ namespace GameManagers
             };
 
             //request gateway from webinterface
-            if (m_winWebInterface.SearchForGateway(gwrGatewayRequest) == false)
+            if (m_winWebInterface.SearchForGatewayList(gwrGatewayRequest) == false)
             {
                 Debug.Log($"User:{m_winWebInterface.UserID} Encountered error when searching for gateway");
 
@@ -242,17 +249,58 @@ namespace GameManagers
         protected void UpdateGettingGateway()
         {
             //check if gateway found
-            if (m_winWebInterface.SearchForGatewayStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Succedded)
+            if (m_winWebInterface.SearchForGatewayListStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Succedded)
             {
-                //transition to connecting through gateway 
-                EnterConnectingThroughGateway();
+
+                long lBestGatewayID = 0;
+                int iBestGateNumberOfConenctionAttempts = int.MaxValue;
+
+                //evaluate gateways to pick the best one, this is done to avoid repeatedly trying to connect to a bad game
+                for(int i = 0; i < m_winWebInterface.ExternalGatewayList.Length; i++)
+                {
+                    long lGateId = m_winWebInterface.ExternalGatewayList[i].m_lGateOwnerUserID;
+
+                    int iConnectionAttempts = 0;
+
+                    if(m_dicConnectionAttempts.TryGetValue(lGateId, out iConnectionAttempts))
+                    {
+                        if(iConnectionAttempts < iBestGateNumberOfConenctionAttempts)
+                        {
+                            lBestGatewayID = lGateId;
+                            iBestGateNumberOfConenctionAttempts = iConnectionAttempts;
+                        }
+                    }
+                    else
+                    {
+                        //if there has been no connection attempts then this is a good gate to connect through
+                        lBestGatewayID = lGateId;
+                        iBestGateNumberOfConenctionAttempts = 0;
+                        break;
+                    }
+                }
+
+                //check if it would be better to start own match at all servers are broken
+                if (iBestGateNumberOfConenctionAttempts >= m_ncsNetworkConnectionSettings.m_iMaxFailedConnectionsForValidGate)
+                {
+                    Debug.Log($"User:{m_winWebInterface.UserID} has already tried connecting to all available gates and failed: {iBestGateNumberOfConenctionAttempts} times, starting new game");
+                    EnterSetUpNewSim();
+                }
+                else
+                {
+
+                    //update the connection attempt dictionary
+                    m_dicConnectionAttempts[lBestGatewayID] = iBestGateNumberOfConenctionAttempts + 1;
+
+                    //transition to connecting through gateway 
+                    EnterConnectingThroughGateway(lBestGatewayID);
+                }
 
                 return;
             }
-            else if (m_winWebInterface.SearchForGatewayStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Failed &&
-               (m_winWebInterface.SearchForGatewayStatus.ShouldRestart() == false || m_winWebInterface.NoGatewayExistsOnServer))
+            else if (m_winWebInterface.SearchForGatewayListStatus.m_cmsStatus == WebInterface.WebAPICommunicationTracker.CommunctionStatus.Failed &&
+               (m_winWebInterface.SearchForGatewayListStatus.ShouldRestart() == false || m_winWebInterface.NoGatewayExistsOnServer))
             {
-                if(m_winWebInterface.SearchForGatewayStatus.ShouldRestart() == false)
+                if(m_winWebInterface.SearchForGatewayListStatus.ShouldRestart() == false)
                 {
                     Debug.Log($"User:{m_winWebInterface.UserID} could not get gateway");
                 }
@@ -262,7 +310,7 @@ namespace GameManagers
             }
         }
 
-        protected void EnterConnectingThroughGateway()
+        protected void EnterConnectingThroughGateway(long lConnectionID)
         {
             Debug.Log($"Enter {ActiveGameState.ConnectingThroughGateway.ToString()} state");
 
@@ -272,9 +320,6 @@ namespace GameManagers
             m_dtmConnectThroughGateStart = DateTime.UtcNow;
 
             //tell p2p network to start a new connection through gateway
-
-            //get the gateway peer
-            long lConnectionID = m_winWebInterface.ExternalGateway.Value.m_lGateOwnerUserID;
 
             Debug.Assert(lConnectionID != 0, "Gateway ID recieved from server appears to be invalid");
 
@@ -351,9 +396,14 @@ namespace GameManagers
             //update gateway management 
             HandleGateway();
 
+            //update UI
+            m_usmUIStateManager?.UpdateNeworkView(m_ncnNetworkConnection);
+
+
             //check if sim state has been fetched from cluster
             bool bHasFetchedSimState = true;
 
+            //check if the user is connected to the swarm and has been voted in to a player position
             if (m_ngpGlobalMessagingProcessor.m_staState != NetworkGlobalMessengerProcessor.State.Active)
             {
                 bHasFetchedSimState = false;
@@ -401,7 +451,7 @@ namespace GameManagers
             //check if getting sim state has timed out 
             TimeSpan tspTimeSinceGetSimStateStarted = DateTime.UtcNow - m_dtmGettingSimStateStart;
 
-            if (tspTimeSinceGetSimStateStarted.TotalSeconds > m_fGettingSimStateTimeOut)
+            if (tspTimeSinceGetSimStateStarted.TotalSeconds > m_ncsNetworkConnectionSettings.m_fGettingSimStateTimeOut)
             {
                 Debug.Log($"Getting sim state timed out before game state was fetched, Global Messaging status:{m_ngpGlobalMessagingProcessor.m_staState}, Sim Data Fetch Status:{m_ngpGlobalMessagingProcessor.m_staState}, has a full state bben synced:{m_sssStateSyncProcessor.m_bIsFullStateSynced}");
 
@@ -482,7 +532,7 @@ namespace GameManagers
 
             if(m_ndbDataBridge.m_sssSimStartStateSyncStatus == SimStateSyncNetworkProcessor.State.SyncFailed)
             {
-                if((DateTime.UtcNow - m_dtmGettingSimStateStart).TotalSeconds > m_fGettingSimStateTimeOut)
+                if((DateTime.UtcNow - m_dtmGettingSimStateStart).TotalSeconds > m_ncsNetworkConnectionSettings.m_fGettingSimStateTimeOut)
                 {
                     Debug.Log("Error getting sim state, get sim state timed out, forced to reset get game process");
 

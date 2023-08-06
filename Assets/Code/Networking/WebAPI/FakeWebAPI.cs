@@ -599,8 +599,17 @@ namespace Networking
                 yield break;
             }
 
+            GetGatewayRequest gwrRequest = new GetGatewayRequest();
+
             //get user id
-            GetGatewayRequest gwrRequest = JsonUtility.FromJson<GetGatewayRequest>(strGatewayDetails);
+            try
+            {
+                gwrRequest = JsonUtility.FromJson<GetGatewayRequest>(strGatewayDetails);
+            }
+            catch
+            {
+                Debug.LogError("bad gate request json message, recieved: " + strGatewayDetails + " but was expecting something like: " + JsonUtility.ToJson(gwrRequest));    
+            }
 
             Gateway[] gtwGate = m_fdbFakeDatabase.SearchForGatewayList(gwrRequest.m_lGameType, gwrRequest.m_lFlags);
 
@@ -624,7 +633,24 @@ namespace Networking
                 };
             }
 
-            string strGateReturnValue = JsonUtility.ToJson(sgrReturnValue);
+            SearchForGatewayReturnList grlGateList = new SearchForGatewayReturnList();
+
+            grlGateList.m_grdGateList = sgrReturnValue;
+
+            //string strGateReturnValue = "[";
+            //for (int i = 0; i < sgrReturnValue.Length; i++)
+            //{
+            //    strGateReturnValue += JsonUtility.ToJson(sgrReturnValue[i]);
+            //
+            //    if(i != sgrReturnValue.Length -1)
+            //    {
+            //        strGateReturnValue += ",";
+            //    }
+            //}
+            //strGateReturnValue += "]";
+
+            string strGateReturnValue = JsonUtility.ToJson(grlGateList);
+
 
             actSearchCallback?.Invoke(true, strGateReturnValue);
         }

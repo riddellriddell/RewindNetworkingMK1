@@ -179,7 +179,7 @@ namespace Networking
     [Serializable]
     public struct SearchForGatewayReturnList
     {
-        public GatewayReturnDetails[] m_arrGateReturnData;
+        public GatewayReturnDetails[] m_grdGateList;
 
     }
 }

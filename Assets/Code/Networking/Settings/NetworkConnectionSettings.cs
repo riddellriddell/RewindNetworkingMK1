@@ -64,7 +64,16 @@ namespace Networking
         [SerializeField]
         public float m_fStartSimStateMaxLagCompensation = 0.6f;
 
+        //the max amount of time to spend trying to get the sim state before you restart and get a new gate to connect through
+        [SerializeField]
+        public float m_fGettingSimStateTimeOut = 120f;
+
         //--------------- Network Gateway Settings ----------
+
+        [SerializeField]
+        public float m_iMaxFailedConnectionsForValidGate = 3;
+
+
         [SerializeField]
         protected float m_fGettingGatewayTimeout = 40f;
 

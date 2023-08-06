@@ -476,10 +476,10 @@ namespace Networking
 
             //check if already searching for a gateway 
             if (
-                SearchForGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.NotStarted &&
-                SearchForGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Failed &&
-                SearchForGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled &&
-                SearchForGatewayStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Succedded)
+                SearchForGatewayListStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.NotStarted &&
+                SearchForGatewayListStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Failed &&
+                SearchForGatewayListStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled &&
+                SearchForGatewayListStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Succedded)
             {
                 Debug.Log("Starting search for gateway before previouse one has finished");
                 return false;
@@ -488,7 +488,7 @@ namespace Networking
             //set the data to request
             GetGatewayRequestData = gwrGatewayRequest;
 
-            SearchForGatewayStatus = SearchForGatewayStatus.Reset();
+            SearchForGatewayListStatus = SearchForGatewayListStatus.Reset();
 
             InternalStartSearchForGatewayList();
 
@@ -508,9 +508,9 @@ namespace Networking
 
                 yield return www.SendWebRequest();
 
-                if (www.isNetworkError || www.isHttpError)
+                if (www.result != UnityWebRequest.Result.Success)
                 {
-                    Debug.Log(www.error + ", error info: "+ www.downloadHandler.text);
+                    Debug.Log(" error is a " + www.result.ToString() + ", error info: "+ www.downloadHandler.text + " :") ;
                     actCallback.Invoke(false, www.responseCode.ToString());
                 }
                 else
@@ -800,26 +800,28 @@ namespace Networking
 
         protected void InternalStartSearchForGatewayList()
         {
-            SearchForGatewayStatus = SearchForGatewayStatus.StartNewAttempt();
+            SearchForGatewayListStatus = SearchForGatewayListStatus.StartNewAttempt();
 
             NoGatewayExistsOnServer = false;
 
+            //build requrest
+            string strRequest = JsonUtility.ToJson(GetGatewayRequestData);
+
+
             if (TestLocally)
             {
-                FakeWebAPI.Instance.SearchForGatewayList(UserID.ToString(), InternalOnFinishSearchForGatewayList);
+                FakeWebAPI.Instance.SearchForGatewayList(strRequest, InternalOnFinishSearchForGatewayList);
             }
             else
             {
-                //build requrest
-                string strRequest = JsonUtility.ToJson(GetGatewayRequestData);
-
+              
                 CoroutineExecutionObject.StartCoroutine(WebRequest(s_strGetGatewayListAddress, strRequest, InternalOnFinishSearchForGatewayList));
             }
         }
 
         protected void InternalOnFinishSearchForGatewayList(bool bWasSuccess, string strResult)
         {
-            if (SearchForGatewayStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.Cancled)
+            if (SearchForGatewayListStatus.m_cmsStatus == WebAPICommunicationTracker.CommunctionStatus.Cancled)
             {
                 return;
             }
@@ -833,7 +835,7 @@ namespace Networking
                     NoGatewayExistsOnServer = true;
                 }
 
-                SearchForGatewayStatus = SearchForGatewayStatus.CommunicationFailed();
+                SearchForGatewayListStatus = SearchForGatewayListStatus.CommunicationFailed();
 
                 return;
             }
@@ -843,15 +845,15 @@ namespace Networking
                 Debug.Log($"External Gateway: {strResult} found");
 
                 //decode external gate
-                ExternalGatewayList = JsonUtility.FromJson<GatewayReturnDetails[]>(strResult);
+                ExternalGatewayList = JsonUtility.FromJson<SearchForGatewayReturnList>(strResult).m_grdGateList;
 
-                SearchForGatewayStatus = SearchForGatewayStatus.CommunicationSuccessfull();
+                SearchForGatewayListStatus = SearchForGatewayListStatus.CommunicationSuccessfull();
 
                 NoGatewayExistsOnServer = false;
             }
             catch
             {
-                SearchForGatewayStatus = SearchForGatewayStatus.CommunicationFailed();
+                SearchForGatewayListStatus = SearchForGatewayListStatus.CommunicationFailed();
             }
         }
 

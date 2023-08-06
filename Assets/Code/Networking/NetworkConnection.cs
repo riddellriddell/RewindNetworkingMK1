@@ -38,7 +38,7 @@ namespace Networking
         //is this peer connected to a swarm
         public bool m_bIsConnectedToSwarm = false;
 
-        //the tiem this peer connected to the swarm 
+        //the time this peer connected to the swarm 
         public DateTime m_dtmConnectionTime = DateTime.MinValue;
 
         //list of all the network connection PacketManagers 
@@ -267,7 +267,7 @@ namespace Networking
         {
             foreach(var kvpKeyValue in ConnectionList)
             {
-                if(kvpKeyValue.Value.Status != Connection.ConnectionStatus.Disconnected)
+                if(kvpKeyValue.Value.Status != Connection.ConnectionStatus.Disconnected || kvpKeyValue.Value.Status != Connection.ConnectionStatus.Disconnecting)
                 {
                     return false;
                 }

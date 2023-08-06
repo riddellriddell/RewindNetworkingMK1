@@ -381,16 +381,19 @@ namespace Networking
             for (int i = 0; i < gmcChangedChannel.m_chvVotes.Count; i++)
             {
                 //check if vote is for kicking peer and is still active
-                if (gmcChangedChannel.m_chvVotes[i].m_vtpVoteType == GlobalMessageChannelState.ChannelVote.VoteType.Kick &&
-                    gmcChangedChannel.m_chvVotes[i].IsActive(dtmTimeOfVote, tspVoteTimeout))
+                if (gmcChangedChannel.m_chvVotes[i].m_vtpVoteType == GlobalMessageChannelState.ChannelVote.VoteType.Kick)
                 {
-                    //todo remove this code
-                    if(i < 0 || i > iMaxPlayerCount)
-                    {
-                        Debug.LogError("Attempting to kick peer out of bounds");
-                    }
+                    if (gmcChangedChannel.m_chvVotes[i].IsActive(dtmTimeOfVote, tspVoteTimeout))
 
-                    iKickPeers.Add(i);
+                    {
+                        //todo remove this code
+                        if (i < 0 || i > iMaxPlayerCount)
+                        {
+                            Debug.LogError("Attempting to kick peer out of bounds");
+                        }
+
+                        iKickPeers.Add(i);
+                    }
                 }
                 else if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.Assigned) //get non kick peer list
                 {

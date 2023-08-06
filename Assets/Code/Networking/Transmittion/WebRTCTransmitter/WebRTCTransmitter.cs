@@ -165,6 +165,21 @@ namespace Networking
                 return false;
             }
 
+            if(m_dchDataChannel.ReadyState != RTCDataChannelState.Open)
+            {
+                Debug.LogError($"Transmitter state: {State} does not match underlying rtc state of :{m_dchDataChannel.ReadyState} unable to send message");
+
+                //check if there is some funny buisness where channel has closed but not been notified 
+                if(State == PeerTransmitterState.Connected)
+                {
+                    //clean up the state 
+                    Disconnect();
+                }
+
+
+                return false;
+            }
+
             m_dchDataChannel.Send(data);
 
             return true;

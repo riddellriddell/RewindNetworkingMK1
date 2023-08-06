@@ -166,7 +166,7 @@ namespace Networking
                usmMessage.m_iMessageType == 0 ||
                usmMessage.m_dtmTimeOfMessage == 0)
             {
-                Debug.LogError("Mallformed message from server");
+                Debug.LogError($"Mallformed message from server, message was { JsonUtility.ToJson(usmMessage) }");
 
                 return;
             }

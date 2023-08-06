@@ -1,4 +1,5 @@
-﻿using SimDataInterpolation;
+﻿using Networking;
+using SimDataInterpolation;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -118,6 +119,11 @@ namespace GameViewUI
             {
                 m_auiAliveUI.OnUpdate(ifdFrameData, iPeerIndex);
             }
+        }
+
+        public void UpdateNeworkView(NetworkConnection nwcNetworkConnection)
+        {
+            m_gsuGameStartupUi?.UpdateGetGameState(nwcNetworkConnection);
         }
 
         public void LogStartupEvent(string strEvent)
