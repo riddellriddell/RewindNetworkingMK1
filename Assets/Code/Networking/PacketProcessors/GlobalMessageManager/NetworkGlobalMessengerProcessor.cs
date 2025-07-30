@@ -645,10 +645,10 @@ namespace Networking
                 //check if connected peer is already part of the system
                 // or the local peer has not voted to add them to the system
                 //TODO:: clean up this monstrosity of a statement
-                if (m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(kvpEntries.Key, out int iIndex) == false ||
-                    (m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iIndex].m_staState == GlobalMessageChannelState.State.VoteJoin &&
+                if (m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(kvpEntries.Key, out int iIndex) == false || //check if already joined
+                    (m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iIndex].m_staState == GlobalMessageChannelState.State.VoteJoin && //check if a vote is active to add them and we have not voted to add them
                     (m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iLocalPeerChannel].m_chvVotes[iIndex].m_vtpVoteType != GlobalMessageChannelState.ChannelVote.VoteType.Add ||
-                    m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iLocalPeerChannel].m_chvVotes[iIndex].IsActive(m_tnpNetworkTime.NetworkTime, m_chmChainManager.VoteTimeout) == false)))
+                    m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iLocalPeerChannel].m_chvVotes[iIndex].IsActive(m_tnpNetworkTime.NetworkTime, m_chmChainManager.VoteTimeout) == false))) // or we did vote in the past but the vote timed out
                 {
                     //get the time the candidate connected 
                     long lConnectionTime = kvpEntries.Value.ParentConnection.m_dtmConnectionEstablishTime.Ticks;
@@ -678,11 +678,11 @@ namespace Networking
             //create add message payload
             VoteMessage vmsVoteMessage = m_cifGlobalMessageFactory.CreateType<VoteMessage>(VoteMessage.TypeID);
 
-            vmsVoteMessage.m_tupActionPerPeer = new Tuple<byte, long>[iPeersToAdd];
+            vmsVoteMessage.m_tupActionPerPeer = new Tuple<byte, long, string>[iPeersToAdd];
 
             for (int i = 0; i < iPeersToAdd; i++)
             {
-                vmsVoteMessage.m_tupActionPerPeer[i] = new Tuple<byte, long>(1, lJoinCandidates.Values[i]);
+                vmsVoteMessage.m_tupActionPerPeer[i] = new Tuple<byte, long, string>(1, lJoinCandidates.Values[i], "Join request");
             }
 
             //create message node and send to all peers
@@ -696,7 +696,7 @@ namespace Networking
             List<Tuple<int, long>> lActivePeers = m_gmbMessageBuffer.LatestState.GetActivePeerIndexAndID();
 
             //list of all the peers to kick
-            List<long> lPeersToKick = new List<long>();
+            List<Tuple<long, string>> lPeersToKick = new List<Tuple<long,string>>();
 
             if (m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iLocalPeerIndex) == false)
             {
@@ -718,13 +718,16 @@ namespace Networking
                     continue;
                 }
 
-                //check if peer has just connected and local peer has not had time to make conenction
-                if (m_tnpNetworkTime.NetworkTime - m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[lActivePeers[i].Item1].m_dtmVoteTime < JoinVoteGracePeriod)
+                //time since this peer was connected and voting to assign to this channel started
+                TimeSpan timeSincePeerJoinedSwarm = m_tnpNetworkTime.NetworkTime - m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[lActivePeers[i].Item1].m_dtmVoteTime;
+                
+                //check if peer has just connected and local peer has not had time to make connection
+                if (timeSincePeerJoinedSwarm < JoinVoteGracePeriod)
                 {
                     continue;
                 }
 
-                //if the target peer has no connection to the local pper or the target peer is in the process of disconnectin 
+                //if the target peer has no connection to the local peer or the target peer is in the process of disconnecting 
                 if (ChildConnectionProcessors.TryGetValue(lActivePeers[i].Item2, out ConnectionGlobalMessengerProcessor cgmProcessor) == false
                     || cgmProcessor.ParentConnection.Status == Connection.ConnectionStatus.New
                     || cgmProcessor.ParentConnection.Status == Connection.ConnectionStatus.Initializing
@@ -742,7 +745,13 @@ namespace Networking
                         continue;
                     }
 
-                    lPeersToKick.Add(lActivePeers[i].Item2);
+                    string kickMessage =
+                        $"No connection to peer, " +
+                        $"Peer connection status :{cgmProcessor.ParentConnection.Status.ToString()} " +
+                        $"Peer disconnection reason: {cgmProcessor.ParentConnection.m_strReasonForDisconnect}" +
+                        $"Time since peer joined swarm: {timeSincePeerJoinedSwarm.ToString()}";
+
+                    lPeersToKick.Add( new Tuple<long,string>(lActivePeers[i].Item2,kickMessage));
                 }
             }
 
@@ -755,11 +764,11 @@ namespace Networking
             //create add message payload
             VoteMessage vmsVoteMessage = m_cifGlobalMessageFactory.CreateType<VoteMessage>(VoteMessage.TypeID);
 
-            vmsVoteMessage.m_tupActionPerPeer = new Tuple<byte, long>[lPeersToKick.Count];
+            vmsVoteMessage.m_tupActionPerPeer = new Tuple<byte, long, string>[lPeersToKick.Count];
 
             for (int i = 0; i < lPeersToKick.Count; i++)
             {
-                vmsVoteMessage.m_tupActionPerPeer[i] = new Tuple<byte, long>(0, lPeersToKick[i]);
+                vmsVoteMessage.m_tupActionPerPeer[i] = new Tuple<byte, long, string>(0, lPeersToKick[i].Item1, lPeersToKick[i].Item2);
             }
 
             //TODO::Temp test to see if kicking is causing the disconnecting

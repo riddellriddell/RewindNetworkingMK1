@@ -1,3 +1,7 @@
+
+var iDataHeadPtr = 1;
+var mapData = new Map();
+
 mergeInto(LibraryManager.library, {
 
   Initialize:function()
@@ -5,11 +9,11 @@ mergeInto(LibraryManager.library, {
     //Dictionary holding all connections
     iDataHeadPtr = 1;
     mapData = new Map();
-
   },  
 
   Dispose:function()
   {
+    mapData.clear();
     delete mapData;
   },
 
@@ -24,18 +28,24 @@ mergeInto(LibraryManager.library, {
 
   MapDataDelete:function(iDataPtr)
   {
-    mapData.delete(iDataPtr);
+    if (mapData.has(iDataPtr)) 
+    {
+        mapData.delete(iDataPtr);
+    }
+    else
+    {
+        console.log("trying to delete data for data pointer that does not exist. Data Pointer: " + iDataPtr)
+    }
   },
 
   //------------------------------- Connection ------------------------------------------
   
   
-  NewConnection__deps: ['SetupDataChannel'],
-  NewConnection__deps: ['MapDataNew'],
+  NewConnection__deps: ['SetupDataChannel','MapDataNew'],
   NewConnection:function(strIceServerURL)
   {
     //connection settings 
-    const config =  JSON.parse(Pointer_stringify(strIceServerURL)); 
+    const config =  JSON.parse(UTF8ToString(strIceServerURL)); 
     
     const exampleConfig = {
       iceServers: [
@@ -51,7 +61,15 @@ mergeInto(LibraryManager.library, {
     
     console.log("oldCandidate: " + JSON.stringify(oldConfig) + " new candidate: " + JSON.stringify(config)  + " example config: " + JSON.stringify(exampleConfig));
 
-    var conConnection = new RTCPeerConnection(config);
+    try
+    {
+        var conConnection = new RTCPeerConnection(config);
+    }
+    catch(e)
+    {
+        console.error("Failed to create RTCPeerConnection", e);
+        return 
+    }
 
     var iDataPtr = _MapDataNew(conConnection);
 
@@ -105,7 +123,7 @@ mergeInto(LibraryManager.library, {
   {
     var conConnection = mapData.get(iConnectionPtr);
 
-    var strReturn = JSON.stringify(conConnection.objEvents);
+    var strReturn = JSON.stringify({...conConnection.objEvents});
 
     //resets event list 
     conConnection.objEvents.bOnIceCandidate = false;
@@ -121,6 +139,12 @@ mergeInto(LibraryManager.library, {
   GetConnectionIceCandidateEvents:function(iConnectionPtr)
   {
     var conConnection = mapData.get(iConnectionPtr);
+    
+        if (!conConnection)
+        {
+          console.log("Connection object not found for connection pointer:" + iConnectionPtr);
+          return -1;
+        }
 
     var strReturn = JSON.stringify(conConnection.objIceCandidates);
 
@@ -135,6 +159,12 @@ mergeInto(LibraryManager.library, {
   GetConnectionOnDataChannelEvents:function(iConnectionPtr)
   {
     var conConnection = mapData.get(iConnectionPtr);
+    
+      if (!conConnection)
+      {
+          console.log("Connection object not found for connection pointer:" + iConnectionPtr);
+          return -1;
+      }
 
     return conConnection.iDataChannelPtr;
   },
@@ -142,6 +172,12 @@ mergeInto(LibraryManager.library, {
   CloseConnection:function(iConnectionPtr)
   {
     var conConnection = mapData.get(iConnectionPtr);
+    
+    if (!conConnection)
+    {
+        console.log("Connection object not found for connection pointer:" + iConnectionPtr);
+        return;
+    }
 
     conConnection.close();
   },
@@ -157,9 +193,7 @@ mergeInto(LibraryManager.library, {
     console.log(event);
   },
   
-  CreateDataChannel__deps: ['SetupDataChannel'],
-  CreateDataChannel__deps: ['MapDataNew'],
-  CreateDataChannel__deps: ['HandleSendChannelStatusChange'],
+  CreateDataChannel__deps: ['SetupDataChannel', 'MapDataNew','HandleSendChannelStatusChange'],
   CreateDataChannel:function(iPeerConnectionPtr, strLabel, bIsReliable)
   {
     console.log("RTC_Lib CreateDataChannel")
@@ -168,11 +202,11 @@ mergeInto(LibraryManager.library, {
 
     ObjectCreationSettings.ordered = bIsReliable;
 
-    var strStringLabel = Pointer_stringify(strLabel);
+    var strStringLabel = UTF8ToString(strLabel);
 
     var conConnection = mapData.get(iPeerConnectionPtr);
 
-    var dchNewDataChannel =  conConnection.createDataChannel("SendChannel");
+    var dchNewDataChannel =  conConnection.createDataChannel(strStringLabel);
 
     var iDataChannelPtr = _MapDataNew(dchNewDataChannel);
 
@@ -280,7 +314,7 @@ mergeInto(LibraryManager.library, {
   SetLocalDescription__deps: ['MapDataNew'],
   SetLocalDescription:function(iConnectionPtr,strDescriptionJson)
   {
-    var objSDP = JSON.parse( Pointer_stringify(strDescriptionJson));
+    var objSDP = JSON.parse( UTF8ToString(strDescriptionJson));
 
     var conConnection = mapData.get(iConnectionPtr);
 
@@ -309,7 +343,7 @@ mergeInto(LibraryManager.library, {
   SetRemoteDescription__deps: ['MapDataNew'],
   SetRemoteDescription:function(iConnectionPtr, strDescriptionJson)
   {
-    var objSDP = JSON.parse(Pointer_stringify(strDescriptionJson));
+    var objSDP = JSON.parse(UTF8ToString(strDescriptionJson));
 
     var conConnection = mapData.get(iConnectionPtr);
 
@@ -344,13 +378,12 @@ mergeInto(LibraryManager.library, {
       console.log(`Failure during addIceCandidate(): ${error.name}`);
     };
 
-    conConnection.addIceCandidate(JSON.parse(Pointer_stringify(strIceCandidateJson))).catch(OnAddIceCandidateError);
+    conConnection.addIceCandidate(JSON.parse(UTF8ToString(strIceCandidateJson))).catch(OnAddIceCandidateError);
   },
 
   ///-------------------------------------------- Data Channel ----------------------------------------
 
-  SetupDataChannel__deps: ['DataChannelEventsReset'],
-  SetupDataChannel__deps:['WriteMessageToDataChannelBuffer'],
+  SetupDataChannel__deps: ['DataChannelEventsReset', 'WriteMessageToDataChannelBuffer'],
   SetupDataChannel:function(dchDataChannel)
   {    
     _DataChannelEventsReset(dchDataChannel);
@@ -376,7 +409,7 @@ mergeInto(LibraryManager.library, {
     {
       //make sure channel is marked as open
       //before sending a message 
-      if(dchDataChannel.bIsOpen = false)
+      if(dchDataChannel.bIsOpen === false)
       {
         console.log("Data channel not marked as open, forcing channel open!");
         dchDataChannel.bIsOpen = true;

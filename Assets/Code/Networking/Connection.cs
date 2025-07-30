@@ -96,6 +96,9 @@ namespace Networking
         //the current state of the connection
         public ConnectionStatus Status { get; private set; } = ConnectionStatus.New;
 
+        //why this connection was closed 
+        public string m_strReasonForDisconnect = "Reasons:";
+        
         //when the connection is created or a reconnection is triggered this is used to
         //create a new peer transmitter
         public IPeerTransmitterFactory m_ptfTransmitterFactory;
@@ -218,7 +221,7 @@ namespace Networking
 
         public void OnCleanup()
         {
-            DisconnectFromPeer();
+            DisconnectFromPeer("cleanup");
 
             m_ptrTransmitter?.OnCleanup();
             m_ptrTransmitter = null;
@@ -245,7 +248,7 @@ namespace Networking
 
         }
 
-        public void DisconnectFromPeer()
+        public void DisconnectFromPeer(string reason)
         {
             //make sure not already disconnecting
             if(Status == ConnectionStatus.Disconnecting || Status == ConnectionStatus.Disconnected)
@@ -255,6 +258,8 @@ namespace Networking
 
             SetStatus(ConnectionStatus.Disconnecting);
 
+            m_strReasonForDisconnect += ", " + reason;
+            
             m_ptrTransmitter.Disconnect();           
         }
 
@@ -335,14 +340,14 @@ namespace Networking
             {
                 if (tspTimeSinceLastMessage > m_tspConnectionEstablishTimeOut)
                 {
-                    DisconnectFromPeer();
+                    DisconnectFromPeer($"Timed out while establishing connection, no message seen in: {m_tspConnectionEstablishTimeOut.ToString()}");
                 }
             }
             else
             {
                 if (tspTimeSinceLastMessage > m_tspConnectionTimeOutTime)
                 {
-                    DisconnectFromPeer();
+                    DisconnectFromPeer( $"Timed out, no message seen in: {m_tspConnectionTimeOutTime.ToString()}");
                 }
             }
         }

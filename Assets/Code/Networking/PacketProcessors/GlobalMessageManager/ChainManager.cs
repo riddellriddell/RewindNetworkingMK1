@@ -165,7 +165,7 @@ namespace Networking
         }
 
         //finds all the chain links from a shared base to GetChainLinksTo returns false if no shared base is found
-        //list is returned with the newews link first and oldest last 
+        //list is returned with the newest link first and oldest last 
         public bool GetChainLinksFromSharedBase(ChainLink chlGetLinksTo, ChainLink chlFromSharedBase, ref List<ChainLink> chlLinksFromSharedBase)
         {
             if (chlFromSharedBase == null)
@@ -190,15 +190,18 @@ namespace Networking
                     return false;
                 }
 
-                //walk back up the chain, steping the newest link back until a shared link is found
+                //walk back up the chain, stepping the newest link back until a shared link is found
                 if(chlFromSharedBase == null || chlGetLinksTo.m_chlParentChainLink.m_iLinkIndex > chlFromSharedBase.m_iLinkIndex)
                 {
+                    //if we have not gone back past the shared base then add the current chain link parent to the list 
+                    //and start the search again from the parent
                     chlGetLinksTo = chlGetLinksTo.m_chlParentChainLink;
 
                     chlLinksFromSharedBase.Add(chlGetLinksTo);
                 }
                 else
                 {
+                    //if we have gone past where the current shared bases is then we need to walk the base back
                     chlFromSharedBase = chlFromSharedBase.m_chlParentChainLink;
                 }
             }
@@ -212,10 +215,14 @@ namespace Networking
         //cleared
         public void ApplyChangesToSimMessageBuffer(long lLocalPeer, bool bIsActive, List<ChainLink> chlLinkChanges, NetworkingDataBridge ndbNetworkingDataBridge)
         {
+            //get the last messaging state before this new set of chain links are added to the messaging chain 
             GlobalMessagingState gsmMessageState = chlLinkChanges[chlLinkChanges.Count - 1].m_chlParentChainLink.m_gmsState.Clone() as GlobalMessagingState;
 
+            //parent chain link that messages are being attached to
             ChainLink chlParentLinkWithMessage = chlLinkChanges[chlLinkChanges.Count - 1].m_chlParentChainLink;
 
+            Int32 numberOfChainLinksScanned = 0;
+            
             //get the end of the parent chain link to clear our any messages in the buffer that fall between the old and new chain links
             while (chlParentLinkWithMessage != null)
             {
@@ -229,19 +236,26 @@ namespace Networking
 
                     if (m_chlChainBase.m_gmsState.m_svaLastMessageSortValue.CompareTo(svaOldestConfirmedMessage) >= 0)
                     {
-                        Debug.LogError("Trying to set the last new message added earlier than the end of the base state");
+                        //we have received a new message chain and when we added the messages from that the oldest message
+                        //existed before the end of the 
+                        Debug.LogError($"Trying to set the last new message added earlier than the end of the base state " +
+                                       $"Parent links traversed: {numberOfChainLinksScanned.ToString()}" +
+                                       $"Last message from shared parent chain value: {svaLastMessage.ToString() }, " +
+                                       $"Oldest sync state time value: {svaOldestSyncState.ToString()}");
                     }
 
                     //make sure the sim reprocess the message queue starting from the end of the last chain
                     ndbNetworkingDataBridge.UpdateProcessedTimeOnNewMessageAdded(svaOldestConfirmedMessage);
             
-                    //remove all  the messages after the parent chain last message
+                    //remove all the messages after the parent chain last message
                     ndbNetworkingDataBridge.m_squInMessageQueue.ClearFrom(svaOldestConfirmedMessage);
             
                     break;
                 }
                 else
                 {
+                    //for debugging check the number of parent links we are traversing 
+                    numberOfChainLinksScanned++;
                     chlParentLinkWithMessage = chlParentLinkWithMessage.m_chlParentChainLink;
                 }
             }
@@ -298,7 +312,7 @@ namespace Networking
         }
 
         //get parent for chain link if it has not already been found, update chain length 
-        public void ProceesChainLink(long lLocalPeerID, bool bActivePeer, ChainLink chlLink)
+        public void ProcessChainLink(long lLocalPeerID, bool bActivePeer, ChainLink chlLink)
         {
             //skip if base link as it should have been processed already 
             if (chlLink == m_chlChainBase)
@@ -606,7 +620,7 @@ namespace Networking
         {
             for (int i = 0; i < ChainLinks.Count; i++)
             {
-                ProceesChainLink(lLocalPeerID, bActivePeer, ChainLinks.Values[i]);
+                ProcessChainLink(lLocalPeerID, bActivePeer, ChainLinks.Values[i]);
             }
         }
 
@@ -763,7 +777,7 @@ namespace Networking
             //reset the processed up to time in the message buffer
             gmbGlobalMessageBuffer.m_svaStateProcessedUpTo = chlNewLink.m_gmsState.m_svaLastMessageSortValue.NextSortValue();
 
-            //get list of all the new chain links in the new branch to the new chian link head
+            //get list of all the new chain links in the new branch to the new chain link head
             GetChainLinksFromSharedBase(chlNewLink, m_chlBestChainHead, ref chlNewBranchLinks);
 
             //apply messages from new branch to sim messages 

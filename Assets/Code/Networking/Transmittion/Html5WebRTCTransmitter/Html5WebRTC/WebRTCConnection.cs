@@ -39,6 +39,7 @@ namespace Unity.Html5WebRTC
                
         public WebRTCConnection(RTCConnectionConfig ccfConnectionConfig)
         {
+            Debug.Log("Calling native function to setup new connection");
             m_iConnectionPtr = NativeFunctions.NewConnection(JsonUtility.ToJson(ccfConnectionConfig));
         }
 

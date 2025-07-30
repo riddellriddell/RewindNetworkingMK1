@@ -52,15 +52,17 @@ namespace Networking
 
             if (s_iActiveTransmitters == 1 && s_bWebRTCSetup == false)
             {
-                Debug.Log("Initialize WebRTC");
+                Debug.Log("Initialize WASM WebRTC");
                 s_bWebRTCSetup = true;
                 WebRTC.Initialize();
+                
+                Debug.Log("Initialize WASM WebRTC Finished");
             }
 
             m_monCoroutineExecutionObject = monCoroutineExecutionObject;
 
             //get config
-            RTCConnectionConfig ccfConfig = SettupConnectionConfigStruct();
+            RTCConnectionConfig ccfConfig = SetupConnectionConfigStruct();
 
             //create peer connection
             m_pcnPeerConnection = new WebRTCConnection(ccfConfig);
@@ -211,10 +213,12 @@ namespace Networking
 
                 if (s_bWebRTCSetup == true)
                 {
-                    Debug.Log("Finalize WebRTC");
+                    Debug.Log("Finalize WASM WebRTC");
                     s_bWebRTCSetup = false;
                     m_bAlive = false;
                     WebRTC.Dispose();
+                    Debug.Log("Finalize WASM WebRTC Finished");
+                    
                 }
             }           
         }
@@ -484,8 +488,10 @@ namespace Networking
             }
         }
 
-        protected RTCConnectionConfig SettupConnectionConfigStruct()
+        protected RTCConnectionConfig SetupConnectionConfigStruct()
         {
+            Debug.Log("Setup Web RTC Config");
+            
             RTCConnectionConfig ccfConfig = new RTCConnectionConfig();
 
             RTCIceServer isrStunServer = new RTCIceServer();

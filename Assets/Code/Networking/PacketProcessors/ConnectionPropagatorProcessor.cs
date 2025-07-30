@@ -208,7 +208,7 @@ namespace Networking
         //check active connection negotiations to see if a message needs sending 
         protected void SendConnectionNegotiationMessages()
         {
-            List<long> lConnectionsToRemove = new List<long>();
+            List<Tuple<long, string>> lConnectionsToRemove = new List<Tuple<long, string>>();
 
             //loop through connections
             foreach (ConnectionPropagatorProcessor cppProcessor in ChildConnectionProcessors.Values)
@@ -280,9 +280,9 @@ namespace Networking
                     }
                     else //if there is no way to send message close connection negotiation
                     {
-                        Debug.Log("Tried to send message to peer:"+ cnpPacket.m_lTo + " but had no mutural connections through the swarm so forcing connection closed");
+                        Debug.Log("Tried to send message to peer:"+ cnpPacket.m_lTo + " but had no mutual connections through the swarm so forcing connection closed");
 
-                        lConnectionsToRemove.Add(cnpPacket.m_lTo);
+                        lConnectionsToRemove.Add(new Tuple<long, string>(cnpPacket.m_lTo, "No mutual peer to send connection negotiation messages through"));
                         break;
                     }
                 }
@@ -291,9 +291,9 @@ namespace Networking
             //check if there are any connections that should be removed 
             for (int i = 0; i < lConnectionsToRemove.Count; i++)
             {
-                RemoveAnyIntermeiarisForConnection(lConnectionsToRemove[i]);
+                RemoveAnyIntermeiarisForConnection(lConnectionsToRemove[i].Item1);
 
-                ParentNetworkConnection.DestroyConnection(lConnectionsToRemove[i]);
+                ParentNetworkConnection.DestroyConnection(lConnectionsToRemove[i].Item1, lConnectionsToRemove[i].Item2);
             }
         }
 

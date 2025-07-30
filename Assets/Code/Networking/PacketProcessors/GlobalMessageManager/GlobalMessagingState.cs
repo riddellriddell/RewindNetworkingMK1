@@ -267,7 +267,7 @@ namespace Networking
                 return false;
             }
 
-            //get hash of previouse data
+            //get hash of previous data
             long lMessageParentHash = pmnMessageNode.m_lPreviousMessageHash;
             long lHashOfLastValidMessage = m_gmcMessageChannels[iMessageChannel].m_lHashOfLastNodeProcessed;
 
@@ -314,7 +314,7 @@ namespace Networking
                         //check if peer is not alreadty added
                         if (m_gmcMessageChannels[iIndex].m_staState == GlobalMessageChannelState.State.VoteJoin)
                         {
-                            //add joim vote to channel
+                            //add join vote to channel
                             m_gmcMessageChannels[iMessageChannel].AddConnectionVote(iIndex, dtmMessageCreationTime, lPeerID);
                         }
                     }

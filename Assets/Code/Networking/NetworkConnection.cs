@@ -125,7 +125,7 @@ namespace Networking
             Debug.Log($"Creating connection: {lPeerID}");
 
             //destroy any existing connection for this user 
-            DestroyConnection(lPeerID);
+            DestroyConnection(lPeerID, $"Stomping old connection for new peer {lPeerID.ToString()}");
 
             //create new connection
             Connection conNewConnection = new Connection(dtmNegotiationStart, this, lPeerID, PacketFactory, m_ptfPeerTransmitterFactory);
@@ -145,7 +145,7 @@ namespace Networking
             }
         }
 
-        public void DestroyConnection(long lUserID)
+        public void DestroyConnection(long lUserID, string reason)
         {
             //check if connection already exists for user 
             if (ConnectionList.TryGetValue(lUserID, out Connection conTargetConnection))
@@ -153,9 +153,9 @@ namespace Networking
                 Debug.Log($"Destroying connection: {lUserID}");
 
                 //destroy connection
-                conTargetConnection.DisconnectFromPeer();
+                conTargetConnection.DisconnectFromPeer(reason);
 
-                //remove from conenciton list
+                //remove from connection list
                 ConnectionList.Remove(lUserID);
 
                 //update all packet managers

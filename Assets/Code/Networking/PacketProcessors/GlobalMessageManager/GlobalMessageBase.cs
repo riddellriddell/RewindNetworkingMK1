@@ -24,7 +24,8 @@ namespace Networking
         //the vote per peer
         //first value = action to perform (0 = kick, 1 = join)
         //second value = target peer
-        public Tuple<byte, long>[] m_tupActionPerPeer;
+        //third value = reason
+        public Tuple<byte, long, string>[] m_tupActionPerPeer;
 
         public override void Serialize(ReadByteStream rbsByteStream)
         {
@@ -63,11 +64,12 @@ namespace Networking
             return iSize;
         }
 
-        public static int DataSize(Tuple<byte, long> Input)
+        public static int DataSize(Tuple<byte, long, string> Input)
         {
             int iSize = 0;
             iSize += ByteStream.DataSize(Input.Item1);
             iSize += ByteStream.DataSize(Input.Item2);
+            iSize += ByteStream.DataSize(Input.Item3);
 
             return iSize;
         }
@@ -80,7 +82,7 @@ namespace Networking
 
             for (int i = 0; i < iCount; i++)
             {
-                Tuple<byte, long> tupVote = Input.m_tupActionPerPeer[i];
+                Tuple<byte, long, string> tupVote = Input.m_tupActionPerPeer[i];
 
                 NetworkingByteStream.Serialize(wbsStream, ref tupVote);
             }
@@ -94,12 +96,12 @@ namespace Networking
 
             if (Input.m_tupActionPerPeer == null || Input.m_tupActionPerPeer.Length != iCount)
             {
-                Input.m_tupActionPerPeer = new Tuple<byte, long>[iCount];
+                Input.m_tupActionPerPeer = new Tuple<byte, long, string>[iCount];
             }
 
             for (int i = 0; i < iCount; i++)
             {
-                Tuple<byte, long> tupVote = null;
+                Tuple<byte, long, string> tupVote = null;
 
                 NetworkingByteStream.Serialize(rbsStream, ref tupVote);
 
@@ -107,24 +109,27 @@ namespace Networking
             }
         }
 
-        public static void Serialize(WriteByteStream wbsStream, ref Tuple<byte, long> Input)
+        public static void Serialize(WriteByteStream wbsStream, ref Tuple<byte, long, string> Input)
         {
             byte bItem1 = Input.Item1;
             long lItem2 = Input.Item2;
+            string strItem3 = Input.Item3;
 
             ByteStream.Serialize(wbsStream, ref bItem1);
             ByteStream.Serialize(wbsStream, ref lItem2);
+            ByteStream.Serialize(wbsStream, ref strItem3);
         }
 
-        public static void Serialize(ReadByteStream rbsStream, ref Tuple<byte, long> Input)
+        public static void Serialize(ReadByteStream rbsStream, ref Tuple<byte, long, string> Input)
         {
             byte bItem1 = 0;
             long lItem2 = 0;
+            string strItem3 = "";
 
             ByteStream.Serialize(rbsStream, ref bItem1);
             ByteStream.Serialize(rbsStream, ref lItem2);
 
-            Input = new Tuple<byte, long>(bItem1, lItem2);
+            Input = new Tuple<byte, long, string>(bItem1, lItem2, strItem3);
         }
     }
 
