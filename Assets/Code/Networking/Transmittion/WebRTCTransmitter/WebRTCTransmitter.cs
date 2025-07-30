@@ -65,7 +65,7 @@ namespace Networking
             {
                 Debug.Log("Initialize WebRTC");
                 s_bWebRTCSetup = true;
-                WebRTC.Initialize();
+                //WebRTC.Initialize();
             }
 
             m_monCoroutineExecutionObject = monCoroutineExecutionObject;
@@ -221,7 +221,7 @@ namespace Networking
             {
                 Debug.Log("Finalize WebRTC");
                 s_bWebRTCSetup = false;
-                WebRTC.Dispose();
+                //WebRTC.Dispose();
             }
         }
 
