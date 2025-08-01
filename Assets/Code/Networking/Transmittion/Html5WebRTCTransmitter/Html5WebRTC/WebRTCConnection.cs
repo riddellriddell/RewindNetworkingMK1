@@ -1,5 +1,7 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using static Unity.Html5WebRTC.RTCSessionDescriptionAsyncOperation;
 
@@ -16,6 +18,8 @@ namespace Unity.Html5WebRTC
         public DelegateOnDataChannel OnDataChannel { get; set; }
         
         public bool m_bLocalDescriptionSet = false;
+        
+        public bool m_bRemoteDescriptionSet = false;
 
         [SerializeField]
         protected class ConnecitonEvents
@@ -45,7 +49,10 @@ namespace Unity.Html5WebRTC
 
         public void Update()
         {
-            string strConnectionEventsJson = NativeFunctions.GetConnectionEvents(m_iConnectionPtr);
+            IntPtr ptrConnectionEventBuffer = NativeFunctions.GetConnectionEvents(m_iConnectionPtr);
+            string strConnectionEventsJson = Marshal.PtrToStringUTF8(ptrConnectionEventBuffer);
+            //free data buffer 
+            NativeFunctions.FreePtr(ptrConnectionEventBuffer);
 
             //get updated events
             ConnecitonEvents cevEvents = JsonUtility.FromJson<ConnecitonEvents>(strConnectionEventsJson);
@@ -53,7 +60,10 @@ namespace Unity.Html5WebRTC
             //check for ice candidate event but only if local state has been set
             if (m_bLocalDescriptionSet && cevEvents.bOnIceCandidate)
             {
-                string strIceCandidatesJson = NativeFunctions.GetConnectionIceCandidateEvents(m_iConnectionPtr);
+                IntPtr ptrIceCandidateBuffer = NativeFunctions.GetConnectionIceCandidateEvents(m_iConnectionPtr);
+                string strIceCandidatesJson = Marshal.PtrToStringUTF8(ptrIceCandidateBuffer);
+                //free data buffer 
+                NativeFunctions.FreePtr(ptrIceCandidateBuffer);
 
                 //get ice candidates and fire event
                 IceCandidates icdIceCandidates = JsonUtility.FromJson<IceCandidates>(strIceCandidatesJson);
@@ -102,8 +112,6 @@ namespace Unity.Html5WebRTC
         {
             int iAsyncPtr = NativeFunctions.SetLocalDescription(m_iConnectionPtr, strSessionDescriptionJson);
 
-            m_bLocalDescriptionSet = true;
-
             return new RTCSetSessionDescriptionAsyncOperation(iAsyncPtr);
         }
 
@@ -116,7 +124,11 @@ namespace Unity.Html5WebRTC
 
         public void AddIceCandidate(RTCIceCandidate icdIceCandidate)
         {
-            NativeFunctions.AddIceCandidate(m_iConnectionPtr, JsonUtility.ToJson(icdIceCandidate));
+            string strToJson = JsonUtility.ToJson(icdIceCandidate);
+            
+            Debug.Log( $"Adding wrapped ice candidate: {strToJson}");
+            
+            NativeFunctions.AddIceCandidate(m_iConnectionPtr, strToJson);
         }
 
         public void Close()

@@ -14,7 +14,7 @@ mergeInto(LibraryManager.library, {
   Dispose:function()
   {
     mapData.clear();
-    delete mapData;
+    mapData = null;;
   },
 
   MapDataNew:function(objData)
@@ -46,36 +46,24 @@ mergeInto(LibraryManager.library, {
   {
     //connection settings 
     const config =  JSON.parse(UTF8ToString(strIceServerURL)); 
-    
-    const exampleConfig = {
-      iceServers: [
-          {
-              username: 'myuser',
-              credential: 'userpassword',
-              urls: 'turn:public_ip_address:3478?transport=tcp'
-          }
-      ]
-  }
 
-    const oldConfig ={iceServers: [{urls: "stun:stun.1.google.com:19302"}]};
-    
-    console.log("oldCandidate: " + JSON.stringify(oldConfig) + " new candidate: " + JSON.stringify(config)  + " example config: " + JSON.stringify(exampleConfig));
+    var conConnection;
 
     try
     {
-        var conConnection = new RTCPeerConnection(config);
+        conConnection = new RTCPeerConnection(config);
     }
     catch(e)
     {
         console.error("Failed to create RTCPeerConnection", e);
-        return 
+        return 0;
     }
 
     var iDataPtr = _MapDataNew(conConnection);
 
     
     //an event object for all events 
-    //boolean values are set to true if there is an event of this type that needs to be handdled 
+    //boolean values are set to true if there is an event of this type that needs to be handled 
     conConnection.objEvents = 
     {
       bOnIceCandidate: false,
@@ -243,11 +231,11 @@ mergeInto(LibraryManager.library, {
       objAsync.strDescription = "Error" + JSON.stringify(error);  
       objAsync.bIsFinished = true;
     }
+    
+    var iAsyncDataPtr = _MapDataNew(objAsync);
 
     conConnection.createOffer().then(ProcessOffer).catch(ProcessError);
         
-    var iAsyncDataPtr = _MapDataNew(objAsync);
-
     return iAsyncDataPtr;
   },
 
@@ -343,6 +331,9 @@ mergeInto(LibraryManager.library, {
   SetRemoteDescription__deps: ['MapDataNew'],
   SetRemoteDescription:function(iConnectionPtr, strDescriptionJson)
   {
+  
+    console.log(`Setting remote description ${strDescriptionJson}`);
+  
     var objSDP = JSON.parse(UTF8ToString(strDescriptionJson));
 
     var conConnection = mapData.get(iConnectionPtr);
@@ -357,8 +348,9 @@ mergeInto(LibraryManager.library, {
       objAsync.bIsFinished = true;
     };
 
-    function ProcessSetLocalDescriptionError()
+    function ProcessSetLocalDescriptionError(error)
     {
+      console.error(`Error setting remote description ${JSON.stringify(error)}`);
       objAsync.bIsFinished = true; 
       objAsync.bIsError = true;
     };
@@ -371,14 +363,17 @@ mergeInto(LibraryManager.library, {
 
   AddIceCandidate:function(iConnectionPtr, strIceCandidateJson)
   {
+    var strJson = UTF8ToString(strIceCandidateJson);
+    console.log(`Adding ice candidate: ${strJson}`);
+  
     var conConnection = mapData.get(iConnectionPtr);
 
     function OnAddIceCandidateError(error)
     {
-      console.log(`Failure during addIceCandidate(): ${error.name}`);
+      console.log(`Failure during addIceCandidate(): ${JSON.stringify(error)}`);
     };
 
-    conConnection.addIceCandidate(JSON.parse(UTF8ToString(strIceCandidateJson))).catch(OnAddIceCandidateError);
+    conConnection.addIceCandidate(JSON.parse(strJson)).catch(OnAddIceCandidateError);
   },
 
   ///-------------------------------------------- Data Channel ----------------------------------------
@@ -416,7 +411,7 @@ mergeInto(LibraryManager.library, {
         dchDataChannel.objEvents.bOnOpen = true;
       }
 
-      if(dchDataChannel.bMessageBuffer != undefined)
+      if(dchDataChannel.bMessageBufferOffset != undefined)
       {        
         _WriteMessageToDataChannelBuffer(dchDataChannel,bMessage);
       }
@@ -443,23 +438,17 @@ mergeInto(LibraryManager.library, {
     };
   },
 
-  DataChannelSetupMessageBuffer:function(iDataChannelPtr,bMessageByteArray,iByteArraySize,bMessageIndexArray,iMessageIndexArraySize)
+  DataChannelSetupMessageBuffer:function(iDataChannelPtr,bMessageByteArrayOffset,iByteArraySize,bMessageIndexArrayOffset,iMessageIndexArraySize)
   {
     var dchDataChannel = mapData.get(iDataChannelPtr);
 
-    if( dchDataChannel != undefined && dchDataChannel.bMessageBuffer != undefined && dchDataChannel.bMessageBuffer.length != 0)
-    {
-      //console.log("message buffer already setup");
-      return;
-    }
-
-    var bMessagesSharedArray = new Uint8Array(buffer, bMessageByteArray, iByteArraySize);
-
-    var iMessageIndexArray =  new Int32Array(buffer, bMessageIndexArray,iMessageIndexArraySize);
-
     dchDataChannel.bIsMessageBufferSetup = true;
-    dchDataChannel.bMessageBuffer = bMessagesSharedArray;
-    dchDataChannel.iMessageIndexBuffer = iMessageIndexArray;
+    dchDataChannel.bMessageBufferOffset = bMessageByteArrayOffset;
+    dchDataChannel.iMessageBufferSize = iByteArraySize;
+    
+    
+    dchDataChannel.bMessageIndexBufferOffset = bMessageIndexArrayOffset;
+    dchDataChannel.iMessageIndexBufferSize = iMessageIndexArraySize;
   },
 
   WriteMessageToDataChannelBuffer:function(dchDataChannel,Message)
@@ -467,29 +456,35 @@ mergeInto(LibraryManager.library, {
     //check that data channel is setup and ready 
     if(dchDataChannel.bIsMessageBufferSetup === undefined || dchDataChannel.bIsMessageBufferSetup == false)
     {
-      return;
+        console.log("message buffer was not setup unable to write message");
+        return;
     }
 
-    if( dchDataChannel.bMessageBuffer.length == 0)
+    if( dchDataChannel.iMessageIndexBufferSize == 0)
     {
-      console.log("message buffer was detached unable to write message");
-      return;
+        console.log("message buffer was detached unable to write message");
+        return;
     }
+    
+    //re create the buffers using offset and size
+    var bMessageBuffer = new Uint8Array(HEAPU8.buffer, dchDataChannel.bMessageBufferOffset, dchDataChannel.iMessageBufferSize);
+    var iMessageIndexBuffer =  new Int32Array(HEAPU8.buffer,  dchDataChannel.bMessageIndexBufferOffset, dchDataChannel.iMessageIndexBufferSize * 4);
+        
 
     var bData = new Uint8Array(Message.data);
 
     var iSize = bData.length; 
 
     //get the total number of messages in the buffer 
-     var iTotalNumberOfMessages = dchDataChannel.iMessageIndexBuffer[0];
+     var iTotalNumberOfMessages = iMessageIndexBuffer[0];
 
      //get the index to write the new message index to 
      var iIndexIndex = iTotalNumberOfMessages + 1;
 
-     //check if too many messages have been recieved 
-     if(iIndexIndex >= dchDataChannel.iMessageIndexBuffer.length)
+     //check if too many messages have been received 
+     if(iIndexIndex >= iMessageIndexBuffer.length)
      {
-        throw("Recieved" +  iIndexIndex + "messages which is too many messages only a max of" + dchDataChannel.iMessageIndexBuffer.length + "Messages can be processed befor message buffer is full");
+        throw("Received" +  iIndexIndex + "messages which is too many messages only a max of" + iMessageIndexBuffer.length + "Messages can be processed befor message buffer is full");
      }
 
      //get the index to write from
@@ -497,25 +492,25 @@ mergeInto(LibraryManager.library, {
  
      if(iIndexIndex != 1)
      {
-       iWriteIndex = dchDataChannel.iMessageIndexBuffer[iTotalNumberOfMessages];
+       iWriteIndex = iMessageIndexBuffer[iTotalNumberOfMessages];
      }
 
      var iWriteEndIndex = iWriteIndex + iSize;
 
-     if(iWriteEndIndex >= dchDataChannel.bMessageBuffer.length)
+     if(iWriteEndIndex >= bMessageBuffer.length)
      {
        //error this message will overflow the message buffer 
        throw("Message buffer overflow");
      }
  
      //set the write to index 
-     dchDataChannel.iMessageIndexBuffer[iIndexIndex] = iWriteEndIndex;
+     iMessageIndexBuffer[iIndexIndex] = iWriteEndIndex;
      
      //update the number of messages in the buffer
-     dchDataChannel.iMessageIndexBuffer[0] = dchDataChannel.iMessageIndexBuffer[0] + 1;
+     iMessageIndexBuffer[0] = iMessageIndexBuffer[0] + 1;
 
      //write the data 
-     dchDataChannel.bMessageBuffer.set(bData,iWriteIndex);
+     bMessageBuffer.set(bData,iWriteIndex);
   },
 
   CloseDataChannel :function(iDataChannelPtr)
@@ -526,7 +521,7 @@ mergeInto(LibraryManager.library, {
   },
 
   DisposeDataChannel__deps: ['MapDataDelete'],
-  DisposeDataChannel :function(iDataChannelPtr)
+  DisposeDataChannel:function(iDataChannelPtr)
   {
     _MapDataDelete(iDataChannelPtr);
   },
@@ -551,11 +546,17 @@ mergeInto(LibraryManager.library, {
     var dchDataChannel = mapData.get(iDataChannelPtr);
 
     //get array view of message 
-    var bSendData = new Uint8Array(buffer,bSendArray,iSendArrayLength);
+    var bSendData = new Uint8Array(HEAPU8.buffer,bSendArray,iSendArrayLength);
 
     console.log("Sending Data " + bSendData + "Through WebRTC data channel:" + dchDataChannel);
 
     //send data 
     dchDataChannel.send(bSendData);
+  },
+  
+  // Add a free function Unity can call
+  FreePtr:function(ptr) 
+  {
+      _free(ptr);
   }
 });

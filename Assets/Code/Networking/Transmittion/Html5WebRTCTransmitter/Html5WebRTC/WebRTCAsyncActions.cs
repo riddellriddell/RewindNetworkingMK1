@@ -1,5 +1,7 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using UnityEngine;
 
 namespace Unity.Html5WebRTC
@@ -62,8 +64,11 @@ namespace Unity.Html5WebRTC
 
         public override void GetResultOnCompletion()
         {
-            //get session description details
-            string strJson = NativeFunctions.GetAsyncResult(m_iAsyncPtr);
+            IntPtr ptrAsyncResults = NativeFunctions.GetAsyncResult(m_iAsyncPtr);
+            string strJson = Marshal.PtrToStringUTF8(ptrAsyncResults);
+            //free data buffer 
+            NativeFunctions.FreePtr(ptrAsyncResults);
+            
 
             RTCSessionDescription sdcSessionDescription = JsonUtility.FromJson<RTCSessionDescription>(strJson);
 
@@ -92,7 +97,10 @@ namespace Unity.Html5WebRTC
         public override void GetResultOnCompletion()
         {
             //get session description details
-            string strJson = NativeFunctions.GetAsyncResult(m_iAsyncPtr);
+            IntPtr ptrAsyncResults = NativeFunctions.GetAsyncResult(m_iAsyncPtr);
+            string strJson = Marshal.PtrToStringUTF8(ptrAsyncResults);
+            //free data buffer 
+            NativeFunctions.FreePtr(ptrAsyncResults);
 
             SetLocalDescriptionResult sdrSetDescriptionResult = JsonUtility.FromJson<SetLocalDescriptionResult>(strJson);
 

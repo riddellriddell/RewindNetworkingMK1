@@ -18,10 +18,10 @@ namespace Unity.Html5WebRTC
         public static extern int NewConnection(string strConfig);
 
         [DllImport("__Internal")]
-        public static extern string GetConnectionEvents(int iConnectionPtr);
+        public  static extern System.IntPtr GetConnectionEvents(int iConnectionPtr);
 
         [DllImport("__Internal")]
-        public static extern string GetConnectionIceCandidateEvents(int iConnectionPtr);
+        public  static extern System.IntPtr GetConnectionIceCandidateEvents(int iConnectionPtr);
 
         [DllImport("__Internal")]
         public static extern void CloseConnection(int iConnectionPtr);
@@ -42,7 +42,7 @@ namespace Unity.Html5WebRTC
         public static extern bool IsAsyncActionComplete(int iAsyncPtr);
         
         [DllImport("__Internal")]
-        public static extern string GetAsyncResult(int iAsyncPtr);
+        public  static extern System.IntPtr GetAsyncResult(int iAsyncPtr);
 
         [DllImport("__Internal")]
         public static extern void MapDataDelete(int iMapDataPtr);
@@ -72,7 +72,7 @@ namespace Unity.Html5WebRTC
             );
 
         [DllImport("__Internal")]
-        public static extern string GetDataChannelEvents(int iDataChannelPtr);
+        public static extern System.IntPtr GetDataChannelEvents(int iDataChannelPtr);
 
         [DllImport("__Internal")]
         public static extern void SendByteArray(int iDataChannelPtr, byte[] bMessage, int iLength);
@@ -82,5 +82,8 @@ namespace Unity.Html5WebRTC
 
         [DllImport("__Internal")]
         public static extern void DisposeDataChannel(int iDataChannelPtr);
+        
+        [DllImport("__Internal")]
+        public static extern void FreePtr(System.IntPtr ptrPointer);
     }
 }

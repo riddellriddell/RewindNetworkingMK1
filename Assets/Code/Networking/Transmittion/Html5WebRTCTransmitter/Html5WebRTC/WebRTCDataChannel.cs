@@ -48,7 +48,7 @@ namespace Unity.Html5WebRTC
         {
             m_iDataChannelPtr = iDataChannelPtr;
 
-            //allocat buffers
+            //allocate buffers
             m_bDataBuffer = new byte[s_iMessageBufferSize];
             m_iMessageIndexBuffer = new int[s_iMessageIndexBufferSize];
 
@@ -78,6 +78,8 @@ namespace Unity.Html5WebRTC
         /// </summary>
         public void RePassBufferPointers()
         {
+            Debug.Log("Memory resize requires re passing data channel pointers");
+            
             //pass buffers to data channel
             NativeFunctions.DataChannelSetupMessageBuffer(
                 m_iDataChannelPtr,
@@ -99,9 +101,17 @@ namespace Unity.Html5WebRTC
             RePassBufferPointers();
 
             //check for events on data channel
-            string strEventsJson = NativeFunctions.GetDataChannelEvents(m_iDataChannelPtr);
             
+            //get pointer to data
+            IntPtr ptr = NativeFunctions.GetDataChannelEvents(m_iDataChannelPtr);
+            string strEventsJson = Marshal.PtrToStringUTF8(ptr);
+            //free data buffer 
+            NativeFunctions.FreePtr(ptr);
+            
+            //convert from string to json
             ChannelEvents cheEvents = JsonUtility.FromJson<ChannelEvents>(strEventsJson);
+            
+
 
             if (cheEvents.strSerializedCorrectly != "True")
             {
@@ -178,11 +188,11 @@ namespace Unity.Html5WebRTC
         public void Send(byte[] bData)
         {
             //pin data 
-            GCHandle gchSendDataHandle = GCHandle.Alloc(bData, GCHandleType.Pinned);
+            //GCHandle gchSendDataHandle = GCHandle.Alloc(bData, GCHandleType.Pinned);
 
             NativeFunctions.SendByteArray(m_iDataChannelPtr, bData,bData.Length);
 
-            gchSendDataHandle.Free();
+            //gchSendDataHandle.Free();
         }
     }
 }

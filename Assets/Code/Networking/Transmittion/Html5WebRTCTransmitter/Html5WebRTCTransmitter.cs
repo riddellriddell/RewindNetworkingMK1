@@ -45,6 +45,8 @@ namespace Networking
         private string m_strRemoteSessionDescription;
         private bool m_bAlive = true;
 
+        private List<RTCIceCandidate> m_ricPendingIceCandidates = new List<RTCIceCandidate>();
+
 
         public Html5WebRTCTransmitter(MonoBehaviour monCoroutineExecutionObject)
         {
@@ -187,7 +189,7 @@ namespace Networking
             }
 
             State = PeerTransmitterState.Negotiating;
-
+           
             //setup unreliable data channel
             //RTCDataChannelInit dciDataChannelInit = new RTCDataChannelInit(false);
             //dciDataChannelInit.maxRetransmits = 0;
@@ -227,6 +229,7 @@ namespace Networking
 
         protected void ProcessIceCandidate(string strIceCandidate)
         {
+            Debug.Log($"Processing IceCandidate {strIceCandidate}");
             //deserialize ice candedate 
             RTCIceCandidateWrapper icwWrapper = JsonUtility.FromJson<RTCIceCandidateWrapper>(strIceCandidate);
             RTCIceCandidate iceIceCandidate = new RTCIceCandidate()
@@ -236,7 +239,26 @@ namespace Networking
                 sdpMLineIndex = icwWrapper.sdpMLineIndex
             };
 
-            m_pcnPeerConnection.AddIceCandidate(iceIceCandidate);
+            if (m_pcnPeerConnection.m_bRemoteDescriptionSet == false ||
+                m_pcnPeerConnection.m_bLocalDescriptionSet == false)
+            {
+                m_ricPendingIceCandidates.Add(iceIceCandidate);
+            }
+            else
+            {
+                m_pcnPeerConnection.AddIceCandidate(iceIceCandidate);
+            }
+            
+        }
+
+        protected void ProcessPendingIceCandidates()
+        {
+            foreach (var rtcIceCandidate in m_ricPendingIceCandidates)
+            {
+                m_pcnPeerConnection.AddIceCandidate(rtcIceCandidate);
+            }
+            
+            m_ricPendingIceCandidates.Clear();
         }
 
         protected IEnumerator ProcessOffer(string strOffer)
@@ -255,12 +277,21 @@ namespace Networking
             m_strRemoteSessionDescription = strOffer;
 
             //set the remote description 
+            Debug.Log($"Starting setting remote description for Offer: {strOffer}");
             yield return m_monCoroutineExecutionObject.StartCoroutine(SetRemoteDescriptionCoroutine());
+            Debug.Log($"Starting setting remote description for Offer: {strOffer}");
 
             //check that we are still negotiating connected and nothing has gone wrong
             if (State != PeerTransmitterState.Negotiating)
             {
                 yield break;
+            }
+            
+            //check if it is time to queue pending inputs
+            if (m_pcnPeerConnection.m_bRemoteDescriptionSet == true &&
+                m_pcnPeerConnection.m_bLocalDescriptionSet == true)
+            {
+                ProcessPendingIceCandidates();
             }
 
             //start building reply 
@@ -280,8 +311,17 @@ namespace Networking
 
             m_strRemoteSessionDescription = strAnswer;
 
+            Debug.Log($"Starting setting remote description for answer: {strAnswer}");
             //set the local description 
             yield return m_monCoroutineExecutionObject.StartCoroutine(SetRemoteDescriptionCoroutine());
+            
+            Debug.Log($"Finished setting remote description for answer: {strAnswer}");
+            
+            if (m_pcnPeerConnection.m_bRemoteDescriptionSet == true &&
+                m_pcnPeerConnection.m_bLocalDescriptionSet == true)
+            {
+                ProcessPendingIceCandidates();
+            }
         }
 
         protected void OnDataChannelRecieved(WebRTCDataChannel dchDataChannel)
@@ -390,6 +430,12 @@ namespace Networking
             //if an error was not encountered 
             if (State == PeerTransmitterState.Negotiating)
             {
+                if (m_pcnPeerConnection.m_bRemoteDescriptionSet == true &&
+                    m_pcnPeerConnection.m_bLocalDescriptionSet == true)
+                {
+                    ProcessPendingIceCandidates();
+                }
+                
                 //send negotiation message 
                 OnNegotiationMessageCreated?.Invoke(m_strLocalSessionDescription + s_strOfferID);
             }
@@ -430,6 +476,13 @@ namespace Networking
             //if an error was not encountered 
             if (State == PeerTransmitterState.Negotiating)
             {
+                //start processed ice candidates if ready
+                if (m_pcnPeerConnection.m_bRemoteDescriptionSet == true &&
+                    m_pcnPeerConnection.m_bLocalDescriptionSet == true)
+                {
+                    ProcessPendingIceCandidates();
+                }
+                
                 //send negotiation message 
                 OnNegotiationMessageCreated?.Invoke(m_strLocalSessionDescription + s_strAnswerID);
             }
@@ -472,6 +525,8 @@ namespace Networking
             if (ssdAsyncOpperation.IsError == false)
             {
                 Debug.Log($"Set Remote description Succeded for {m_pcnPeerConnection}");
+                
+                m_pcnPeerConnection.m_bRemoteDescriptionSet = true;
             }
             else
             {
