@@ -254,7 +254,7 @@ namespace Networking
             return pktInputPacket;
         }
 
-        //checks to see if state sync time has run out and if it has if state was sucesfully synced 
+        //checks to see if state sync time has run out and if it has if state was successfully synced 
         public void UpdateTimeOutState()
         {
             if (m_tnpNetworkTime.BaseTime > m_dtmRequestTimeOut)
@@ -271,7 +271,9 @@ namespace Networking
                     m_staState = State.SyncFailed;
                     m_ndbNetworkDataBridge.m_sssSimStartStateSyncStatus = m_staState;
 
-                    Debug.LogError("Sync failed, did not download all segments before time ran out");
+                    Debug.LogError($"Sync failed, did not download all segments before time ran out, " +
+                                   $"Time since request:{m_tnpNetworkTime.BaseTime - (m_dtmRequestTimeOut - StateRequestTimeOut)} " +
+                                   $"Segments remaining: {m_sPendingSegments.Count}");
 
                     return;
                 }
@@ -284,7 +286,10 @@ namespace Networking
                     m_staState = State.SyncFailed;
                     m_ndbNetworkDataBridge.m_sssSimStartStateSyncStatus = m_staState;
 
-                    Debug.LogError("Sync failed, final synchronizations was not stable, not enough peers egreed with final state");
+                    Debug.LogError($"Sync failed, final synchronizations was not stable, not enough peers agreed with final state " +
+                                   $"Peers with hash: {m_iPeersWithSimHash} " +
+                                   $"Total Peer Count: {m_lAuthorativePeers.Count}" +
+                                   $"Number of peers in agreement needed: { m_lAuthorativePeers.Count - iMaxNumberOfFailedRequests}");
 
                     return;
                 }

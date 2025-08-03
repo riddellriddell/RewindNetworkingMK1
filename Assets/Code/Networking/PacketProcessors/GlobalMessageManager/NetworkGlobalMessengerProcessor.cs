@@ -1,6 +1,7 @@
 ﻿using SharedTypes;
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Networking
 {
@@ -745,12 +746,27 @@ namespace Networking
                         continue;
                     }
 
-                    string kickMessage =
-                        $"No connection to peer, " +
-                        $"Peer connection status :{cgmProcessor.ParentConnection.Status.ToString()} " +
-                        $"Peer disconnection reason: {cgmProcessor.ParentConnection.m_strReasonForDisconnect}" +
-                        $"Time since peer joined swarm: {timeSincePeerJoinedSwarm.ToString()}";
+                    string kickMessage = "";
 
+                    if (cgmProcessor != null)
+                    {
+                        kickMessage = $"Connection to peer failed, " +
+                            $"Peer connection status :{cgmProcessor.ParentConnection.Status.ToString()} " +
+                            $"Peer disconnection reason: {cgmProcessor.ParentConnection.m_strReasonForDisconnect} " +
+                            $"Time since peer joined swarm: {timeSincePeerJoinedSwarm.ToString()} " +
+                            $"Global Status of kick target: {m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[i].m_staState.ToString()} " +
+                            $"Time since peer assigned to channel: {(m_tnpNetworkTime.NetworkTime - m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[i].m_dtmAssignedTime).ToString()} ";
+                    }
+                    else
+                    {
+                        kickMessage = $"No connection to peer found in time, " +
+                                      $"Time since peer joined swarm: {timeSincePeerJoinedSwarm.ToString()} " +
+                                      $"$Global Status of kick target: {m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[i].m_staState.ToString()} " +
+                                      $"Time since peer assigned to channel: {(m_tnpNetworkTime.NetworkTime - m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[i].m_dtmAssignedTime).ToString()} ";
+                    }
+
+                    Debug.Log($"Kicking peer: {lActivePeers[i].Item1}, For Reason: {kickMessage}");
+                    
                     lPeersToKick.Add( new Tuple<long,string>(lActivePeers[i].Item2,kickMessage));
                 }
             }

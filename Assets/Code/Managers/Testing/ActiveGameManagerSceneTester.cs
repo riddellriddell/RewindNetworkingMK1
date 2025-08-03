@@ -239,7 +239,7 @@ namespace GameManagers
                 NewPeerID();
             }
 
-            Debug.Log($"Get player id for divice_id {m_strUniqueDeviceID}");
+            Debug.Log($"Get player id for device_id {m_strUniqueDeviceID}");
 
             m_wbiWebInterface.GetPlayerID(m_strUniqueDeviceID);
 

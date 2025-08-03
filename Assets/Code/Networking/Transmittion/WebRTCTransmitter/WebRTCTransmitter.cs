@@ -153,7 +153,7 @@ namespace Networking
         {
             if (State != PeerTransmitterState.Connected)
             {
-                Debug.LogError($"Cant send data in non conencted state Data:{data}");
+                Debug.LogError($"Cant send data in non connected state Data:{data}");
 
                 return false;
             }

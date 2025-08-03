@@ -56,6 +56,9 @@ namespace Networking
 
         //the time when voting on assigning peer to this channel started
         public DateTime m_dtmVoteTime;
+        
+        //the time when the target peer was assigned
+        public DateTime m_dtmAssignedTime;
 
         //the current state of this channel
         public State m_staState;
@@ -81,11 +84,13 @@ namespace Networking
         }
 
         //changes the data in this class to match that of the passed channel state 
-        public void ResetToState(GlobalMessageChannelState chsChannelState)
+        public void ResetToState(in GlobalMessageChannelState chsChannelState)
         {
             m_lChannelPeer = chsChannelState.m_lChannelPeer;
 
             m_dtmVoteTime = chsChannelState.m_dtmVoteTime;
+            
+            m_dtmAssignedTime = chsChannelState.m_dtmAssignedTime;
 
             m_staState = chsChannelState.m_staState;
 
@@ -114,6 +119,7 @@ namespace Networking
             m_staState = State.Empty;
 
             m_dtmVoteTime = DateTime.MinValue;
+            m_dtmAssignedTime = DateTime.MinValue;
 
             m_chvVotes = new List<ChannelVote>(iMaxPeerCount);
 
@@ -165,6 +171,7 @@ namespace Networking
             //reset peer
             m_lChannelPeer = long.MinValue;
             m_dtmVoteTime = DateTime.MinValue;
+            m_dtmAssignedTime = DateTime.MinValue;
             m_staState = State.Empty;
 
             //reset hash head
@@ -210,6 +217,7 @@ namespace Networking
             m_lChannelPeer = lPeerID;
             m_staState = State.Assigned;
             m_dtmVoteTime = dtmTimeOfJoin;
+            m_dtmAssignedTime = m_dtmVoteTime;
         }
 
         //gets index of any vote for peer 
@@ -262,6 +270,9 @@ namespace Networking
 
             //the time when voting on assigning peer to this channel started
             mcsOutState.m_dtmVoteTime = m_dtmVoteTime;
+            
+            //clone the time a client was assigned to this channel 
+            mcsOutState.m_dtmAssignedTime = m_dtmAssignedTime;
 
             //the current state of this channel
             mcsOutState.m_staState = m_staState;
@@ -354,6 +365,9 @@ namespace Networking
 
             //time of last vote start
             ByteStream.Serialize(rbsByteStream, ref Output.m_dtmVoteTime);
+            
+            //time last peer was assigned 
+            ByteStream.Serialize(rbsByteStream, ref Output.m_dtmAssignedTime);
 
             //state
             byte bState = 0;
@@ -393,6 +407,9 @@ namespace Networking
 
             //time of last vote
             ByteStream.Serialize(wbsByteStream, ref Input.m_dtmVoteTime);
+            
+            //time last peer was assigned 
+            ByteStream.Serialize(wbsByteStream, ref Input.m_dtmAssignedTime);
 
             //state
             byte bState = (byte)Input.m_staState;
@@ -423,6 +440,7 @@ namespace Networking
 
             iSize += ByteStream.DataSize(Input.m_lChainLinkHeadHash);
             iSize += ByteStream.DataSize(Input.m_dtmVoteTime);
+            iSize += ByteStream.DataSize(Input.m_dtmAssignedTime);
             iSize += ByteStream.DataSize(Input.m_iLastMessageIndexProcessed);
             iSize += ByteStream.DataSize(Input.m_lChannelPeer);
             iSize += ByteStream.DataSize(Input.m_lHashOfLastNodeProcessed);

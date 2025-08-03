@@ -260,6 +260,8 @@ namespace Networking
 
             m_strReasonForDisconnect += ", " + reason;
             
+            Debug.Log($"Disconnecting from peer: {m_lUserUniqueID} for reason: {reason}");
+            
             m_ptrTransmitter.Disconnect();           
         }
 
