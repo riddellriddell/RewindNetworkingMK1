@@ -239,7 +239,7 @@ namespace Networking
                         //we have received a new message chain and when we added the messages from that the oldest message
                         //existed before the end of the 
                         Debug.LogError($"Trying to set the last new message added earlier than the end of the base state " +
-                                       $"Parent links traversed: {numberOfChainLinksScanned.ToString()}" +
+                                       $"Parent links traversed: {numberOfChainLinksScanned.ToString()} " +
                                        $"Last message from shared parent chain value: {svaLastMessage.ToString() }, " +
                                        $"Oldest sync state time value: {svaOldestSyncState.ToString()}");
                     }

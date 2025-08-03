@@ -528,7 +528,7 @@ namespace Networking
 
             bool bForceSendMessage = false;
 
-            //send a message if jsut connected 
+            //send a message if just connected 
             bForceSendMessage = m_bSendConnectionMessage;
 
             //check if max time between packet sends has been reached
@@ -543,7 +543,7 @@ namespace Networking
                 return;
             }
 
-            //calculate the number of packets that dont need to be sent 
+            //calculate the number of packets that don't need to be sent 
             int iPacketsToDrop = PacketsInFlight.Count - (m_iPacketsQueuedToSendCount - m_iLastAckPacketNumberSent);
 
             if (iPacketsToDrop >= PacketsInFlight.Count)
@@ -591,6 +591,9 @@ namespace Networking
                 {
                     //send packet through transmitter
                     m_ptrTransmitter.SentData(pkwPacketWrappepr.WriteStream.GetData());
+
+                    //increment the number of packets in flight
+                    iPacketsSent++;
 
                     //setup new packet
                     pkwPacketWrappepr = new PacketWrapper(m_iTotalPacketsReceived, iPacketStart + i, m_iMaxBytesToSend);

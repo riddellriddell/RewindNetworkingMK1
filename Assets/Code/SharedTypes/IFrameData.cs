@@ -10,7 +10,7 @@ namespace Sim
         bool Encode(WriteByteStream wbsWriteBytStream);
         bool Decode(ReadByteStream rbsReadByteStream);
         int GetSize();
-        bool ResetToState(IFrameData fdaFrameDataToResetTo);
+        bool ResetToState(in IFrameData fdaFrameDataToResetTo);
         void GetHash(byte[] bHashBytes);
     }
 }

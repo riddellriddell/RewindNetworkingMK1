@@ -280,7 +280,7 @@ namespace Networking
 
                 int iMaxNumberOfFailedRequests = Mathf.CeilToInt(m_lAuthorativePeers.Count * MaxFailedRequestPercent);
 
-                //check if enough peers aggreed upon state
+                //check if enough peers agreed upon state
                 if (m_iPeersWithSimHash < m_lAuthorativePeers.Count - iMaxNumberOfFailedRequests)
                 {
                     m_staState = State.SyncFailed;

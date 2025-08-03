@@ -138,6 +138,10 @@ namespace Networking
             }
         }
 
+        public override string ToString()
+        {
+            return $"Sort Value A: {m_lSortValueA.ToString()}, Sort Value B: {m_lSortValueB.ToString()}";
+        }
     }
 
     public partial class NetworkingByteStream

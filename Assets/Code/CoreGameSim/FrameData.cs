@@ -169,7 +169,7 @@ namespace Sim
 
         }
 
-        public bool ResetToState(IFrameData fdaFrameDataToResetTo)
+        public bool ResetToState(in IFrameData fdaFrameDataToResetTo)
         {
             FrameData fdaTargetData = fdaFrameDataToResetTo as FrameData;
 
