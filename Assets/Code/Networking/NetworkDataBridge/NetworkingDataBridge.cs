@@ -50,7 +50,7 @@ namespace Networking
         //indicates the sim has processed all the messages up to this message
         public SortingValue m_svaSimProcessedMessagesUpToAndIncluding = SortingValue.MinValue;
 
-        //no messages this old or older are alowed in the message buffer
+        //no messages this old or older are allowed in the message buffer
         public SortingValue m_svaOldestMessageToStoreInBuffer;
 
         //TODO::Wrap this in a #define
@@ -133,7 +133,7 @@ namespace Networking
             m_tupDataAtTimeForPeers[lPeerID] = new Tuple<DateTime, long, byte[]>(dtmTime, lPeerID, bData);
         }
 
-        //queue this message discarding all the messages in the buffer that were older than this message
+        //queue this message discarding all the messages in the buffer that come after it
         public void QueueSimMessage(SortingValue svaTime, long lPeerID, int iChannelIndex, ISimMessagePayload smpMessage)
         {
             MessagePayloadWrapper mprMessage = new MessagePayloadWrapper()
@@ -332,7 +332,7 @@ namespace Networking
                 svaOldestValidTime = m_svaOldestActiveSimTime.NextSortValue();
             }
 
-            //if the sim data sync has not succeded keep all messages from oldest time 
+            //if the sim data sync has not succeeded keep all messages from oldest time 
             if (m_sssSimStartStateSyncStatus == SimStateSyncNetworkProcessor.State.GettingStateData || m_sssSimStartStateSyncStatus == SimStateSyncNetworkProcessor.State.SyncFailed )
             {
                 svaOldestValidTime = m_svaOldestActiveSimTime.NextSortValue();

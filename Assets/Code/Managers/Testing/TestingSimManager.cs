@@ -65,6 +65,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
 
     public NetworkingDataBridge m_ndbNetworkingDataBridge;
 
+    //simulation data buffer
     public ConstIndexRandomAccessQueue<TFrameData> m_fdaSimStateBuffer;
 
     //for each of the "threads" processing the body states what index are they currently up too
@@ -239,6 +240,8 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
             //release lock on thread buffer
 
             //do hash check on the data
+            //this only works when all sims are running on the same machine
+            //it compares sim states for this tick across all users
             if(m_bVerifyFrameData) TestingSimDataSyncVerifier<TFrameData>.VerifyData(m_iTickOfStateSync, ref fdaState, 1, (int)m_sdaSettingsData.TicksPerSecond * 4);
         }
 
@@ -251,6 +254,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
     /// </summary>
     public void CheckForNewDataRequests()
     {
+        //get all the requests, clearing the request queue in the process
         if (m_ndbNetworkingDataBridge.GetNewRequestsForSimData(ref m_tupNewDataRequests))
         {
             //check if sim data for the requests exist

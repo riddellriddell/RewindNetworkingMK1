@@ -54,7 +54,7 @@ namespace Networking
         //the hash of this state 
         public long m_lHashOfStateCandidate;
 
-        //a refference to the next link
+        //a reference to the next link
         public ChainLink m_chlNextLink;
 
         //is there a state on the same chain that is older

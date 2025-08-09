@@ -412,12 +412,13 @@ namespace Networking
         //and start producing input chain links
         public void StartAsFirstPeerInSystem()
         {
-            //setup the inital state of the chain
+            //set up the initial state of the chain
             m_chmChainManager.SetStartState(ParentNetworkConnection.m_lPeerID, MaxChannelCount, m_tnpNetworkTime.NetworkTime);
 
             DateTime dtmNetworkTime = m_tnpNetworkTime.NetworkTime;
 
             //get current chain link
+            //this is just number of chain links since start of year
             uint iCurrentChainLink = m_chmChainManager.GetChainlinkCycleIndexForTime(
                 dtmNetworkTime,
                 ChainManager.TimeBetweenLinks,
@@ -433,13 +434,13 @@ namespace Networking
                 out DateTime m_dtmTimeOfPreviousLink,
                 out uint iLastChainLinkForPeer);
 
-            //create base chain link
+            //create base chain link, this is in the past relative to game start time
             ChainLink chlLink = CreateFirstChainLink(iLastChainLinkForPeer);
 
             //add link to chain manager
             m_chmChainManager.AddFirstChainLink(ParentNetworkConnection.m_lPeerID, true, chlLink, m_ndbNetworkDataBridge);
 
-            //reset th proessed up to point on the global message buffer
+            //reset th processed up to point on the global message buffer
             m_gmbMessageBuffer.m_svaStateProcessedUpTo = m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue.NextSortValue();
 
             //update buffer final state
@@ -455,7 +456,7 @@ namespace Networking
             m_dtmTimeOfStateCollectionStart = m_tnpNetworkTime.BaseTime;
         }
 
-        //check if enough start states have been recieved to pick start state
+        //check if enough start states have been received to pick start state
         public void CheckForSuccessfulStartStateSetup()
         {
             //check if enough candidates have been recieved

@@ -624,7 +624,7 @@ namespace GameManagers
                 //get current time 
                 DateTime dtmCurrentTime = m_tnpTimeManager.NetworkTime;
 
-                //get latency to worst connection 
+                //get latency to the worst connection 
                 TimeSpan tspWorstLatency = m_tnpTimeManager.LargetsRTT.TotalSeconds < m_ncsNetworkConnectionSettings.m_fStartSimStateMaxLagCompensation ?
                     m_tnpTimeManager.LargetsRTT : TimeSpan.FromSeconds(m_ncsNetworkConnectionSettings.m_fStartSimStateMaxLagCompensation);
 
@@ -639,7 +639,6 @@ namespace GameManagers
 
                 //send request to peers
                 m_sssStateSyncProcessor.RequestSimData(dtmSimStateRequestTime, tupActivePeerList);
-
             }
         }
 

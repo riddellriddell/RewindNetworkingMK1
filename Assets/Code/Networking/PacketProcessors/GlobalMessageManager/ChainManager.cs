@@ -69,7 +69,7 @@ namespace Networking
             //add chain links to buffer 
             ChainLinks.Add(chkChainLink.m_svaChainSortingValue, chkChainLink);
 
-            //validate chainlink to make sure all peers are seeing the samme thing 
+            //validate chain link to make sure all peers are seeing the same thing 
             ChainLinkVerifier.RegisterLink(chkChainLink, lLocalPeerID);
 
             //set as base chain link
@@ -563,10 +563,10 @@ namespace Networking
             return true;
         }
 
-        //adds a new chain link but does not process it as the start state has not been finilized yet 
+        //adds a new chain link but does not process it as the start state has not been finalized yet 
         public void AddChainLinkPreConnection(long lLocalPeerID, ChainLink chlLink, GlobalMessageBuffer gmbGlobalMessageBuffer, NetworkingDataBridge ndbNetworkDataBridge)
         {
-            //validate chainlink to make sure all peers are seeing the samme thing 
+            //validate chain link to make sure all peers are seeing the same thing 
             ChainLinkVerifier.RegisterLink(chlLink, lLocalPeerID);
 
             //get the chain link index to start at 
@@ -823,7 +823,7 @@ namespace Networking
             return iRelativeLength;
         }
 
-        //does the chain link hold all the messages recieved in the target time frame
+        //does the chain link hold all the messages received in the target time frame
         //does the chain include all messages sent by peer
         protected int ScoreChainLinkMessages(ChainLink chlLink, GlobalMessageBuffer gmbMessageBuffer)
         {
@@ -887,7 +887,7 @@ namespace Networking
             return -(int)Math.Min(iLatestCycleIndex - chlLink.m_iLinkIndex, int.MaxValue);
         }
 
-        //checks the link chain and removes links that are "aggread upon "
+        //checks the link chain and removes links that are "agreed upon "
         protected void UpdateBaseLink(long lLocalPeerID, bool bActivePeer, GlobalMessageBuffer gmbGlobalMessageBuffer, NetworkingDataBridge ndbNetworkDataBridge)
         {
             ChainLink chlNewBase = m_chlBestChainHead.m_chlParentChainLink;
@@ -934,7 +934,7 @@ namespace Networking
         }
 
         //check if a chain link is valid enough to turn into the base link
-        //this is done by checking if a link has enough parents, is old enough and enough peers aggree on it
+        //this is done by checking if a link has enough parents, is old enough and enough peers agree on it
         protected bool IsValidBaseLink(ChainLink chlBaseCandidate, ChainLink chlCurrentHead)
         {
             //check if it has enough acks 
