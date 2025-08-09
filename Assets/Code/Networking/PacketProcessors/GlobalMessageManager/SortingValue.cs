@@ -9,7 +9,7 @@ namespace Networking
     /// <summary>
     /// this struct is used to sort messages into a cronological order
     /// </summary>
-    public struct SortingValue : ICloneable, IComparable
+    public struct SortingValue : ICloneable, IComparable, IEquatable<SortingValue>
     {
         public const int c_BitsPerSegment = 64;
         public const int c_TotalBytes = 16;
@@ -138,9 +138,75 @@ namespace Networking
             }
         }
 
+        public int CompareTo(IPeerMessageNode obj)
+        {
+            return CompareTo(obj.SortingValue);
+        }
+
+        public int CompareTo(SortingValue obj)
+        {
+            if(obj.m_lSortValueA > m_lSortValueA)
+            {
+                return -1;
+            }
+            else if(obj.m_lSortValueA < m_lSortValueA)
+            {
+                return 1;
+            }
+            else if(obj.m_lSortValueB > m_lSortValueB)
+            {
+                return -1;
+            }
+            else if(obj.m_lSortValueB < m_lSortValueB)
+            {
+                return 1;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+
         public override string ToString()
         {
             return $"Sort Value A: {m_lSortValueA.ToString()}, Sort Value B: {m_lSortValueB.ToString()}";
+        }
+        
+        public static bool operator <(SortingValue a, SortingValue b)
+        {
+            return a.CompareTo(b) < 0;
+        }
+
+        // Override >
+        public static bool operator >(SortingValue a, SortingValue b)
+        {
+            return a.CompareTo(b) > 0;
+        }
+
+        // It's recommended to also override <= and >=
+        public static bool operator <=(SortingValue a, SortingValue b)
+        {
+            return a.CompareTo(b) < 1;
+        }
+
+        public static bool operator >=(SortingValue a, SortingValue b)
+        {
+            return a.CompareTo(b) >-1;
+        }
+
+        public bool Equals(SortingValue other)
+        {
+            return m_lSortValueA == other.m_lSortValueA && m_lSortValueB == other.m_lSortValueB;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is SortingValue other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(m_lSortValueA, m_lSortValueB);
         }
     }
 

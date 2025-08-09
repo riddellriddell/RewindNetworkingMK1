@@ -157,7 +157,8 @@ namespace Networking
 
         public void QueuePlayerChangeMessage(SortingValue svaTime, UserConnecionChange uccConnectionChange)
         {
-            if (svaTime.CompareTo(m_svaOldestMessageToStoreInBuffer) < 0)
+            //check if a player is changing before the start of the message queue
+            if (svaTime < m_svaOldestMessageToStoreInBuffer)
             {
                 m_squInMessageQueue.Clear();
                 m_svaSimProcessedMessagesUpToAndIncluding = m_svaOldestMessageToStoreInBuffer;
@@ -173,9 +174,15 @@ namespace Networking
         public void UpdateProcessedTimeOnNewMessageAdded(SortingValue svaNewMessageTime)
         {
             //check that the new time is less than the old processed up to time but is later than the state sync
-            if(svaNewMessageTime.CompareTo(m_svaSimProcessedMessagesUpToAndIncluding) < 0 && svaNewMessageTime.CompareTo(m_svaOldestActiveSimTime) > 0)
+            if((svaNewMessageTime < m_svaSimProcessedMessagesUpToAndIncluding) && (svaNewMessageTime > m_svaOldestActiveSimTime))
             {
                 m_svaSimProcessedMessagesUpToAndIncluding = svaNewMessageTime;
+            }
+            else if( (svaNewMessageTime <= m_svaOldestActiveSimTime))
+            {
+                //throw error as we are adding messages without a base state to process from
+                Debug.LogError( $"Queuing up message before the oldest simulation state, " +
+                                $"we will not be able to process this message");
             }
         }
 

@@ -15,11 +15,11 @@ namespace Networking
         //the messaging state once all the messages after the best chain head have been processed 
         public GlobalMessagingState LatestState { get; } = new GlobalMessagingState();
 
-        //this code is intended for future use in detecting peers missing messages and echoing them  to peer without having to use the chain link system
+        //this code is intended for future use in detecting peers missing messages and echoing them to peer without having to use the chain link system
         #region MessageEchoing
         //
-        ////tracks the most recent message recieved from a peer
-        //public Dictionary<long, PeerMessageNode> LastMessageRecievedFromPeer { get; } = new Dictionary<long, PeerMessageNode>();
+        ////tracks the most recent message received from a peer
+        //public Dictionary<long, PeerMessageNode> LastMessageReceivedFromPeer { get; } = new Dictionary<long, PeerMessageNode>();
         //
         ////the total number of messages that have ever been sent on this server up to the start of the 
         ////unconfirmed message buffer
@@ -47,6 +47,10 @@ namespace Networking
         public SortingValue m_svaStateProcessedUpTo = SortingValue.MinValue;
 
         //function to add messages to buffer
+        //this only adds the message if it does not already exist
+        //when adding the message, if the message is past the end of the best chain but earlier 
+        //than the "processed up to" value then it resets the processed up to value to the time 
+        //of this message so the next time the simulation updates it re simulates using this message
         public void AddMessageToBuffer(PeerMessageNode pmnMessage, SortingValue svaBestLinkHeadEnd)
         {
             //check if buffer already has item
@@ -57,12 +61,12 @@ namespace Networking
 
                 //update the earliest change to the message buffer that has not processed
                 //check that this change is happening after the best message head (changes before the best link head will be handled when the best head changes)
-                if(svaBestLinkHeadEnd.CompareTo(pmnMessage.m_svaMessageSortingValue) < 0)
+                if(svaBestLinkHeadEnd < pmnMessage.m_svaMessageSortingValue)
                 {
                     //check if this message is the earliest change to the buffer
-                    if(m_svaStateProcessedUpTo.CompareTo(pmnMessage.m_svaMessageSortingValue) > 0)
+                    if(m_svaStateProcessedUpTo > pmnMessage.m_svaMessageSortingValue)
                     {
-                        //store new earliest change so the sim knowes where to reprocess from 
+                        //store new earliest change so the sim knows where to reprocess from 
                         m_svaStateProcessedUpTo = pmnMessage.m_svaMessageSortingValue;
                     }
                 }
@@ -109,7 +113,7 @@ namespace Networking
             for (int i = iStartIndex; i < UnConfirmedMessageBuffer.Count; i++)
             {
                 //check if message is new and should be added to network bridge message buffer
-                if(UnConfirmedMessageBuffer.Values[i].m_svaMessageSortingValue.CompareTo(m_svaStateProcessedUpTo) > -1)
+                if(UnConfirmedMessageBuffer.Values[i].m_svaMessageSortingValue >= m_svaStateProcessedUpTo)
                 {
                     LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i], tspVoteTimeout, iMaxPlayerCount, ndbNetworkingDataBridge);
                 }

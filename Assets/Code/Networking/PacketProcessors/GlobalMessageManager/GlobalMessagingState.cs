@@ -55,8 +55,8 @@ namespace Networking
             return gmsCloneState;
         }
 
-        //process a message lLocalPeer is the user in controll of this computer
-        //and must be in the "Kept" group when split occures 
+        //process a message lLocalPeer is the user in control of this computer
+        //and must be in the "Kept" group when split occurs 
         public void ProcessMessage(long lLocalPeer, bool bActivePeer, PeerMessageNode pmnMessageNode, TimeSpan tspVoteTimeout, int iMaxPlayerCount, NetworkingDataBridge ndbNetworkingDataBridge = null)
         {
             //update the most recent sorting value 
@@ -354,7 +354,7 @@ namespace Networking
             //process kick messages 
             ProcessSplitVotes(lLocalPeerID, bActivePeer, iMessageChannel, dtmMessageCreationTime, tspVoteTimeout, iMaxPlayerCount, out List<int> iKickPeers);
 
-            //changes are only stored in the sim messsage buffer if updating the main branch or unconfimed message head 
+            //changes are only stored in the sim message buffer if updating the main branch or unconfirmed message head 
             if (ndbNetworkingDataBridge != null)
             {
                 //create a sim message for peers joining or leaving game
@@ -552,7 +552,7 @@ namespace Networking
             }
         }
         
-        //adds a messaget to the sim message buffer that a peer or peers have joined or left the global messaging system 
+        //adds a message to the sim message buffer that a peer or peers have joined or left the global messaging system 
         protected void AddPeerChangeMessageToSimBuffer(SortingValue svaChangeTime, in List<int> iPeersToKick, in List<int> iPeersToAdd, NetworkingDataBridge ndbNetworkingDataBridge)
         {
             //check that there is a change in the game layout
