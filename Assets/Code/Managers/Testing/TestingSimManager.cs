@@ -90,7 +90,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
     public bool m_bLogInputUsage = false;
 
     //check if the final frame data for a tick matches for all peers
-    public bool m_bVerifyFrameData = false;
+    public bool m_bVerifyFrameData = true;
 
     public TestingSimManager(TConstData cdaSimConstantData, TSettingsData sdaSimSettingsData, NetworkingDataBridge ndbNetworkingDataBridge,SimProcessManager<TFrameData, TConstData, TSettingsData> spmSimProcessManager)
     {
@@ -143,7 +143,8 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
         m_iActiveBodyProcessingTicks = new SortedRandomAccessQueueUsingLambda<uint, ThreadSaveDataLock>((uint iCompareFrom, uint iCompareTo) => iCompareFrom.CompareTo(iCompareTo) * -1);
 
         // set processed up to time, no messages earlier or equal to this time will be processed
-        m_ndbNetworkingDataBridge.SetOldestActiveSimTime( new SortingValue(0, ulong.MaxValue));
+        //I am adding +1 to prevent any wrap around issues, there shouldn't be but this is just in case
+        m_ndbNetworkingDataBridge.SetOldestActiveSimTime( new SortingValue(0, ulong.MinValue + 1));
 
         //set processed messages time to the earliest possible time as no processing has been done since
         m_ndbNetworkingDataBridge.m_svaSimProcessedMessagesUpToAndIncluding = m_ndbNetworkingDataBridge.m_svaOldestActiveSimTime;
@@ -362,7 +363,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
             //the last tick that has been fully processed before unprocessed messages could exist
             uint iNewestFullyProcessedTick = ConvertDateTimeToTick(dtmEarliestPossibleTimeOfAnUnprocessedMessage) - 1;
 
-            //get the tick to update from but dont go earlier than the fist game state synced
+            //get the tick to update from but don't go earlier than the fist game state synced
             uint iBaseTickToProcessFrom = Math.Max(m_iTickOfStateSync, iNewestFullyProcessedTick);
 
             RunStateUpdateAll(iBaseTickToProcessFrom);
@@ -689,20 +690,20 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
 
 
     //updates all the states after base state upto current tick based off network time;
-    public void RunStateUpdateExcludingHead(uint iBaseTick)
-    { 
-        //update until current time
-        while (iBaseTick < ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetCurrentSimTime()))
-        {
-            RunStateUpdateForBaseTick(iBaseTick);
-
-            //advance to the next tick
-            iBaseTick++;
-
-            //set the most recently processed tick
-            m_iSimHeadTick = Math.Max(iBaseTick, m_iSimHeadTick);
-        }
-    }
+    // public void RunStateUpdateExcludingHead(uint iBaseTick)
+    // { 
+    //     //update until current time
+    //     while (iBaseTick < ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetCurrentSimTime()))
+    //     {
+    //         RunStateUpdateForBaseTick(iBaseTick);
+    //
+    //         //advance to the next tick
+    //         iBaseTick++;
+    //
+    //         //set the most recently processed tick
+    //         m_iSimHeadTick = Math.Max(iBaseTick, m_iSimHeadTick);
+    //     }
+    // }
 
     public void RunStateUpdateAll(uint iBaseTick)
     {
@@ -772,9 +773,17 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
             }
 
 
-            if (m_bLogInputUsage) TestInputUsage.RegisterInputUsage(svaMessageSortValues[i], BitConverter.ToInt64(objMessages[i].GetHash()), iNextTick, m_ndbNetworkingDataBridge.GetLocalPeerID(), lInputCreatorPeerID, bIsConnectionChangeMessage);
+            if (m_bLogInputUsage)
+            {
+                TestInputUsage.RegisterInputUsage(
+                    svaMessageSortValues[i],
+                    BitConverter.ToInt64(objMessages[i].GetHash()),
+                    iNextTick,
+                    m_ndbNetworkingDataBridge.GetLocalPeerID(),
+                    lInputCreatorPeerID,
+                    bIsConnectionChangeMessage);
+            }
         }
-        
 
         //get the current head tick
         uint iHeadTick = ConvertDateTimeToTick(m_ndbNetworkingDataBridge.GetCurrentSimTime());
@@ -787,7 +796,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
             m_iNumberOfInputsInHeadSateCalculation = objMessages.Length;
         }
 
-        //caclulate new sim state at tick
+        //calculate new sim state at tick
         CalculateTickResult(iNextTick, m_sdaSettingsData, m_cdaConstantData, fdaBaseState, ref objMessages, ref fdaNextState);
 
 
@@ -846,7 +855,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
         uint iIndexOfOldestStateStillNeeded = ConvertDateTimeToTick(dtmOldesTimeStillNeeded);
 
 
-        //protect against errors on startup with initalised min values
+        //protect against errors on startup with initialised min values
         if (iIndexOfOldestStateStillNeeded == 0)
         {
             return;
