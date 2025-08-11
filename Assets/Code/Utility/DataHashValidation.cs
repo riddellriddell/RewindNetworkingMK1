@@ -11,12 +11,13 @@ using Utility;
 /// </summary>
 public class DataHashValidation : MonoBehaviour
 {
-    public static bool LogDataHash(byte[] bInputDataHash,int bExecutionPoint , uint iTick,  byte[] bOutputDataHash, string strTagData = "")
+    public static bool LogDataHash(byte[] bInputDataHash,byte[] bInputCommandHash, int bExecutionPoint , uint iTick,  byte[] bOutputDataHash, string strTagData = "")
     {
         List<byte> lstInputDataHash = new List<byte>();
         lstInputDataHash.AddRange(BitConverter.GetBytes(iTick));
         lstInputDataHash.AddRange(BitConverter.GetBytes(bExecutionPoint));
         lstInputDataHash.AddRange(bInputDataHash);
+        lstInputDataHash.AddRange(bInputCommandHash);
 
         MD5 md5 = MD5.Create();
 
