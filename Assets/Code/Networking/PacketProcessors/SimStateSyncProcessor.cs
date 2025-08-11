@@ -136,7 +136,7 @@ namespace Networking
             //this happens when state data exists for a request at a time
             if (m_ndbNetworkDataBridge.m_tupDataAtTimeForPeers.Count > 0)
             {
-                Debug.Log("SimStateSync:: Festching Data For Peers From Network Data Bridge");
+                Debug.Log("SimStateSync:: Fetching Data For Peers From Network Data Bridge");
 
                 //check if there are any active requests 
                 foreach (Tuple<DateTime, long, byte[]> tupDataAtTime in m_ndbNetworkDataBridge.m_tupDataAtTimeForPeers.Values)
@@ -262,7 +262,7 @@ namespace Networking
                 //clean up peers
                 foreach (SimStateSyncConnectionProcessor sscSyncConnection in ChildConnectionProcessors.Values)
                 {
-                    sscSyncConnection.CleanUpRecievingState();
+                    sscSyncConnection.CleanUpReceivingState();
                 }
 
                 //check if full state was downloaded 
@@ -321,7 +321,7 @@ namespace Networking
                     //clean up peers
                     foreach (SimStateSyncConnectionProcessor sscSyncConnection in ChildConnectionProcessors.Values)
                     {
-                        sscSyncConnection.CleanUpRecievingState();
+                        sscSyncConnection.CleanUpReceivingState();
                     }
 
                     Debug.Log("State synced early");
@@ -761,7 +761,7 @@ namespace Networking
             }
         }
 
-        //get a list of all the times for all the requestd sim states and the peers that requested them
+        //get a list of all the times for all the requested sim states and the peers that requested them
         public List<Tuple<DateTime, long>> GetRequestedTimeOfSimStates()
         {
             List<Tuple<DateTime, long>> dtmSimTimes = new List<Tuple<DateTime, long>>();
@@ -1314,7 +1314,7 @@ namespace Networking
             }
         }
 
-        public void CleanUpRecievingState()
+        public void CleanUpReceivingState()
         {
             //the state of the data sync
             m_istInState = InState.NotRequested;
