@@ -619,10 +619,84 @@ namespace GameManagers
             //check if already attempting to get sim state
             if (m_sssStateSyncProcessor.m_staState != SimStateSyncNetworkProcessor.State.GettingStateData)
             {
+                //get the chain manager 
+                ChainManager chmChainManager = m_ngpGlobalMessagingProcessor.m_chmChainManager;
+                
                 //schedule new request for data
 
                 //get current time 
                 DateTime dtmCurrentTime = m_tnpTimeManager.NetworkTime;
+                
+                //time of most recent possible base state
+                DateTime dtmMostRecentPossibleBaseLink;
+                
+                //get the current chain  link index, this counts the max number of chain links since the start of the year
+                uint iCurrentChainLink = m_ngpGlobalMessagingProcessor.m_chmChainManager.GetChainlinkCycleIndexForTime(
+                    dtmCurrentTime, 
+                    ChainManager.TimeBetweenLinks, 
+                    ChainManager.GetChainBaseTime(dtmCurrentTime));
+                
+                //get how far back in time we should go
+                int iMaxLinksFromHead = chmChainManager.MinChainLenght;
+                
+                //get how long the chain could possibly be
+                
+                //next step convert from link to date time for the most recent time all the chain links could have been finalized
+                //get the base chain link
+                uint iCurrentChainBaseIndex = m_ngpGlobalMessagingProcessor.m_chmChainManager.m_chlChainBase.m_iLinkIndex;
+
+                uint iCurrentChainLenght = chmChainManager.m_chlBestChainHead.m_iChainLength - chmChainManager.m_chlChainBase.m_iChainLength;
+
+                uint iHeadIndex = m_ngpGlobalMessagingProcessor.m_chmChainManager.m_chlBestChainHead.m_iLinkIndex;
+                
+                uint iDistanceToPossibleHead =  iCurrentChainLink - iHeadIndex;
+                
+                uint iPossibleCurrentChainLenght = iCurrentChainLenght + iDistanceToPossibleHead;
+                
+                //get how many chain links away from the base the earliest possible base could be,
+                //ig if there are a bunch of chain links other peers have that this peer does not
+                //what would be the earliest base chain other peers could have
+                int possibleExtraChainLinks = (int)(iPossibleCurrentChainLenght - iMaxLinksFromHead);
+                
+                //if possible extra chain links is negative then either the game just started or we got sent a bad
+                //set of chain links? 
+                if (possibleExtraChainLinks > 0)
+                {
+                    //work out how many links back from the head we need to walk
+                    int iPossibleBaseDistanceFromHead = (int)iCurrentChainLenght - possibleExtraChainLinks;
+                    
+                    //if the distance is negative then other peers base link could be past our current head 
+                    if (iPossibleBaseDistanceFromHead < iMaxLinksFromHead)
+                    {
+                        //convert the possible most recent base to a date time
+                        dtmMostRecentPossibleBaseLink = dtmCurrentTime - (ChainManager.TimeBetweenLinks * chmChainManager.MinChainLenght);
+                    }
+                    else
+                    {
+                        ChainLink chlPossibleYoungestBase = chmChainManager.m_chlBestChainHead;
+                        int iNumberOfLinksToWalk = iPossibleBaseDistanceFromHead;
+                        
+                        //get the chain head and walk back 
+                        while (chlPossibleYoungestBase.m_chlParentChainLink != null && iNumberOfLinksToWalk > 0)
+                        {
+                            iNumberOfLinksToWalk--;
+
+                            chlPossibleYoungestBase = chlPossibleYoungestBase.m_chlParentChainLink;
+                        }
+                        
+                        //get the index of the link
+                        uint iYoungestBaseLinkCycle = chlPossibleYoungestBase.m_iLinkIndex;
+                    }
+                }
+                
+                //get the current link index
+                uint iCurrentChainIndex = chmChainManager.GetChainlinkCycleIndexForTime(
+                    dtmCurrentTime,
+                    ChainManager.TimeBetweenLinks,
+                    ChainManager.GetChainBaseTime(dtmCurrentTime));
+                
+                //get the most recent time that a chain link base can exist 
+                m_ngpGlobalMessagingProcessor.m_chmChainManager.m_chlChainBase.m_iLinkIndex * ;
 
                 //get latency to the worst connection 
                 TimeSpan tspWorstLatency = m_tnpTimeManager.LargetsRTT.TotalSeconds < m_ncsNetworkConnectionSettings.m_fStartSimStateMaxLagCompensation ?
