@@ -36,7 +36,7 @@ namespace Networking
         //data for requests from peers
         public Dictionary<long,Tuple<DateTime, long, byte[]>> m_tupDataAtTimeForPeers = new Dictionary<long, Tuple<DateTime, long, byte[]>>();
        
-        //timespan values used to shared time accross all peers  
+        //timespan values used to shared time across all peers  
         public DateTime m_dtmNetworkOldestTime = DateTime.MinValue;
 
         public TimeSpan m_tspNetworkTimeOffset = TimeSpan.Zero;
@@ -58,7 +58,7 @@ namespace Networking
         //this is only for use when debugging
         public long m_lLocalPeerID;
 
-        //returns an array of requests between the start time and the end time including times a the same time as the start and excluding items at the end time 
+        //returns an array of requests between the start time and the end time including times at the same time as the start and excluding items at the end time 
         public List<Tuple<DateTime, long>> GetRequestsForTimePeriod(DateTime dtmStartTimeExclusive, DateTime dtmEndTimeInclusive)
         {
             List<Tuple<DateTime, long>> outArray = new List<Tuple<DateTime, long>>(0);
@@ -143,19 +143,11 @@ namespace Networking
                 m_smpPayload = smpMessage
             };
 
-            if( svaTime.CompareTo(m_svaOldestMessageToStoreInBuffer) < 0 )
-            {
-                m_squInMessageQueue.Clear();
-                m_svaSimProcessedMessagesUpToAndIncluding = m_svaOldestMessageToStoreInBuffer;
-            }
-            else
-            {
-                UpdateProcessedTimeOnNewMessageAdded(svaTime);
-                m_squInMessageQueue.EnterPurgeInsert(svaTime, mprMessage);
-            }            
+            QueueSimMessage(svaTime, mprMessage);
         }
 
-        public void QueuePlayerChangeMessage(SortingValue svaTime, UserConnecionChange uccConnectionChange)
+
+        public void QueueSimMessage(SortingValue svaTime, in IInput inpInput)
         {
             //check if a player is changing before the start of the message queue
             if (svaTime < m_svaOldestMessageToStoreInBuffer)
@@ -166,7 +158,15 @@ namespace Networking
             else
             {
                 UpdateProcessedTimeOnNewMessageAdded(svaTime);
-                m_squInMessageQueue.EnterPurgeInsert(svaTime, uccConnectionChange);
+                m_squInMessageQueue.EnterPurgeInsert(svaTime, inpInput);
+            }
+            
+            //check if queuing up messages before start state
+            if ((svaTime <= m_svaOldestActiveSimTime))
+            {
+                //throw error as we are adding messages without a base state to process from
+                Debug.LogError( $"Queuing up message before the oldest simulation state, " +
+                                $"we will not be able to process this message");
             }
         }
 
@@ -181,7 +181,8 @@ namespace Networking
             else if( (svaNewMessageTime <= m_svaOldestActiveSimTime))
             {
                 //throw error as we are adding messages without a base state to process from
-                Debug.LogError( $"Queuing up message before the oldest simulation state, " +
+                Debug.LogError( $"Peer {GetLocalPeerID()} is Queuing up message at sort value {svaNewMessageTime} " +
+                                $"before the oldest simulation state {m_svaOldestActiveSimTime} , " +
                                 $"we will not be able to process this message");
             }
         }
@@ -306,13 +307,13 @@ namespace Networking
             //if the time processed up to is less than the start range of the values processed then 
             //dont update the processed up to value as there might be a message in the gap between 
             //what has been processed in the past and this update
-            if(m_svaSimProcessedMessagesUpToAndIncluding.CompareTo(svaFrom) < 0 )
+            if(m_svaSimProcessedMessagesUpToAndIncluding < svaFrom)
             {
                 return;
             }
 
             //check that this is actually consuming new inputs
-            if(m_svaSimProcessedMessagesUpToAndIncluding.CompareTo(svaTo) > 0)
+            if(m_svaSimProcessedMessagesUpToAndIncluding > svaTo)
             {
                 return;
             }
@@ -329,12 +330,12 @@ namespace Networking
 
             SortingValue svaOldestValidTime = m_svaConfirmedMessageTime;
 
-            if (svaOldestValidTime.CompareTo(m_svaSimProcessedMessagesUpToAndIncluding) > 0)
+            if (svaOldestValidTime > m_svaSimProcessedMessagesUpToAndIncluding)
             {
                 svaOldestValidTime = m_svaSimProcessedMessagesUpToAndIncluding;
             }
 
-            if (svaOldestValidTime.CompareTo(m_svaOldestActiveSimTime) < 1)
+            if (svaOldestValidTime <= m_svaOldestActiveSimTime)
             {
                 svaOldestValidTime = m_svaOldestActiveSimTime.NextSortValue();
             }
@@ -342,7 +343,16 @@ namespace Networking
             //if the sim data sync has not succeeded keep all messages from oldest time 
             if (m_sssSimStartStateSyncStatus == SimStateSyncNetworkProcessor.State.GettingStateData || m_sssSimStartStateSyncStatus == SimStateSyncNetworkProcessor.State.SyncFailed )
             {
-                svaOldestValidTime = m_svaOldestActiveSimTime.NextSortValue();
+
+                svaOldestValidTime =  m_svaOldestActiveSimTime.NextSortValue();
+
+                // make sure we don't throw away inputs after our state request time
+                SortingValue svaStateRequestTime = new SortingValue((ulong)m_dtmSimStateSyncRequestTime.Ticks, ulong.MinValue);
+                
+                if (svaOldestValidTime > svaStateRequestTime)
+                {
+                    svaOldestValidTime = svaStateRequestTime;
+                }
             }
 
             return svaOldestValidTime;

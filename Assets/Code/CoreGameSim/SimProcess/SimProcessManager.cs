@@ -9,7 +9,7 @@ namespace Sim
 {
     public class SimProcessManager<TFrameData, TConstData, TSettingsData> where TFrameData: IFrameData
     {
-        public bool m_bCheckForDeSync = false;
+        public bool m_bCheckForDeSync = true;
 
         public bool m_bHashFrameData = false;
 
@@ -91,7 +91,7 @@ namespace Sim
                     fdaOutFrameData.GetHash(bHash);
 
                     //log desync values 
-                    DataHashValidation.LogDataHash(bOldStartHashShort, (byte)i, iTick, bHash, m_spcSimProcesses.Values[i].ProcessName);
+                    DataHashValidation.LogDataHash(bOldStartHashShort, ifdOutFrameDataInput.InputHash, (byte)i, iTick, bHash, m_spcSimProcesses.Values[i].ProcessName);
                 }
 
             }

@@ -992,7 +992,7 @@ namespace Networking
 
             //TODO::FIX THIS, the number of global messages does not match the number of messages in the sim buffer. global messages needs to be filtered to exclude voting join leave messages 
             //check if any inputs have snuck in to the sim buffer that are not in the active chain 
-            //ChainBaseStateVerifier.ValidateSimMessaageBufferMatchesUpToLink(m_chlBestChainHead, ndbNetworkDataBridge, lLocalPeerID);
+            ChainBaseStateVerifier.ValidateSimMessageBufferMatchesUpToLink(m_chlBestChainHead, ndbNetworkDataBridge, lLocalPeerID);
 
             //check if base states match 
             ChainBaseStateVerifier.RegisterAllStatesUpToLink(chlNewBase, lLocalPeerID);

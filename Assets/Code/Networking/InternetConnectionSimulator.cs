@@ -118,18 +118,21 @@ namespace Networking
             //update the packet outage 
             UpdatePacketOutages();
 
-            //loop through all the packets in flight 
-            for (int i = 0; i < m_lstDataInFlight.Count; i++)
+            if (m_lstDataInFlight != null)
             {
-                if (m_lstDataInFlight[i].m_fTimeOfDelivery < Time.timeSinceLevelLoad && m_lstDataInFlight[i].m_bData != null)
+                //loop through all the packets in flight 
+                for (int i = 0; i < m_lstDataInFlight.Count; i++)
                 {
-                    //deliver packet 
-                    m_lstDataInFlight[i].m_actRecieveDataCallback?.Invoke(m_lstDataInFlight[i].m_bData);
+                    if (m_lstDataInFlight[i].m_fTimeOfDelivery < Time.timeSinceLevelLoad &&
+                        m_lstDataInFlight[i].m_bData != null)
+                    {
+                        //deliver packet 
+                        m_lstDataInFlight[i].m_actRecieveDataCallback?.Invoke(m_lstDataInFlight[i].m_bData);
 
-                    m_lstDataInFlight[i] = new TimeStampedWrapper();
+                        m_lstDataInFlight[i] = new TimeStampedWrapper();
+                    }
                 }
             }
-
         }
 
         private void UpdatePacketOutages()

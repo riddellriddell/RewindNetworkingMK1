@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using SharedTypes;
 using UnityEngine;
 using Utility;
 
@@ -35,8 +36,9 @@ namespace Networking
             }
         }
 
-        public static void ValidateSimMessaageBufferMatchesUpToLink(ChainLink chlLink, NetworkingDataBridge ndmDataBridge, long lPeerUpdatingBase)
+        public static void ValidateSimMessageBufferMatchesUpToLink(ChainLink chlLink, NetworkingDataBridge ndmDataBridge, long lPeerUpdatingBase)
         {
+            //values to store the start and end times of this chain
             SortingValue svlOldSortValue = SortingValue.MaxValue;
             SortingValue svlNewSortValue = SortingValue.MinValue;
 
@@ -44,14 +46,20 @@ namespace Networking
             ulong iMessagesReportedAtEndOfNewest = chlLink.m_lChainMessageCount;
             ulong iMessagesReportedAtStartOfOldest = chlLink.m_lChainMessageCount;
 
+            Dictionary<SortingValue, string> dicNodeTypeAtTime = new Dictionary<SortingValue, string>();
+
             //get the oldest chain link
+            //while getting the oldest chain link add up all the messages 
+            //found along the way
             while (chlLink.m_chlParentChainLink != null)
             {
+                //get the reported message count at the start instead of the end of the chain
                 iMessagesReportedAtStartOfOldest = chlLink.m_lChainMessageCount - (ulong)chlLink.m_pmnMessages.Count;
 
+                //add up all the messages
                 if (chlLink.m_pmnMessages.Count > 0)
                 {
-                    lMessagesCounted++;
+                    lMessagesCounted += (ulong)chlLink.m_pmnMessages.Count;
 
                     //try get the newest value if the newest value has not yet been calculated
                     if (svlNewSortValue.CompareTo(SortingValue.MinValue) == 0)
@@ -59,42 +67,83 @@ namespace Networking
                         svlNewSortValue = chlLink.m_pmnMessages[chlLink.m_pmnMessages.Count - 1].m_svaMessageSortingValue;
                     }
 
-
+                    //get the start time of this chain
                     svlOldSortValue = chlLink.m_pmnMessages[0].m_svaMessageSortingValue;
 
                     for(int i = 0; i < chlLink.m_pmnMessages.Count; i++)
                     {
-                        if(svlOldSortValue.CompareTo(chlLink.m_pmnMessages[i].m_svaMessageSortingValue) > 0 || svlNewSortValue.CompareTo(chlLink.m_pmnMessages[i].m_svaMessageSortingValue) < 0)
+                        //check that the oldest message is the oldest and the newest messages is the newest
+                        if((svlOldSortValue > chlLink.m_pmnMessages[i].m_svaMessageSortingValue) || (svlNewSortValue < chlLink.m_pmnMessages[i].m_svaMessageSortingValue))
                         {
                             Debug.LogError($"Peer: {lPeerUpdatingBase} Chain Link Message List Not Sorted");
                         }
+                        
+                        //sanity check that there are not more than 1 message occuring at the same time
+                        if(dicNodeTypeAtTime.ContainsKey(chlLink.m_pmnMessages[i].m_svaMessageSortingValue ))
+                        {
+                            Debug.LogError($"Peer: {lPeerUpdatingBase} Chain Link Message contains multiple messages with" +
+                                           $"same sorting values" );
+                        }
+                        else
+                        {
+                            //add message time and type to help with debugging
+                            dicNodeTypeAtTime.Add(chlLink.m_pmnMessages[i].m_svaMessageSortingValue, $"Chain link message Type ID: { chlLink.m_pmnMessages[i].m_bMessageType.ToString()}");
+                        }
+                        
+
                     }
                 }
 
                 chlLink = chlLink.m_chlParentChainLink;
             }
 
-            ulong lReportedMessageCount = iMessagesReportedAtEndOfNewest - iMessagesReportedAtStartOfOldest;
+            ulong lReportedMessageCountInTargetChainToBase = iMessagesReportedAtEndOfNewest - iMessagesReportedAtStartOfOldest;
 
-            if(lReportedMessageCount != lMessagesCounted)
+            if(lReportedMessageCountInTargetChainToBase != lMessagesCounted)
             {
-                Debug.LogError($"Peer: {lPeerUpdatingBase} Error when comparing reported chain lenghts to count lenght. reproted length {lReportedMessageCount}, Counted Length {lMessagesCounted}");
+                Debug.LogError($"Peer: {lPeerUpdatingBase} Error when comparing reported chain lengths to count lenght. reported length {lReportedMessageCountInTargetChainToBase}, Counted Length {lMessagesCounted}");
             }
 
             //get the number of messages in the buffer sent to the sim
             ndmDataBridge.m_squInMessageQueue.TryGetFirstIndexGreaterThan(svlOldSortValue, out int iNextStartIndex, out bool bStartCollision, out int iStartCollisionIndex);
             ndmDataBridge.m_squInMessageQueue.TryGetFirstIndexLessThan(svlNewSortValue, out int iNextEndIndex, out bool bEndCollision, out int iEndCollisionIndex);
 
-            if ((bStartCollision == false || bEndCollision == false) && lReportedMessageCount > 0)
+            if ((bStartCollision == false || bEndCollision == false) && lReportedMessageCountInTargetChainToBase > 0)
             {
-                Debug.LogError($"Peer: {lPeerUpdatingBase} Start or end messages in chain were not found in sim message buffer");
+                Debug.LogError($"Peer: {lPeerUpdatingBase} Start or end messages in chain were not found in sim message buffer, start message collision:{ bStartCollision } end message collision:{ bEndCollision }");
             }
 
-            long lMessagesInBuffer = iEndCollisionIndex - iStartCollisionIndex;
+            long lMessagesInBuffer = iEndCollisionIndex - iStartCollisionIndex + 1;
 
-            if (lReportedMessageCount > 0 && lReportedMessageCount != (ulong)lMessagesInBuffer)
+            if (lReportedMessageCountInTargetChainToBase > 0 && lReportedMessageCountInTargetChainToBase != (ulong)lMessagesInBuffer)
             {
-                Debug.LogError($"Peer: {lPeerUpdatingBase} The number of messages in the message buffer: {lMessagesInBuffer} dont match the number of messages in the chain links over the same time {lReportedMessageCount}");
+                Debug.LogError($"Peer: {lPeerUpdatingBase} The number of messages in the message buffer: {lMessagesInBuffer} dont match the number of messages in the chain links over the same time {lReportedMessageCountInTargetChainToBase}");
+                
+                //loop through mesasges and try and find the messages that were not the same
+                for (int i = iStartCollisionIndex; i <= iEndCollisionIndex; i++)
+                {
+                    SortingValue svaInputTime = ndmDataBridge.m_squInMessageQueue.GetKeyAtIndex(i);
+                    
+                    //get the key to see if it already exists 
+                    if (dicNodeTypeAtTime.ContainsKey(svaInputTime))
+                    {
+                        dicNodeTypeAtTime.Remove(svaInputTime);
+                        //not a unique message
+                        continue;
+                    }
+                    else
+                    {
+                        //add it to the dictionary
+                        dicNodeTypeAtTime.Add( svaInputTime, $"Data bridge message type: {ndmDataBridge.m_squInMessageQueue.GetValueAtIndex(i).GetType().ToString()}");
+                    }
+                }
+                
+                //loop over all the types and print them out
+                foreach( var kvpType in dicNodeTypeAtTime)
+                {
+                    Debug.LogError( $"Miss matched message info: Key:{ kvpType.Key.ToString() }, Type: { kvpType.Value.ToString() }");
+                }
+                
             }
         }
 

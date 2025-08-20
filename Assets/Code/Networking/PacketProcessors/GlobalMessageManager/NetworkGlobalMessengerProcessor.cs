@@ -459,7 +459,16 @@ namespace Networking
         //check if enough start states have been received to pick start state
         public void CheckForSuccessfulStartStateSetup()
         {
-            //check if enough candidates have been recieved
+            //check if we have received a network map yet
+            NetworkLayoutProcessor nlpLayoutProcessor = ParentNetworkConnection.GetPacketProcessor<NetworkLayoutProcessor>();
+
+            //check we have received layout info from all peers 
+            if (nlpLayoutProcessor.HasRecievedNetworkLayoutDataFromAllConnectedPeers() == false)
+            {
+                return;
+            }
+            
+            //check if enough candidates have been received
             int iConnectedPeers = ChildConnectionProcessors.Count;
 
             //check if there are any connected peers
@@ -469,22 +478,22 @@ namespace Networking
             }
 
             //check if enough states have been recieved 
-            float fPercentOfStatesRecieved = m_chmChainManager.m_iStartStatesRecieved / (float)iConnectedPeers;
+            float fPercentOfStatesReceived = m_chmChainManager.m_iStartStatesRecieved / (float)iConnectedPeers;
 
             //TODO: Remove this debug code when startup problem fixed 
-            m_fPercentOfStartStatesRecieved = fPercentOfStatesRecieved;
+            m_fPercentOfStartStatesRecieved = fPercentOfStatesReceived;
 
             //should a connection be forced
-            //this occurs in anomilus conditions 
+            //this occurs in anomalous conditions 
             bool bForceConnection = false;
 
-            if (m_tnpNetworkTime.BaseTime - m_dtmTimeOfStateCollectionStart > StateCollectionTimeOutTime)
-            {
-                bForceConnection = true;
-            }
+            //if (m_tnpNetworkTime.BaseTime - m_dtmTimeOfStateCollectionStart > StateCollectionTimeOutTime)
+            //{
+            //    bForceConnection = true;
+            //}
 
             //check if enough states have been recieved
-            if (fPercentOfStatesRecieved < MinPercentOfStartStatesFromPeers && bForceConnection == false)
+            if (fPercentOfStatesReceived < MinPercentOfStartStatesFromPeers && bForceConnection == false)
             {
                 return;
             }
@@ -499,16 +508,17 @@ namespace Networking
             }
 
             //check if too much time has passed and a start state should be forced
-            if (bForceConnection)
-            {
-                IsAcknowledgedStartState = true;
-            }
+            //if (bForceConnection)
+            //{
+            //    IsAcknowledgedStartState = true;
+            //}
 
-            //if there is a state that has recieved enough validation set it as the start state 
+            //if there is a state that has received enough validation set it as the start state 
             if (IsAcknowledgedStartState)
             {
                 m_staState = State.Connected;
 
+                //set the global message chain to base everything off
                 m_chmChainManager.SetChainStartState(ParentNetworkConnection.m_lPeerID, false, MaxChannelCount, sscStartStateCandidate.m_gmsStateCandidate, sscStartStateCandidate.m_chlNextLink, m_ndbNetworkDataBridge);
 
                 //reset the last message processed value on the message buffer

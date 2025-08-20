@@ -576,7 +576,7 @@ namespace Networking
                 uccConnectionChange.m_iJoinPeerChannelIndex[i] = iPeersToAdd[i];
             }
 
-            ndbNetworkingDataBridge.QueuePlayerChangeMessage(svaChangeTime, uccConnectionChange);
+            ndbNetworkingDataBridge.QueueSimMessage(svaChangeTime, uccConnectionChange);
         }
 
         //perform join
