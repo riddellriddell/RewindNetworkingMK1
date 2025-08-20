@@ -121,7 +121,7 @@ namespace Networking
             //merge messages into the message buffer 
             //update data bridge if new messages have been added to the message buffer that the sim will need to process
             //bIsDirty is true if new messages were added
-            MergeChainLinkMessagesIntoBuffer(chlLink, gmbGlobalMessageBuffer, ndbNetworkingDataBridge, out bDirtyUnconfirmedMessageBufferState);
+            MergeChainLinkMessagesIntoBuffer(chlLink, gmbGlobalMessageBuffer, out bDirtyUnconfirmedMessageBufferState);
 
             //recalculate chain values
             ReprocessAllChainLinks(lLocalPeerID, bActivePeer);
@@ -583,7 +583,7 @@ namespace Networking
             ChainLinks.Add(svaLinkSortValue, chlLink);
 
             //merge messages into the message buffer 
-            MergeChainLinkMessagesIntoBuffer(chlLink, gmbGlobalMessageBuffer, ndbNetworkDataBridge, out bool bIsMessageBufferDirty);
+            MergeChainLinkMessagesIntoBuffer(chlLink, gmbGlobalMessageBuffer, out bool bIsMessageBufferDirty);
         }
 
         //set the first chain link and associated start state
@@ -709,9 +709,10 @@ namespace Networking
             throw new Exception("Should have found chain link index for next channel link");
         }
 
-        //put the messages in the chain link into the main buffer and replce any messages
+        //put the messages in the chain link into the main buffer and replace any messages
         // in the chain with their duplicates in the buffer if they have already been added
-        public void MergeChainLinkMessagesIntoBuffer(ChainLink chlChain, GlobalMessageBuffer gmbBuffer, NetworkingDataBridge ndbNetworkingDataBridge, out bool bDirtyMessageBufferState)
+        public void MergeChainLinkMessagesIntoBuffer(ChainLink chlChain, GlobalMessageBuffer gmbBuffer,
+            out bool bDirtyMessageBufferState)
         {
             bDirtyMessageBufferState = false;
 
@@ -848,9 +849,9 @@ namespace Networking
 
         //which links have been acknowledged by peers
         //how diverse is the chain acknowledgement
-        protected int ScoreChainAchnowledgement(ChainLink chlLink)
+        protected int ScoreChainAcknowledgement(ChainLink chlLink)
         {
-            //check that link is setup and connected
+            //check that link is set up and connected
             if(chlLink.m_gmsState == null || chlLink.m_bIsConnectedToBase == false)
             {
                 return -10;
