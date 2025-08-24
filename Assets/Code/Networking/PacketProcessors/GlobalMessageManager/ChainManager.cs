@@ -234,14 +234,16 @@ namespace Networking
 
                     SortingValue svaOldestConfirmedMessage = SortingValue.Max( svaLastMessage, svaOldestSyncState);
 
-                    if (m_chlChainBase.m_gmsState.m_svaLastMessageSortValue.CompareTo(svaOldestConfirmedMessage) >= 0)
+                    if (m_chlChainBase.m_gmsState.m_svaLastMessageSortValue > svaOldestConfirmedMessage)
                     {
                         //we have received a new message chain and when we added the messages from that the oldest message
-                        //existed before the end of the 
+                        //existed before the end of the base chain
                         Debug.LogError($"Trying to set the last new message added earlier than the end of the base state " +
                                        $"Parent links traversed: {numberOfChainLinksScanned.ToString()} " +
                                        $"Last message from shared parent chain value: {svaLastMessage.ToString() }, " +
-                                       $"Oldest sync state time value: {svaOldestSyncState.ToString()}");
+                                       $"Oldest sync state time value: {svaOldestSyncState.ToString()} " +
+                                       $"Base last message sorting value: {m_chlChainBase.m_gmsState.m_svaLastMessageSortValue.ToString()} " +
+                                       $"New chain parent last message sorting value: {svaOldestConfirmedMessage.ToString()}");
                     }
 
                     //make sure the sim reprocess the message queue starting from the end of the last chain
