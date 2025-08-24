@@ -97,7 +97,7 @@ namespace Networking
 
         public void AddChainLink(long lLocalPeerID, bool bActivePeer, ChainLink chlLink, GlobalMessageKeyManager gkmKeyManager, GlobalMessageBuffer gmbGlobalMessageBuffer, NetworkingDataBridge ndbNetworkingDataBridge, out bool bDirtyUnconfirmedMessageBufferState)
         {
-            //validate chainlink to make sure all peers are seeing the samme thing 
+            //validate chain link to make sure all peers are seeing the same thing 
             ChainLinkVerifier.RegisterLink(chlLink, lLocalPeerID);
 
             bDirtyUnconfirmedMessageBufferState = false;
@@ -275,13 +275,13 @@ namespace Networking
 
         public void SetChannelAcknowledgements(int iChannelIndex, ChainLink chlAcknowledgedLink)
         {
-            //check if alreadty acked 
+            //check if already acked 
             if (chlAcknowledgedLink.m_bIsChannelBranch[iChannelIndex])
             {
                 return;
             }
 
-            //clear out existing acknowledements 
+            //clear out existing acknowledgements 
             //and acknowledge new branch
             for (int i = ChainLinks.Count - 1; i > -1; i--)
             {
