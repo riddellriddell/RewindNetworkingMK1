@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Random = UnityEngine.Random;
 
 namespace GameManagers
@@ -43,8 +44,17 @@ namespace GameManagers
         [SerializeField]
         public GlobalMessageChannelState.State m_staState;
 
+        [FormerlySerializedAs("m_iVotes")] [SerializeField]
+        public int m_iOldStyleVotes;
+        
         [SerializeField]
-        public int m_iVotes;
+        public int m_iNewStyleForVotes;
+        
+        [SerializeField]
+        public int m_iNewStyleAgainstVotes;
+        
+        [SerializeField]
+        public float m_fSecondsUntilVoteFinished;
     }
 
     [Serializable]
@@ -350,7 +360,7 @@ namespace GameManagers
                 {
                     GlobalMessageChannelState gcsChannelState = gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[i];
 
-                    int iVotes = 0;
+                    int iOldStyleVotes = 0;
 
                     //for a given chanel check what its votes are on all the other channels
                     for (int j = 0; j < gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels.Count; j++)
@@ -367,18 +377,60 @@ namespace GameManagers
                                 if (gcsVotingChannel.m_chvVotes[i].IsActive(tnpTimeProcessor.NetworkTime, gmpGlobalMessagingProcessor.m_chmChainManager.VoteTimeout) == true)
                                 {
                                     //
-                                    iVotes++;
+                                    iOldStyleVotes++;
                                 }
                             }
                         }
-
                     }
+                    
+                    int iNewStyleVotes = 0;
+                    int iNewStyleForVotes = 0;
+                    int iNewStyleAgainstVotes = 0;
+                    
+                    //get the connection
+                    iNewStyleVotes = gcsChannelState.m_vtyVotesOnChannelByPeers.Count;
+                    
+                    //loop through all votes and add up valid votes
+                    foreach (var kvpVote in gcsChannelState.m_vtyVotesOnChannelByPeers)
+                    {
+                        //check if the vote is valid
+                        if (gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(kvpVote.Key,
+                                out iIndex))
+                        {
+                            //check if the vote is for or against 
+                            if (kvpVote.Value == GlobalMessageChannelState.ChannelVote.VoteType.Add ||
+                                kvpVote.Value == GlobalMessageChannelState.ChannelVote.VoteType.Kick)
+                            {
+                                iNewStyleForVotes++;
+                            }
+                            else
+                            {
+                                iNewStyleAgainstVotes++;
+                            }
+                        }
+                    }
+                    
+                    DateTime dtmStateLastTime = gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.TimeOfLastMessage();
+                    
+                    //get the time this vote expires
+                    DateTime dtmVoteExpire = dtmStateLastTime;
+                    dtmVoteExpire = gcsChannelState.m_staState == GlobalMessageChannelState.State.VoteJoin? gcsChannelState.m_dtmJoinVoteTime : dtmVoteExpire;
+                    dtmVoteExpire = gcsChannelState.m_staState == GlobalMessageChannelState.State.VoteKick? gcsChannelState.m_dtmKickVoteTime : dtmVoteExpire;
+                    
+                    //get the time dif from now to the time of expire
+                    TimeSpan tspTimeUntilExpire = dtmVoteExpire - dtmStateLastTime;
+                                                  
+                    
+                    
 
                     m_gmsGlobalMessagingState.Add(new ActiveGameManagerSceneTesterGlobalMessageChannel()
                     {
                         m_lActivePeerID = gcsChannelState.m_lChannelPeer,
                         m_staState = gcsChannelState.m_staState,
-                        m_iVotes = iVotes
+                        m_iOldStyleVotes = iOldStyleVotes,
+                        m_iNewStyleForVotes = iNewStyleForVotes,
+                        m_iNewStyleAgainstVotes = iNewStyleAgainstVotes,
+                        m_fSecondsUntilVoteFinished = tspTimeUntilExpire.Seconds
                     });
                 }
             }

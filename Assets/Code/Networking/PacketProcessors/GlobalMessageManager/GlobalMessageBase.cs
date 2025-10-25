@@ -26,7 +26,12 @@ namespace Networking
         //second value = target peer
         //third value = reason
         public Tuple<byte, long, string>[] m_tupActionPerPeer;
-
+        
+        //single action vote, this is a parallel system for kicking and joining players
+        //the goal is to replace the more complicated and bug prone system above
+        public GlobalMessageChannelState.ChannelVote.VoteType m_vtaVoteAction;
+        public long m_lPeerID;
+        
         public override void Serialize(ReadByteStream rbsByteStream)
         {
             VoteMessage vmsMessage = this;
@@ -60,6 +65,10 @@ namespace Networking
             {
                 iSize += NetworkingByteStream.DataSize(Input.m_tupActionPerPeer[i]);
             }
+            
+            //add the size of the new vote system changes
+            iSize += ByteStream.DataSize(Input.m_lPeerID);
+            iSize += ByteStream.DataSize((Byte)Input.m_vtaVoteAction);
 
             return iSize;
         }
@@ -86,6 +95,11 @@ namespace Networking
 
                 NetworkingByteStream.Serialize(wbsStream, ref tupVote);
             }
+            
+            Byte bVoteAction = (Byte)Input.m_vtaVoteAction;
+            
+            ByteStream.Serialize(wbsStream, ref bVoteAction);
+            ByteStream.Serialize(wbsStream, ref Input.m_lPeerID);
         }
 
         public static void Serialize(ReadByteStream rbsStream, ref VoteMessage Input)
@@ -107,6 +121,15 @@ namespace Networking
 
                 Input.m_tupActionPerPeer[i] = tupVote;
             }
+
+            Byte bVoteAction = 0;
+            
+            ByteStream.Serialize(rbsStream, ref bVoteAction);
+            
+            //serialize the new simple vote system
+            Input.m_vtaVoteAction = (GlobalMessageChannelState.ChannelVote.VoteType)bVoteAction;
+
+            ByteStream.Serialize(rbsStream, ref Input.m_lPeerID);
         }
 
         public static void Serialize(WriteByteStream wbsStream, ref Tuple<byte, long, string> Input)

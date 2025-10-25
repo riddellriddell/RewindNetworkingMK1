@@ -55,9 +55,8 @@ namespace Networking
             return gmsCloneState;
         }
 
-        //process a message lLocalPeer is the user in control of this computer
-        //and must be in the "Kept" group when split occurs 
-        public void ProcessMessage(long lLocalPeer, bool bActivePeer, PeerMessageNode pmnMessageNode, TimeSpan tspVoteTimeout, int iMaxPlayerCount, NetworkingDataBridge ndbNetworkingDataBridge = null)
+        //process a message and its effect on who is in the global messaging system
+        public void ProcessMessage(PeerMessageNode pmnMessageNode, TimeSpan tspVoteTimeout, int iMaxPlayerCount, NetworkingDataBridge ndbNetworkingDataBridge = null)
         {
             //update the most recent sorting value 
             m_svaLastMessageSortValue = SortingValue.Max(m_svaLastMessageSortValue, pmnMessageNode.m_svaMessageSortingValue);
@@ -65,7 +64,7 @@ namespace Networking
             //check if peer is in game 
             if (pmnMessageNode.m_lPeerID != long.MinValue && TryGetIndexForPeer(pmnMessageNode.m_lPeerID, out int iIndexOfMessageChannel))
             {
-                //validate message 
+                //validate message (check if it is the next message for this peer and is based on the correct previous message) 
                 bool bIsValidMessage = ValidateAndApplyMessageChangeToChannel(iIndexOfMessageChannel, pmnMessageNode);
 
                 //filter invalid messages
@@ -75,19 +74,28 @@ namespace Networking
                     if (pmnMessageNode.m_bMessageType == VoteMessage.TypeID)
                     {
                         //apply votes
-                        ApplyVotesToChannel(lLocalPeer, bActivePeer, iIndexOfMessageChannel, pmnMessageNode, tspVoteTimeout, iMaxPlayerCount, ndbNetworkingDataBridge);
+                        ApplyVotesToChannel( iIndexOfMessageChannel, pmnMessageNode, tspVoteTimeout, iMaxPlayerCount, ndbNetworkingDataBridge);
                     }
                     else if (ndbNetworkingDataBridge != null && pmnMessageNode.m_gmbMessage is ISimMessagePayload)
                     {
                         //store sim message 
                         ndbNetworkingDataBridge.QueueSimMessage(pmnMessageNode.m_svaMessageSortingValue, pmnMessageNode.m_lPeerID, iIndexOfMessageChannel, pmnMessageNode.m_gmbMessage as ISimMessagePayload);
                     }
+                    
+                    //apply the effects of any votes that may have been cast or might have expired
+                    ApplyAnyConnectionVotes(pmnMessageNode.m_dtmMessageCreationTime,  pmnMessageNode.m_svaMessageSortingValue, tspVoteTimeout, iMaxPlayerCount,ndbNetworkingDataBridge);
+                }
+                else
+                {
+                    Debug.LogError("Message from peer" + pmnMessageNode.m_lPeerID + " failed validation");
                 }
             }
             else
             {
                 //peer cant vote or create inputs because they are not part of the global message system
+                Debug.LogError("Peer" + pmnMessageNode.m_lPeerID + " is not part of the global messaging system");
             }
+
         }
 
         //returns a list of all the peer id's that are in an active state 
@@ -199,7 +207,16 @@ namespace Networking
                 }
 
                 //compare vote start time to current time
-                TimeSpan tspTimeSinceVoteStart =  dtmTime - m_gmcMessageChannels[i].m_dtmVoteTime;
+                TimeSpan tspTimeSinceVoteStart = TimeSpan.Zero;
+
+                if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.VoteJoin)
+                {
+                    tspTimeSinceVoteStart = dtmTime - m_gmcMessageChannels[i].m_dtmJoinVoteTime;
+                }
+                else if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.VoteKick)
+                {
+                    tspTimeSinceVoteStart = dtmTime - m_gmcMessageChannels[i].m_dtmKickVoteTime;
+                }
 
                 //check if vote has timed out
                 if(tspTimeSinceVoteStart > tspVoteTimeout)
@@ -222,6 +239,13 @@ namespace Networking
             }
         }
 
+        //try ang get time based on the sorting value
+        public DateTime TimeOfLastMessage()
+        {
+            //get the sorting value
+            return new DateTime((long)m_svaLastMessageSortValue.m_lSortValueA);
+        }
+        
         //setup channel for a global messenging system with a maximum number of peers
         protected void Init(int iMaxChannelCount)
         {
@@ -264,6 +288,7 @@ namespace Networking
             //check if message is next in peer message chain
             if (iCurrentChannelIndex + 1 != iMessageChannelIndex)
             {
+                Debug.LogError("tried to process message that was not correctly ordered for peer");
                 return false;
             }
 
@@ -274,6 +299,7 @@ namespace Networking
             //check if message parent hash matches last processed message
             if (lMessageParentHash != lHashOfLastValidMessage)
             {
+                Debug.LogError("previous message hash for message did not match actual hash");
                 return false;
             }
 
@@ -289,42 +315,50 @@ namespace Networking
         }
 
         //apply the vote command to the peer
-        protected void ApplyVotesToChannel(long lLocalPeerID, bool bActivePeer, int iMessageChannel,PeerMessageNode pmnMessage , TimeSpan tspVoteTimeout, int iMaxPlayerCount, NetworkingDataBridge ndbNetworkingDataBridge = null)
+        protected void ApplyVotesToChannel(int iMessageChannel,PeerMessageNode pmnMessage , TimeSpan tspVoteTimeout, int iMaxPlayerCount, NetworkingDataBridge ndbNetworkingDataBridge = null)
         {
             DateTime dtmMessageCreationTime = pmnMessage.m_dtmMessageCreationTime;
             VoteMessage vmsMessageNode = pmnMessage.m_gmbMessage as VoteMessage;
 
+            //clear any previous votes that have failed  
+            //RemoveFailedVotes(dtmMessageCreationTime, tspVoteTimeout);
+            
             for (int i = 0; i < vmsMessageNode.m_tupActionPerPeer.Length; i++)
             {
-                // a value of 0 is kick 1 is join
-                byte bIsJoin = vmsMessageNode.m_tupActionPerPeer[i].Item1;
+                //
+                GlobalMessageChannelState.ChannelVote.VoteType vacVoteAction = (GlobalMessageChannelState.ChannelVote.VoteType)vmsMessageNode.m_tupActionPerPeer[i].Item1;
                 long lPeerID = vmsMessageNode.m_tupActionPerPeer[i].Item2;
 
-                //clear any previous votes that have failed  
-                RemoveFailedVotes(dtmMessageCreationTime, tspVoteTimeout);
-
                 //process join commands
-                if (bIsJoin > 0)
+                if (vacVoteAction == GlobalMessageChannelState.ChannelVote.VoteType.Add || vacVoteAction == GlobalMessageChannelState.ChannelVote.VoteType.AntiAdd)
                 {
                     int iIndex = int.MinValue;
                                        
                     //check if vote is already in progress for channel
                     if (TryGetIndexForPeer(lPeerID, out iIndex))
                     {
-                        //check if peer is not alreadty added
+                        //check if peer is not already added
                         if (m_gmcMessageChannels[iIndex].m_staState == GlobalMessageChannelState.State.VoteJoin)
                         {
                             //add join vote to channel
-                            m_gmcMessageChannels[iMessageChannel].AddConnectionVote(iIndex, dtmMessageCreationTime, lPeerID);
+                            m_gmcMessageChannels[iMessageChannel].AddOldStyleVote(iIndex, dtmMessageCreationTime, lPeerID,  vacVoteAction);
+                            
+                            //add new style vote 
+                            m_gmcMessageChannels[iIndex].AddNewStyleVote(pmnMessage.m_lPeerID, vacVoteAction);
                         }
                     }
-                    else if (TryGetEmptyChannel(out iIndex))//try get empty channel
+                    //if we are adding but no add vote exists then find an empty channel to start the vote on
+                    else if (TryGetEmptyChannel(out iIndex) &&  
+                             vacVoteAction != GlobalMessageChannelState.ChannelVote.VoteType.AntiAdd)
                     {
                         //set the channel to start voting process
                         m_gmcMessageChannels[iIndex].StartVoteJoinForPeer(lPeerID, dtmMessageCreationTime);
 
                         //add join vote to channel
-                        m_gmcMessageChannels[iMessageChannel].AddConnectionVote(iIndex, dtmMessageCreationTime, lPeerID);
+                        m_gmcMessageChannels[iMessageChannel].AddOldStyleVote(iIndex, dtmMessageCreationTime, lPeerID, vacVoteAction);
+                        
+                        //add new style vote 
+                        m_gmcMessageChannels[iIndex].AddNewStyleVote(pmnMessage.m_lPeerID, vacVoteAction);
                     }
                 }
                 else //process kick commands
@@ -332,42 +366,127 @@ namespace Networking
                     //get peer ID for kick target
                     if (TryGetIndexForPeer(lPeerID, out int iKickTarget))
                     {
-                        //check that peer has joined 
+                        //check that peer is not in the middle of joining
                         if (m_gmcMessageChannels[iKickTarget].m_staState != GlobalMessageChannelState.State.VoteJoin)
                         {
-                            //check if kick action is alredy happening 
+                            //check if kick action is already happening 
                             if (m_gmcMessageChannels[iKickTarget].m_staState != GlobalMessageChannelState.State.VoteKick)
                             {
                                 m_gmcMessageChannels[iKickTarget].StartVoteKickForPeer(dtmMessageCreationTime);
                             }
 
                             //add kick vote to channel
-                            m_gmcMessageChannels[iMessageChannel].AddKickVote(iKickTarget, dtmMessageCreationTime, lPeerID);
+                            m_gmcMessageChannels[iMessageChannel].AddOldStyleVote(iKickTarget, dtmMessageCreationTime, lPeerID, vacVoteAction);
+                            
+                            //add new style vote 
+                            m_gmcMessageChannels[iKickTarget].AddNewStyleVote(pmnMessage.m_lPeerID, vacVoteAction);
                         }
                     }
                 }
             }
             
-            //process join votes
-            ProcessJoin(iMessageChannel, dtmMessageCreationTime, tspVoteTimeout, out List<int> iJoinPeers);
-                                  
-            //process kick messages 
-            ProcessSplitVotes(lLocalPeerID, bActivePeer, iMessageChannel, dtmMessageCreationTime, tspVoteTimeout, iMaxPlayerCount, out List<int> iKickPeers);
+            // //process join votes
+            // ProcessJoin(iMessageChannel, dtmMessageCreationTime, tspVoteTimeout, out List<int> iJoinPeers);
+            //                       
+            // //process kick messages 
+            // ProcessSplitVotes(lLocalPeerID, bActivePeer, iMessageChannel, dtmMessageCreationTime, tspVoteTimeout, iMaxPlayerCount, out List<int> iKickPeers);
+            //
+            // //changes are only stored in the sim message buffer if updating the main branch or unconfirmed message head 
+            // if (ndbNetworkingDataBridge != null)
+            // {
+            //     //create a sim message for peers joining or leaving game
+            //     AddPeerChangeMessageToSimBuffer(pmnMessage.m_svaMessageSortingValue, iKickPeers, iJoinPeers, ndbNetworkingDataBridge);
+            // }
+            //
+            // //assign peers to channels
+            // AddPeersToGlobalMessenger(iJoinPeers, dtmMessageCreationTime);
+            //
+            // //remove peer channels for kicked group
+            // KickPeers(iKickPeers);
+        }
 
+        protected void ApplyAnyConnectionVotes( DateTime dtmTimeToCheckAt, SortingValue svaMessageSortVal, TimeSpan tspVoteTimeout, int iMaxPlayerCount, NetworkingDataBridge ndbNetworkingDataBridge = null)
+        {
+            //new version of agent kicking, works by timing out commands
+            CheckForSuccessfulVotes( out List<int> iKickPeers, out List<int> iJoinPeers, dtmTimeToCheckAt, tspVoteTimeout);
+            
             //changes are only stored in the sim message buffer if updating the main branch or unconfirmed message head 
             if (ndbNetworkingDataBridge != null)
             {
                 //create a sim message for peers joining or leaving game
-                AddPeerChangeMessageToSimBuffer(pmnMessage.m_svaMessageSortingValue, iKickPeers, iJoinPeers, ndbNetworkingDataBridge);
+                AddPeerChangeMessageToSimBuffer(svaMessageSortVal, iKickPeers, iJoinPeers, ndbNetworkingDataBridge);
             }
 
             //assign peers to channels
-            AddPeersToGlobalMessenger(iJoinPeers, dtmMessageCreationTime);
+            AddPeersToGlobalMessenger(iJoinPeers, dtmTimeToCheckAt);
 
             //remove peer channels for kicked group
             KickPeers(iKickPeers);
         }
 
+        
+        //check if anyone should be kicked
+        protected void CheckForSuccessfulVotes(out List<int> iKickChannels, out List<int> iJoinChannels,  DateTime dtmTimeToCheck, TimeSpan tspVoteTimeout)
+        {
+            //loop through channels to get number of active channels
+            int iActiveChannelCount = ActiveChannelCount();
+            
+            //create an array for all the votes
+            iJoinChannels = new List<int>();
+            iKickChannels = new List<int>();
+            
+            //loop through all clients 
+            for(int i = 0 ; i < m_gmcMessageChannels.Count ; i++)
+            {
+                DateTime dtmTimeOfVoteStart = dtmTimeToCheck;
+                
+                //check if the vote is about to end
+                if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.VoteKick)
+                {
+                    dtmTimeOfVoteStart = m_gmcMessageChannels[i].m_dtmKickVoteTime;
+                }
+                else if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.VoteJoin)
+                {
+                    dtmTimeOfVoteStart = m_gmcMessageChannels[i].m_dtmJoinVoteTime;
+                }
+                else
+                {
+                    continue;
+                }
+                
+                //decide if this peer should be added to the keep or kick array depending on the type of vote
+                List<int> targetOut = m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.VoteKick ? iKickChannels : iJoinChannels;
+                
+                //check time out or enough people have voted that the result can't change
+                if ((dtmTimeToCheck - dtmTimeOfVoteStart ) > tspVoteTimeout)
+                {
+                    //evaluate if the vote was successful despite timing out
+                    if (m_gmcMessageChannels[i].IsMajorityForVote())
+                    {
+                        //get the channel index
+                        if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.VoteKick)
+                        
+                        //add to list of all kick targets
+                        targetOut.Add(i);
+                    }
+                }
+                else if (m_gmcMessageChannels[i].IsVoteResultCertain(iActiveChannelCount) &&
+                         m_gmcMessageChannels[i].IsMajorityForVote())
+                {
+                    targetOut.Add(i);
+                }
+                else
+                {
+                    continue;
+                }
+                
+                //clear and reset votes
+                //this only happens if the result was certain or the vote timed out
+                m_gmcMessageChannels[i].m_staState = GlobalMessageChannelState.State.Assigned;
+                m_gmcMessageChannels[i].m_vtyVotesOnChannelByPeers.Clear();
+            }
+        }
+        
         //process split vote
         protected void ProcessSplitVotes(long lLocalPeerID, bool bActivePeer, int iChangedMessageChannel, DateTime dtmTimeOfVote, TimeSpan tspVoteTimeout, int iMaxPlayerCount, out List<int> iKickPeers)
         {
@@ -483,8 +602,8 @@ namespace Networking
         //process join vote
         protected void ProcessJoin(int iMessagingChannel, DateTime dtmTimeOfVote, TimeSpan tspVoteTimeout, out List<int> iJoinPeers)
         {
-            //first value is the channel seccond is number of voted
-            List<Tuple<int, int>> tupJoinRequest = new List<Tuple<int, int>>();
+            //first value is the channel second is number of votes for, third is votes against
+            List<Tuple<int, int, int>> tupJoinRequest = new List<Tuple<int, int, int>>();
 
             iJoinPeers = new List<int>();
 
@@ -501,7 +620,7 @@ namespace Networking
                     m_gmcMessageChannels[i].m_lChannelPeer == cvtVote.m_lPeerID)
                 {
                     //add peer to the list
-                    tupJoinRequest.Add(new Tuple<int, int>(i, 0));
+                    tupJoinRequest.Add(new Tuple<int, int, int>(i, 0, 0));
                 }
             }
 
@@ -524,7 +643,7 @@ namespace Networking
                 //loop through all join requests 
                 for (int j = 0; j < tupJoinRequest.Count; j++)
                 {
-                    Tuple<int, int> tupRequest = tupJoinRequest[j];
+                    Tuple<int, int, int> tupRequest = tupJoinRequest[j];
 
                     GlobalMessageChannelState.ChannelVote cvtVote = gcsChannel.m_chvVotes[tupRequest.Item1];
 
@@ -534,7 +653,7 @@ namespace Networking
                    m_gmcMessageChannels[tupRequest.Item1].m_lChannelPeer == cvtVote.m_lPeerID)
                     {
                         //increment votes for add                        
-                        tupJoinRequest[j] = new Tuple<int, int>(tupRequest.Item1, tupRequest.Item2 + 1);
+                        tupJoinRequest[j] = new Tuple<int, int, int>(tupRequest.Item1, tupRequest.Item2 + 1, 0);
                     }
                 }
             }
@@ -592,7 +711,11 @@ namespace Networking
                 {
                     m_gmcMessageChannels[j].ClearVotesForChannelIndex(iJoinList[i]);
                 }
+                
+                //clear new style votes
+                m_gmcMessageChannels[iJoinList[i]].m_vtyVotesOnChannelByPeers.Clear();
             }
+
         }
 
         //perfotm split
@@ -611,6 +734,9 @@ namespace Networking
                     //clear any votes for kicked player
                     m_gmcMessageChannels[j].ClearVotesForChannelIndex(ikickTarget);
                 }
+                
+                //clear new style votes
+                m_gmcMessageChannels[ikickTarget].m_vtyVotesOnChannelByPeers.Clear();
             }
         }
 

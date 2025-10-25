@@ -253,9 +253,21 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
             return false;
         }
 
+        int compareResult = Compare(m_keyKeys[m_iQueueEnter], Key);
+        
         //check if new value is past end list 
-        if (Compare(m_keyKeys[m_iQueueEnter], Key) < 1)
+        if (compareResult < 1)
         {
+            //check for collision
+            if (compareResult == 0)
+            {
+                //set collision to true
+                bCollision = true;
+                
+                //set the index
+                 iCollisionIndex = m_iCount - 1;
+            }
+            
             //return index for no value greater than key
             iIndex = int.MaxValue;
 
@@ -264,7 +276,7 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
 
         iIndex = m_iCount - 1;
 
-        //perform binary sarch on remaining values 
+        //perform linear search on remaining values 
         for (int i = 0; i < m_iCount; i++)
         {
             int iCompareResult = Compare(m_keyKeys[UnsafeRemapIndex(i)], Key);
@@ -474,10 +486,19 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
 
             return false;
         }
+        
+        int iExitCompareResult = Compare(m_keyKeys[m_iQueueExit], Key);
 
         //check if new value is past end list 
-        if (Compare(m_keyKeys[m_iQueueExit], Key) > -1)
+        if (iExitCompareResult > -1)
         {
+            //check for collision
+            if (iExitCompareResult == 0)
+            {
+                iCollisionIndex = 0;
+                bCollision = true;
+            }
+            
             //return index for no value greater than key
             iIndex = int.MinValue;
 

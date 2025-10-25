@@ -100,7 +100,7 @@ namespace Networking
 
         //adds the effect of all the messages after the last message processed by gmsStartMessageState state 
         //and stores the result in LatestState
-        public void UpdateFinalMessageState(long lLocalPeerID, bool bActivePeer, GlobalMessagingState gmsStartMessageState,NetworkingDataBridge ndbNetworkingDataBridge, TimeSpan tspVoteTimeout, int iMaxPlayerCount)
+        public void UpdateFinalMessageState(GlobalMessagingState gmsStartMessageState,NetworkingDataBridge ndbNetworkingDataBridge, TimeSpan tspVoteTimeout, int iMaxPlayerCount)
         {
             LatestState.ResetToState(gmsStartMessageState);
 
@@ -110,16 +110,17 @@ namespace Networking
             //move on to next message 
             iStartIndex++;
 
+            //apply all the messages that are not in the message chain that happen after the last message chain link 
             for (int i = iStartIndex; i < UnConfirmedMessageBuffer.Count; i++)
             {
                 //check if message is new and should be added to network bridge message buffer
                 if(UnConfirmedMessageBuffer.Values[i].m_svaMessageSortingValue >= m_svaStateProcessedUpTo)
                 {
-                    LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i], tspVoteTimeout, iMaxPlayerCount, ndbNetworkingDataBridge);
+                    LatestState.ProcessMessage(UnConfirmedMessageBuffer.Values[i], tspVoteTimeout, iMaxPlayerCount, ndbNetworkingDataBridge);
                 }
                 else    
                 {
-                    LatestState.ProcessMessage(lLocalPeerID, bActivePeer, UnConfirmedMessageBuffer.Values[i], tspVoteTimeout, iMaxPlayerCount, null);
+                    LatestState.ProcessMessage( UnConfirmedMessageBuffer.Values[i], tspVoteTimeout, iMaxPlayerCount, null);
                 }                
             }
 

@@ -210,7 +210,7 @@ namespace Networking
             }
         }
                
-        public void CaluclateGlobalMessagingStateAtEndOflink(long lLocalPeerID, bool bActivePeer, GlobalMessagingState gmsStateAtLinkStart, TimeSpan tspVoteTimeout, int iMaxPlayerCount, NetworkingDataBridge ndbNetworkingDataBridge = null)
+        public void CaluclateGlobalMessagingStateAtEndOflink(long lLocalPeerID, GlobalMessagingState gmsStateAtLinkStart, TimeSpan tspVoteTimeout, int iMaxPlayerCount, NetworkingDataBridge ndbNetworkingDataBridge = null)
         {
             if(m_gmsState == null)
             {
@@ -218,11 +218,14 @@ namespace Networking
                 m_gmsState = new GlobalMessagingState(iMaxChannels);
             }
 
+            //reset to the start of the chain
             m_gmsState.ResetToState(gmsStateAtLinkStart);
 
+            //add the effects of all the messages, queueing them into the network data bridge allong with
+            //and connection change messges
             for(int i = 0; i < m_pmnMessages.Count; i++)
             {
-                m_gmsState.ProcessMessage(lLocalPeerID, bActivePeer, m_pmnMessages[i], tspVoteTimeout, iMaxPlayerCount, ndbNetworkingDataBridge);
+                m_gmsState.ProcessMessage( m_pmnMessages[i], tspVoteTimeout, iMaxPlayerCount, ndbNetworkingDataBridge);
             }
 
             //check that end state matches expected state

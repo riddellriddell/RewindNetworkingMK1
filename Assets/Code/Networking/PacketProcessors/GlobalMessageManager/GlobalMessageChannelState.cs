@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
 using Utility;
 
 namespace Networking
@@ -22,8 +23,10 @@ namespace Networking
             public enum VoteType : byte
             {
                 None, //no active vote for channel
-                Kick, //kick the player 
                 Add, // add a player to the channel
+                AntiAdd, // add a player to the channel
+                Kick, //kick the player 
+                AntiKick, //don't aggree with the current kick command for this channle
             }
 
             public VoteType m_vtpVoteType;
@@ -39,6 +42,7 @@ namespace Networking
                 if (dtmCurrentTime < m_dtmVoteTime)
                 {
                     //should not get into this state 
+                    Debug.LogError($"The time of vote { m_dtmVoteTime.ToString()} is later than the current time { dtmCurrentTime.ToString()}. this should never happen.");
                     return false;
                 }
 
@@ -55,7 +59,10 @@ namespace Networking
         public long m_lChannelPeer;
 
         //the time when voting on assigning peer to this channel started
-        public DateTime m_dtmVoteTime;
+        public DateTime m_dtmJoinVoteTime;
+        
+        //the time when voting on assigning peer to this channel started
+        public DateTime m_dtmKickVoteTime;
         
         //the time when the target peer was assigned
         public DateTime m_dtmAssignedTime;
@@ -63,6 +70,9 @@ namespace Networking
         //the current state of this channel
         public State m_staState;
 
+        //list of all votes on this channel made by other peers
+        public Dictionary<long, ChannelVote.VoteType> m_vtyVotesOnChannelByPeers;
+        
         //list of all the active votes by this channel on other channels
         public List<ChannelVote> m_chvVotes;
 
@@ -88,18 +98,17 @@ namespace Networking
         {
             m_lChannelPeer = chsChannelState.m_lChannelPeer;
 
-            m_dtmVoteTime = chsChannelState.m_dtmVoteTime;
+            m_dtmJoinVoteTime = chsChannelState.m_dtmJoinVoteTime;
+            
+            m_dtmKickVoteTime = chsChannelState.m_dtmKickVoteTime;
             
             m_dtmAssignedTime = chsChannelState.m_dtmAssignedTime;
 
             m_staState = chsChannelState.m_staState;
+            
+            m_vtyVotesOnChannelByPeers = new Dictionary<long, ChannelVote.VoteType>(chsChannelState.m_vtyVotesOnChannelByPeers);
 
-            //copy across votes 
-            m_chvVotes.Clear();
-            for (int i = 0; i < chsChannelState.m_chvVotes.Count; i++)
-            {
-                m_chvVotes.Add(chsChannelState.m_chvVotes[i]);
-            }
+            m_chvVotes = new List<ChannelVote>(chsChannelState.m_chvVotes);
 
             m_lHashOfLastNodeProcessed = chsChannelState.m_lHashOfLastNodeProcessed;
 
@@ -117,8 +126,11 @@ namespace Networking
             m_lChannelPeer = long.MinValue;
 
             m_staState = State.Empty;
-
-            m_dtmVoteTime = DateTime.MinValue;
+            
+            m_vtyVotesOnChannelByPeers = new Dictionary<long, ChannelVote.VoteType>(iMaxPeerCount);
+            
+            m_dtmJoinVoteTime = DateTime.MinValue;
+            m_dtmKickVoteTime = DateTime.MinValue;
             m_dtmAssignedTime = DateTime.MinValue;
 
             m_chvVotes = new List<ChannelVote>(iMaxPeerCount);
@@ -132,47 +144,145 @@ namespace Networking
                     m_vtpVoteType = ChannelVote.VoteType.None
                 });
             }
+            
 
             m_lHashOfLastNodeProcessed = 0;
             m_iLastMessageIndexProcessed = 0;
             m_msvLastSortValue = SortingValue.MinValue;
 
         }
-
-        //process channel change message
-        public void AddKickVote(int iPeerChannelIndex, DateTime dtmCreationTime, long lTargetPeerID)
+        
+        public void AddOldStyleVote(int iPeerChannelIndex, DateTime dtmCreationTime, long lTargetPeerID,
+            ChannelVote.VoteType vtyVoteType)
         {
             //channel vote 
             m_chvVotes[iPeerChannelIndex] = new ChannelVote()
             {
                 m_dtmVoteTime = dtmCreationTime,
                 m_lPeerID = lTargetPeerID,
-                m_vtpVoteType = ChannelVote.VoteType.Kick
+                m_vtpVoteType = vtyVoteType
             };
         }
 
-        //add connection vote
-        public void AddConnectionVote(int iPeerChannelIndex, DateTime dtmCreationTime, long lTargetPeerID)
+        public void AddNewStyleVote(long lPeerMakingTheVote, ChannelVote.VoteType vtyVoteType)
         {
-            //channel vote 
-            m_chvVotes[iPeerChannelIndex] = new ChannelVote()
-            {
-                m_dtmVoteTime = dtmCreationTime,
-                m_lPeerID = lTargetPeerID,
-                m_vtpVoteType = ChannelVote.VoteType.Add
-            };
+            //add or overwrite the vote 
+            m_vtyVotesOnChannelByPeers[lPeerMakingTheVote] = vtyVoteType;
         }
+
+        public void RemoveVoteByPeer(long lPeerToRemoveTheVoteOf)
+        {
+            m_vtyVotesOnChannelByPeers.Remove(lPeerToRemoveTheVoteOf);
+        }
+        
+        //has enough people voted on this channel that there is no chance for the 
+        //vote result to change, eg if you need 51% approve out of 10 people an 6 have voted yes
+        //then we don't need to wait for the last 4 people
+        public bool IsVoteResultCertain(int iNumberOfActivePeers)
+        {
+            //number of votes needed (50%)
+            int iMinVotesForSuccess = (iNumberOfActivePeers + 1) / 2;
+            
+            //check what type of vote we are looking for
+            ChannelVote.VoteType vtyYesVote = ChannelVote.VoteType.None;
+            ChannelVote.VoteType vtyNoVote = ChannelVote.VoteType.None;
+
+            if (m_staState == State.VoteJoin)
+            {
+                vtyYesVote = ChannelVote.VoteType.Add;
+                vtyNoVote = ChannelVote.VoteType.AntiAdd;
+            }
+            else if (m_staState == State.VoteKick)
+            {
+                vtyYesVote = ChannelVote.VoteType.Kick;
+                vtyNoVote = ChannelVote.VoteType.AntiKick;
+            }
+
+            int iNumberOfYesVotes = 0;
+            int iNumberOfNoVotes = 0;
+            
+            //get votes 
+            foreach (var vtyVote in m_vtyVotesOnChannelByPeers)
+            {
+                if (vtyVote.Value == vtyYesVote)
+                {
+                    iNumberOfYesVotes++;
+                }
+                else if (vtyVote.Value == vtyNoVote)
+                {
+                    iNumberOfNoVotes++;
+                }
+                
+            }
+            
+            //check ratio of vote to not vote 
+            if (iNumberOfYesVotes >= iMinVotesForSuccess)
+            {
+                return true;
+            }
+
+            return false;
+        }
+        
+        //check if vote is for or against 
+        //this does not factor in time 
+        public bool IsMajorityForVote()
+        {
+              
+            //check what type of vote we are looking for
+            ChannelVote.VoteType vtyYesVote = ChannelVote.VoteType.None;
+            ChannelVote.VoteType vtyNoVote = ChannelVote.VoteType.None;
+
+            if (m_staState == State.VoteJoin)
+            {
+                vtyYesVote = ChannelVote.VoteType.Add;
+                vtyNoVote = ChannelVote.VoteType.AntiAdd;
+            }
+            else if (m_staState == State.VoteKick)
+            {
+                vtyYesVote = ChannelVote.VoteType.Kick;
+                vtyNoVote = ChannelVote.VoteType.AntiKick;
+            }
+
+            
+            int iNumberOfYesVotes = 0;
+            int iNumberOfNoVotes = 0;
+            
+            //get votes 
+            foreach (var vtyVote in m_vtyVotesOnChannelByPeers)
+            {
+                if (vtyVote.Value == vtyYesVote)
+                {
+                    iNumberOfYesVotes++;
+                }
+                else if (vtyVote.Value == vtyNoVote)
+                {
+                    iNumberOfNoVotes++;
+                }
+                
+            }
+
+            if (iNumberOfYesVotes > iNumberOfNoVotes)
+            {
+                return true;
+            }
+            
+            return false;
+        }
+        
 
         //clear channel
         public void ClearChannel()
         {
-            ClearVotes();
+            ClearVotesByChannel();
 
             //reset peer
             m_lChannelPeer = long.MinValue;
-            m_dtmVoteTime = DateTime.MinValue;
+            m_dtmJoinVoteTime = DateTime.MinValue;
+            m_dtmKickVoteTime = DateTime.MinValue;
             m_dtmAssignedTime = DateTime.MinValue;
             m_staState = State.Empty;
+            m_vtyVotesOnChannelByPeers.Clear();
 
             //reset hash head
             m_lHashOfLastNodeProcessed = 0;
@@ -180,7 +290,7 @@ namespace Networking
         }
 
         //clear all votes by channel
-        public void ClearVotes()
+        public void ClearVotesByChannel()
         {
             //clear all votes
             for (int i = 0; i < m_chvVotes.Count; i++)
@@ -197,27 +307,36 @@ namespace Networking
         //start vote on channel to assign peer to it
         public void StartVoteJoinForPeer(long lPeerID, DateTime dtmVoteStartTime)
         {
-            ClearVotes();
+            ClearVotesByChannel();
+            
+            //clear new style votes
+            m_vtyVotesOnChannelByPeers.Clear();
+            
             m_lChannelPeer = lPeerID;
-            m_dtmVoteTime = dtmVoteStartTime;
+            m_dtmJoinVoteTime = dtmVoteStartTime;
             m_staState = State.VoteJoin;
+            
         }
 
         public void StartVoteKickForPeer(DateTime dtmVoteStartTime)
         {
-            m_dtmVoteTime = dtmVoteStartTime;
+            //clear all new style votes on this chanel
+            m_vtyVotesOnChannelByPeers.Clear();
+            
+            m_dtmKickVoteTime = dtmVoteStartTime;
             m_staState = State.VoteKick;
         }
 
         //make the peer with id lPeerID in control of this channel
         public void AssignPeerToChannel(long lPeerID, DateTime dtmTimeOfJoin)
         {
-            ClearVotes();
+            ClearVotesByChannel();
 
             m_lChannelPeer = lPeerID;
             m_staState = State.Assigned;
-            m_dtmVoteTime = dtmTimeOfJoin;
-            m_dtmAssignedTime = m_dtmVoteTime;
+            m_dtmJoinVoteTime = dtmTimeOfJoin;
+            m_dtmAssignedTime = m_dtmJoinVoteTime;
+            m_vtyVotesOnChannelByPeers.Clear();
         }
 
         //gets index of any vote for peer 
@@ -269,19 +388,22 @@ namespace Networking
             mcsOutState.m_lChannelPeer = m_lChannelPeer;
 
             //the time when voting on assigning peer to this channel started
-            mcsOutState.m_dtmVoteTime = m_dtmVoteTime;
+            mcsOutState.m_dtmJoinVoteTime = m_dtmJoinVoteTime;
+            
+            //get the time when kicking the peer was started
+            mcsOutState.m_dtmKickVoteTime = m_dtmKickVoteTime;
             
             //clone the time a client was assigned to this channel 
             mcsOutState.m_dtmAssignedTime = m_dtmAssignedTime;
 
             //the current state of this channel
             mcsOutState.m_staState = m_staState;
+            
+            //copy the votes dictionary
+            mcsOutState.m_vtyVotesOnChannelByPeers = new Dictionary<long, ChannelVote.VoteType>(m_vtyVotesOnChannelByPeers);
 
-            //list of all the active votes by this channel on other channels
-            for(int i = 0; i < mcsOutState.m_chvVotes.Count; i++)
-            {
-                mcsOutState.m_chvVotes[i] = m_chvVotes[i];
-            }            
+            //copy the votes list
+            mcsOutState.m_chvVotes = new List<ChannelVote>(m_chvVotes);
 
             //the hash of the last valid node processed for this channel
             mcsOutState.m_lHashOfLastNodeProcessed = m_lHashOfLastNodeProcessed;
@@ -360,11 +482,34 @@ namespace Networking
                 Output.m_chvVotes.Add(cvhtVote);
             }
 
+            //TODO::JackR check if this is deterministic
+            int iVoteCount = 0;
+            
+            ByteStream.Serialize(rbsByteStream, ref iVoteCount);
+
+            Output.m_vtyVotesOnChannelByPeers = new Dictionary<long, GlobalMessageChannelState.ChannelVote.VoteType>(iVoteCount);
+            
+            //add in all the votes and the peers that did the vots
+            for (int i = 0; i < iVoteCount; i++)
+            {
+                Byte bVoteType = 0;
+                ByteStream.Serialize(rbsByteStream, ref bVoteType);
+                
+                long lPeerID = 0;
+                ByteStream.Serialize(rbsByteStream, ref lPeerID);
+                
+                Output.m_vtyVotesOnChannelByPeers[lPeerID] = (GlobalMessageChannelState.ChannelVote.VoteType)bVoteType;
+            }
+            
+
             //assigned peer
             ByteStream.Serialize(rbsByteStream, ref Output.m_lChannelPeer);
 
-            //time of last vote start
-            ByteStream.Serialize(rbsByteStream, ref Output.m_dtmVoteTime);
+            //time of last join vote start
+            ByteStream.Serialize(rbsByteStream, ref Output.m_dtmJoinVoteTime);
+            
+            //time of last kick vote started
+            ByteStream.Serialize(rbsByteStream, ref Output.m_dtmKickVoteTime);
             
             //time last peer was assigned 
             ByteStream.Serialize(rbsByteStream, ref Output.m_dtmAssignedTime);
@@ -401,12 +546,31 @@ namespace Networking
 
                 Serialize(wbsByteStream, ref chvVote);
             }
+            
+            
+            //todo:: move this to a dictionary serialization func
+            int iVoteCount = Input.m_vtyVotesOnChannelByPeers.Count;
+            
+            ByteStream.Serialize(wbsByteStream, ref iVoteCount );
+
+            //add in all the votes and the peers that did the vots
+            foreach ( var kvp in Input.m_vtyVotesOnChannelByPeers)
+            {
+                Byte bVoteType = (Byte)kvp.Value;
+                ByteStream.Serialize(wbsByteStream, ref bVoteType);
+                
+                long lPeerID = kvp.Key;
+                ByteStream.Serialize(wbsByteStream, ref lPeerID);
+            }
 
             //assigned peer
             ByteStream.Serialize(wbsByteStream, ref Input.m_lChannelPeer);
 
-            //time of last vote
-            ByteStream.Serialize(wbsByteStream, ref Input.m_dtmVoteTime);
+            //time of last join vote
+            ByteStream.Serialize(wbsByteStream, ref Input.m_dtmJoinVoteTime);
+            
+            //time of last kick vote
+            ByteStream.Serialize(wbsByteStream, ref Input.m_dtmKickVoteTime);
             
             //time last peer was assigned 
             ByteStream.Serialize(wbsByteStream, ref Input.m_dtmAssignedTime);
@@ -437,14 +601,21 @@ namespace Networking
             {
                 iSize += DataSize(Input.m_chvVotes[i]);
             }
+            
+            //add the size of dictionary of votes
+            iSize += ByteStream.DataSize(Input.m_vtyVotesOnChannelByPeers.Count);
+            
+            iSize += sizeof(long) * Input.m_vtyVotesOnChannelByPeers.Count;
+            iSize += sizeof(byte) * Input.m_vtyVotesOnChannelByPeers.Count;
 
             iSize += ByteStream.DataSize(Input.m_lChainLinkHeadHash);
-            iSize += ByteStream.DataSize(Input.m_dtmVoteTime);
+            iSize += ByteStream.DataSize(Input.m_dtmJoinVoteTime);
+            iSize += ByteStream.DataSize(Input.m_dtmKickVoteTime);
             iSize += ByteStream.DataSize(Input.m_dtmAssignedTime);
             iSize += ByteStream.DataSize(Input.m_iLastMessageIndexProcessed);
             iSize += ByteStream.DataSize(Input.m_lChannelPeer);
             iSize += ByteStream.DataSize(Input.m_lHashOfLastNodeProcessed);
-            iSize += DataSize(Input.m_msvLastSortValue);
+            iSize += NetworkingByteStream.DataSize(Input.m_msvLastSortValue);
             iSize += ByteStream.DataSize((byte)Input.m_staState);
 
             return iSize;
