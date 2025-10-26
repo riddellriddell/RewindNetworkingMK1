@@ -38,7 +38,7 @@ public class ClassWithIDFactory
             return iID;
         }
 
-       // Debug.Assert(m_tipTypeIDs[iID] == null, $"Two types {m_tipTypeIDs[iID].ToString()}, {typType.ToString()} have the same index {iID}");
+       //Debug.Assert(m_tipTypeIDs[iID] == null, $"Two types {m_tipTypeIDs[iID].ToString()}, {typType.ToString()} have the same index {iID}");
 
         m_tipTypeIDs[iID] = typType;
 
@@ -51,6 +51,9 @@ public class ClassWithIDFactory
         {
             throw new Exception($"ID {iID} does not exists in factory");
         }
+        
+        //check if class is valid 
+        Debug.Assert(typeof(T).IsAssignableFrom(m_tipTypeIDs[iID]), $" {m_tipTypeIDs[iID].ToString()} is not a type of {typeof(T).ToString() }" );
 
         return (T)Activator.CreateInstance(m_tipTypeIDs[iID]);
     }

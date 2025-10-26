@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Utility;
@@ -146,7 +147,7 @@ namespace Networking
     {
         public static int TypeID { get; set; } = int.MinValue;
 
-        public static bool HasBeedAddedToClassFactory
+        public static bool HasBeenAddedToClassFactory
         {
             get
             {
@@ -182,4 +183,59 @@ namespace Networking
             NetworkingByteStream.Serialize(wbsByteStream, ref m_sscStartStateCandidate);
         }
     }
+    
+    //this is used to tell other peers when you started simulating the global chain
+    //this is used so other peers won't expect a chain state from you if you don't have it
+    public class GlobalChainSimulationStartTimePacket:DataPacket
+    {
+        public static int TypeID { get; set; } = int.MinValue;
+
+        public static bool HasBeenAddedToClassFactory
+        {
+            get
+            {
+                return TypeID != int.MinValue;
+            }
+        }
+
+        public override int GetTypeID
+        {
+            get
+            {
+                return TypeID;
+            }
+        }
+
+        public DateTime m_dtmStartOfChainSimulation;
+
+        public NetworkGlobalMessengerProcessor.State m_staGlobalMessagingState;
+
+        public override int PacketPayloadSize
+        {
+            get
+            {
+                int size = ByteStream.DataSize(m_dtmStartOfChainSimulation.Ticks);
+                size += sizeof(int);
+
+                return size;
+            }
+        }
+
+        public override void DecodePacket(ReadByteStream rbsByteStream)
+        {
+            ByteStream.Serialize(rbsByteStream, ref m_dtmStartOfChainSimulation);
+
+            int enumAsInt = 0;
+            ByteStream.Serialize(rbsByteStream, ref enumAsInt);
+            m_staGlobalMessagingState = (NetworkGlobalMessengerProcessor.State)enumAsInt;
+        }
+
+        public override void EncodePacket(WriteByteStream wbsByteStream)
+        {
+            ByteStream.Serialize(wbsByteStream, ref m_dtmStartOfChainSimulation);
+            int enumAsInt = (int)m_staGlobalMessagingState;
+            ByteStream.Serialize(wbsByteStream, ref enumAsInt);
+        }
+    }
 }
+

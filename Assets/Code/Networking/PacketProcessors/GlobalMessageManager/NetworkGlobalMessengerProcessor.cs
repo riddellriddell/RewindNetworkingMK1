@@ -73,12 +73,18 @@ namespace Networking
 
         //sim interface for selecting which peers to add or kick from game 
         public IGlobalMessageKickJoinSimVerificationInterface m_sviSimKickJoinInterface;
+        
+        //when did this peer start simulating the global message state system
+        //this is used to decide when to wait for peers to send their connection state 
+        public DateTime m_dtmGlobalMessageSystemActiveStartTime { get; private set; } = DateTime.MaxValue;
 
         //the local time this peer started connecting  / syncronizing with the global message system 
         protected DateTime m_dtmTimeOfStateCollectionStart = DateTime.MinValue;
 
         //the local time the connection process was started by the game manager 
         protected DateTime m_dtmConnectionStartTime = DateTime.MinValue;
+
+
 
         //should the best start state be reevaluated 
         protected bool m_bStartStateCandidatesDirty = true;
@@ -137,6 +143,9 @@ namespace Networking
 
             GlobalChainStatePacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalChainStatePacket>(GlobalChainStatePacket.TypeID);
 
+            GlobalChainSimulationStartTimePacket.TypeID =
+                ParentNetworkConnection.PacketFactory.AddType<GlobalChainSimulationStartTimePacket>(
+                    GlobalChainSimulationStartTimePacket.TypeID);
         }
 
         public override void ApplyNetworkSettings(NetworkConnectionSettings ncsSettings)
@@ -197,6 +206,18 @@ namespace Networking
                             m_staState = State.Active;
 
                             SetTimeOfNextPeerChainLink(m_tnpNetworkTime.NetworkTime);
+                            
+                            //set the time the peer joined the chain
+                            m_dtmGlobalMessageSystemActiveStartTime = NetworkTimeOfConnectionEst;
+                            
+                            //create packet to tell all peers that this peer has conencted 
+                            GlobalChainSimulationStartTimePacket stpStartTimePacket =
+                                new GlobalChainSimulationStartTimePacket();
+
+                            stpStartTimePacket.m_dtmStartOfChainSimulation = m_dtmGlobalMessageSystemActiveStartTime;
+                            
+                            //tell all peers that this client has connected
+                            ParentNetworkConnection.TransmitPacketToAll(stpStartTimePacket);
                         }
                     }
                     break;
@@ -456,7 +477,7 @@ namespace Networking
             }
             
             //check if enough candidates have been received
-            int iConnectedPeers = ChildConnectionProcessors.Count;
+            int iConnectedPeers = NumberOfConnectedPeers();
 
             //check if there are any connected peers
             if (iConnectedPeers == 0)
@@ -464,7 +485,9 @@ namespace Networking
                 return;
             }
 
-            //check if enough states have been recieved 
+            //check if enough states have been received 
+            //this is causing issues because some of the peers are in the same state as the connecting peer and 
+            //don't currently have a state to send
             float fPercentOfStatesReceived = m_chmChainManager.m_iStartStatesRecieved / (float)iConnectedPeers;
 
             //TODO: Remove this debug code when startup problem fixed 
@@ -902,12 +925,63 @@ namespace Networking
                 }
             }
         }
+
+        //this might be useless
+        public int NumberOfConnectedPeers()
+        {
+            int iNumberOfPeersWithGlobalMessageState = 0;
+            foreach (ConnectionGlobalMessengerProcessor childConnection in ChildConnectionProcessors.Values)
+            {
+                //check if connecection is conencted
+                if (childConnection.ParentConnection.Status != Connection.ConnectionStatus.Connected)
+                {
+                    continue;
+                }
+                
+                //check if the simulation start time is after the given date
+                if (childConnection.m_staPeerGlobalMessageState == State.Active ||
+                    childConnection.m_staPeerGlobalMessageState == State.Connected)
+                {
+                    iNumberOfPeersWithGlobalMessageState++;
+                }
+            }
+
+            return iNumberOfPeersWithGlobalMessageState;
+        }
+        
+        //when this peer gets synced, check if there are any non synced peers and send them the sync state
+        //this is so non synced peers can judge the average sync state and correctly choose the chain link to start with
+        public void SendUnSyncedPeersStateOnSync()
+        {
+            //loop thorugh all peers and check what their state is
+            foreach (ConnectionGlobalMessengerProcessor conChildConnection in ChildConnectionProcessors.Values)
+            {
+                //check if connecection is conencted
+                if (conChildConnection.ParentConnection.Status != Connection.ConnectionStatus.Connected)
+                {
+                    continue;
+                }
+                
+                //check if the simulation start time is after the given date
+                if (conChildConnection.m_staPeerGlobalMessageState == State.ConnectAsAdditionalPeer)
+                {
+                    //sync the current connection state with the peer
+                    conChildConnection.StartStateSync();
+                }
+            }
+        }
     }
 
     public class ConnectionGlobalMessengerProcessor : ManagedConnectionPacketProcessor<NetworkGlobalMessengerProcessor>
     {
         //has this peer sent a start state 
         public bool m_bHasRecievedStartState = false;
+
+        //if this peer connected and has a chain state this is the earliest time of their chain
+        public DateTime m_dtmEarliestChainState = DateTime.MaxValue;
+
+        public NetworkGlobalMessengerProcessor.State m_staPeerGlobalMessageState =
+            NetworkGlobalMessengerProcessor.State.WaitingForConnection;
 
         public override int Priority
         {
@@ -923,13 +997,23 @@ namespace Networking
 
             if (cstNewState == Connection.ConnectionStatus.Connected)
             {
+                //send them the local state
                 StartStateSync();
+
+                //tell them about when this peer joined the global message chain
+                SyncLocalGlobalMessageState();
             }
         }
 
         public override void OnConnectionReset()
         {
+            m_dtmEarliestChainState = DateTime.MaxValue;
+            m_staPeerGlobalMessageState = NetworkGlobalMessengerProcessor.State.WaitingForConnection;
+            
             StartStateSync();
+            
+            //tell them about when this peer joined the global message chain
+            SyncLocalGlobalMessageState();
         }
 
         public override DataPacket ProcessReceivedPacket(Connection conConnection, DataPacket pktInputPacket)
@@ -966,6 +1050,15 @@ namespace Networking
                 }
 
                 return null;
+            }
+            else if (pktInputPacket is GlobalChainSimulationStartTimePacket)
+            {
+                GlobalChainSimulationStartTimePacket stpStartTimePacket =
+                    pktInputPacket as GlobalChainSimulationStartTimePacket;
+                
+                //set the start time for the connection
+                m_dtmEarliestChainState =  stpStartTimePacket.m_dtmStartOfChainSimulation;
+                m_staPeerGlobalMessageState = stpStartTimePacket.m_staGlobalMessagingState;
             }
 
 
@@ -1004,7 +1097,6 @@ namespace Networking
                 //send state to peer
                 m_tParentPacketProcessor.ParentNetworkConnection.SendPacket(ParentConnection, cspStatePacket);
 
-
                 //send all the chain links attached to local peers chain link head (best link) starting from the oldest 
                 for (int i = chlLinksToSend.Count - 1; i > -1; i--)
                 {
@@ -1016,6 +1108,21 @@ namespace Networking
                     m_tParentPacketProcessor.ParentNetworkConnection.SendPacket(ParentConnection, clpChainLinkPacket);
                 }
             }
+        }
+
+        public void SyncLocalGlobalMessageState()
+        {
+            //create sync packet
+            GlobalChainSimulationStartTimePacket stpStartTimeSync = ParentConnection.m_cifPacketFactory.CreateType<GlobalChainSimulationStartTimePacket>(GlobalChainSimulationStartTimePacket.TypeID);
+
+            stpStartTimeSync.m_dtmStartOfChainSimulation =
+                m_tParentPacketProcessor.m_dtmGlobalMessageSystemActiveStartTime;
+
+            stpStartTimeSync.m_staGlobalMessagingState = m_tParentPacketProcessor.m_staState;
+
+            //send the time the local peer joined the global message state
+            m_tParentPacketProcessor.ParentNetworkConnection.SendPacket(ParentConnection, stpStartTimeSync);
+
         }
     }
 }
