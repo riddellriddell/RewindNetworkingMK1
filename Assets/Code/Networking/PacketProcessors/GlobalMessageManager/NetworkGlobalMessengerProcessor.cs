@@ -873,7 +873,6 @@ namespace Networking
             gmpMessagePacket.m_pmnMessage = pmnMessageNode;
 
             ParentNetworkConnection.TransmitPacketToAll(gmpMessagePacket);
-
         }
 
         public void ProcessMessage(PeerMessageNode pmnMessage)
@@ -896,13 +895,6 @@ namespace Networking
             //if connected or active
             if (m_staState == State.Connected || m_staState == State.Active)
             {
-                bool bIsActivePeer = false;
-
-                if (m_staState == State.Active)
-                {
-                    bIsActivePeer = true;
-                }
-
                 //check if message is being created behind head
                 if (m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue.CompareTo(pmnMessage.m_svaMessageSortingValue) > 0)
                 {
@@ -1069,7 +1061,8 @@ namespace Networking
         public void StartStateSync()
         {
             //check if local peer is connected to global messaging system
-            if (m_tParentPacketProcessor.m_staState == NetworkGlobalMessengerProcessor.State.Active &&
+            if ((m_tParentPacketProcessor.m_staState == NetworkGlobalMessengerProcessor.State.Active ||
+                m_tParentPacketProcessor.m_staState == NetworkGlobalMessengerProcessor.State.Connected) &&
                 m_tParentPacketProcessor.m_chmChainManager.m_gmsChainStartState != null &&
                  m_tParentPacketProcessor.m_chmChainManager.m_chlBestChainHead != null)
             {
@@ -1106,6 +1099,18 @@ namespace Networking
 
                     //send state to peer
                     m_tParentPacketProcessor.ParentNetworkConnection.SendPacket(ParentConnection, clpChainLinkPacket);
+                }
+                
+                //send all the messages in the unconfirmed message buffer
+                foreach (PeerMessageNode pmnPeerMessage in m_tParentPacketProcessor.m_gmbMessageBuffer
+                             .UnConfirmedMessageBuffer.Values)
+                {
+                    GlobalMessagePacket gmpMessagePacket =  m_tParentPacketProcessor.ParentNetworkConnection.PacketFactory.CreateType<GlobalMessagePacket>(GlobalMessagePacket.TypeID);
+
+                    gmpMessagePacket.m_pmnMessage = pmnPeerMessage;
+                    
+                    //send to client
+                    ParentConnection.QueuePacketToSend(gmpMessagePacket);
                 }
             }
         }

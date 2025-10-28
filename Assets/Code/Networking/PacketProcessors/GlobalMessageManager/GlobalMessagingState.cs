@@ -288,7 +288,7 @@ namespace Networking
             //check if message is next in peer message chain
             if (iCurrentChannelIndex + 1 != iMessageChannelIndex)
             {
-                Debug.LogError("tried to process message that was not correctly ordered for peer");
+                Debug.LogError($"tried to process message that was not correctly ordered for channel:{iMessageChannel}, current index:{iCurrentChannelIndex}, message index:{iMessageChannelIndex}");
                 return false;
             }
 

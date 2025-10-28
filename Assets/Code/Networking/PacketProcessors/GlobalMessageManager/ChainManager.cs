@@ -415,7 +415,7 @@ namespace Networking
                 //set linkage in chain 
                 chlTargetLink.m_chlParentChainLink = chlParentLink;
             }
-            else if (chlParentLink.m_iLinkIndex > chlTargetLink.m_iLinkIndex)
+            else if (chlParentLink != null && chlParentLink.m_iLinkIndex > chlTargetLink.m_iLinkIndex)
             {
                 Debug.LogError("Chain link parent exists after or at the same time as chain link");
             }
@@ -1003,7 +1003,7 @@ namespace Networking
 
             //TODO::FIX THIS, the number of global messages does not match the number of messages in the sim buffer. global messages needs to be filtered to exclude voting join leave messages 
             //check if any inputs have snuck in to the sim buffer that are not in the active chain 
-            ChainBaseStateVerifier.ValidateSimMessageBufferMatchesUpToLink(m_chlBestChainHead, ndbNetworkDataBridge, lLocalPeerID);
+            //ChainBaseStateVerifier.ValidateSimMessageBufferMatchesUpToLink(m_chlBestChainHead, ndbNetworkDataBridge, lLocalPeerID);
 
             //check if base states match 
             ChainBaseStateVerifier.RegisterAllStatesUpToLink(chlNewBase, lLocalPeerID);
