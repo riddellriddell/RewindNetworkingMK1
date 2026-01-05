@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 /// <summary>
 /// this class global messages and stores them in a time arranged buffer
@@ -53,7 +54,8 @@ namespace Networking
         //of this message so the next time the simulation updates it re simulates using this message
         public void AddMessageToBuffer(PeerMessageNode pmnMessage, SortingValue svaBestLinkHeadEnd)
         {
-            //check if buffer already has item
+            //check if buffer already has item, if it does then there is no reason to reset the
+            //simulated up to time value
             if (UnConfirmedMessageBuffer.ContainsKey(pmnMessage.m_svaMessageSortingValue) == false)
             {
 
@@ -67,7 +69,7 @@ namespace Networking
                     if(m_svaStateProcessedUpTo > pmnMessage.m_svaMessageSortingValue)
                     {
                         //store new earliest change so the sim knows where to reprocess from 
-                        m_svaStateProcessedUpTo = pmnMessage.m_svaMessageSortingValue;
+                        m_svaStateProcessedUpTo = pmnMessage.m_svaMessageSortingValue.LastSortValue();
                     }
                 }
 
@@ -103,6 +105,9 @@ namespace Networking
         public void UpdateFinalMessageState(GlobalMessagingState gmsStartMessageState,NetworkingDataBridge ndbNetworkingDataBridge, TimeSpan tspVoteTimeout, int iMaxPlayerCount)
         {
             LatestState.ResetToState(gmsStartMessageState);
+            
+            //for testing seeing what happens if i don't include non chain messages
+            return;
 
             //get the index of the last message processed
             int iStartIndex = UnConfirmedMessageBuffer.IndexOfKey(LatestState.m_svaLastMessageSortValue);
@@ -143,7 +148,7 @@ namespace Networking
         }
 
         //returns a subset of the message buffer that is older than the get message sort value but
-        //still contains messages recieved from all active channels excluding channes that have 
+        //still contains messages recieved from all active channels excluding channels that have 
         //timed out and are being treated as disconnected or disabled
         public List<PeerMessageNode> GetChainLinkMessages(SortingValue msvGetMessagesFrom, TimeSpan tspConnectionTimeOutTime, DateTime dtmLinkEndTime)
         {
@@ -161,8 +166,8 @@ namespace Networking
             //get the last message in time band 
             //PeerMessageNode pmnLastMessage = UnConfirmedMessageBuffer.Values[UnConfirmedMessageBuffer.Values.Count - 1];
 
-            //if no messages for a channel have been recieved for more than tspTreatAsLatestIfOlderThan
-            //treat that channel as disconnected / inactive and dont wait to recieve more messages
+            //if no messages for a channel have been received for more than tspTreatAsLatestIfOlderThan
+            //treat that channel as disconnected / inactive and don't wait to receive more messages
             //from it before including it in the node list 
             DateTime dtmConnectionTimeOutTime = dtmLinkEndTime;
 
@@ -175,6 +180,12 @@ namespace Networking
 
             SortingValue msvOldestActiveChannel = LatestState.m_svaLastMessageSortValue;
 
+            //check if there are newer messages in the unconfirmed message buffer
+            if (UnConfirmedMessageBuffer.Count > 0)
+            {
+                msvOldestActiveChannel = SortingValue.Max(msvOldestActiveChannel,UnConfirmedMessageBuffer.Last().Key);
+            }
+            
             //get the last time messages were recieved for all channels 
             //excluding the channels being treated as disconnected;
             for (int i = 0; i < LatestState.m_gmcMessageChannels.Count; i++)
@@ -219,6 +230,40 @@ namespace Networking
 
         }
 
+        public Tuple<UInt32, long> GetMostRecentPeerMessageIndexAndHash(long lPeerID)
+        {
+            //loop through the unconfirmed message list starting at the end and traversing to the front 
+            UInt32 iUnConfirmedIndex = 0;
+            long lUnConfirmedHash = 0;
+
+            foreach (var kvpPeerMessage in UnConfirmedMessageBuffer.Reverse())
+            {
+                if (kvpPeerMessage.Value.m_lPeerID == lPeerID)
+                {
+                    iUnConfirmedIndex = kvpPeerMessage.Value.m_iPeerMessageIndex;
+                    lUnConfirmedHash = kvpPeerMessage.Value.m_lMessagePayloadHash;
+
+                    break;
+                }
+            }
+
+            if (LatestState.TryGetIndexForPeer(lPeerID, out int iChannelIndex) == true)
+            {
+                UInt32 iConfirmedIndex = LatestState.m_gmcMessageChannels[iChannelIndex].m_iLastMessageIndexProcessed;
+                long lConfirmedHash = LatestState.m_gmcMessageChannels[iChannelIndex].m_lHashOfLastNodeProcessed;
+            
+                //if the chain has a newer index then use that
+                if (iConfirmedIndex > iUnConfirmedIndex)
+                {
+                    //not part of the peer message system so cant send message 
+                    return new Tuple<UInt32, long>(iConfirmedIndex, lConfirmedHash );
+                }
+            }
+            
+            //not part of the peer message system so cant send message 
+            return new Tuple<UInt32, long>(iUnConfirmedIndex, lUnConfirmedHash );
+        }
+        
         ////the last global index that messages were recieved from all peers that are being tracked 
         //public long GlobalIndexOfLastRecievedMessagesFromAllPeers(List<long> lTrackedPeers)
         //{
@@ -325,6 +370,5 @@ namespace Networking
         {
             return 0;
         }
-
     }
 }

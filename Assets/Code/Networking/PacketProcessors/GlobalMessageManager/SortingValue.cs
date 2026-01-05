@@ -93,6 +93,28 @@ namespace Networking
 
             return svaOut;
         }
+        
+        public SortingValue LastSortValue()
+        {
+            SortingValue svaOut = new SortingValue()
+            {
+                m_lSortValueA = m_lSortValueA,
+                m_lSortValueB = m_lSortValueB
+            };
+
+            //check for lower segment overflow
+            if (m_lSortValueB == ulong.MinValue)
+            {
+                svaOut.m_lSortValueA--;
+                svaOut.m_lSortValueB = ulong.MaxValue;
+            }
+            else
+            {
+                svaOut.m_lSortValueB--;
+            }
+
+            return svaOut;
+        }
 
         public object Clone()
         {

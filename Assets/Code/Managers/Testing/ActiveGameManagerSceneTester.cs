@@ -342,96 +342,112 @@ namespace GameManagers
                 //get the index of the base link
                 m_iBaseChainLinkIndex = (int)gmpGlobalMessagingProcessor.m_chmChainManager.m_chlChainBase.m_iLinkIndex;
                 m_iHeadChainLinkIndex = (int)gmpGlobalMessagingProcessor.m_chmChainManager.m_chlBestChainHead.m_iLinkIndex;
-
-                //try and get what channel this local peer is assigned to, this is debug only
-                if (gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(m_agmActiveGameManager.m_ncnNetworkConnection.m_lPeerID, out int iIndex))
+                //check if messages have been setup yet and a state has been computed
+                if (gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState != null)
                 {
-                    m_iGlobalMessagingChannelIndex = iIndex;
-                }
-                else
-                {
-                    m_iGlobalMessagingChannelIndex = -1;
-                }
-
-                m_gmsGlobalMessagingState = new List<ActiveGameManagerSceneTesterGlobalMessageChannel>();
-
-                //loop through all the channels
-                for (int i = 0; i < gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels.Count; i++)
-                {
-                    GlobalMessageChannelState gcsChannelState = gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[i];
-
-                    int iOldStyleVotes = 0;
-
-                    //for a given chanel check what its votes are on all the other channels
-                    for (int j = 0; j < gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels.Count; j++)
+                    //try and get what channel this local peer is assigned to, this is debug only
+                    if (gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(m_agmActiveGameManager.m_ncnNetworkConnection.m_lPeerID, out int iIndex))
                     {
-                        GlobalMessageChannelState gcsVotingChannel = gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[j];
+                        m_iGlobalMessagingChannelIndex = iIndex;
+                    }
+                    else
+                    {
+                        m_iGlobalMessagingChannelIndex = -1;
+                    }
+    
+                    m_gmsGlobalMessagingState = new List<ActiveGameManagerSceneTesterGlobalMessageChannel>();
+                    
+                    //loop through all the channels
+                    for (int i = 0;
+                         i < gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels.Count;
+                         i++)
+                    {
+                        GlobalMessageChannelState gcsChannelState = gmpGlobalMessagingProcessor.m_gmbMessageBuffer
+                            .LatestState.m_gmcMessageChannels[i];
 
-                        if (gcsVotingChannel.m_staState == GlobalMessageChannelState.State.Assigned ||
-                            gcsVotingChannel.m_staState == GlobalMessageChannelState.State.VoteKick)
+                        int iOldStyleVotes = 0;
+
+                        //for a given chanel check what its votes are on all the other channels
+                        for (int j = 0;
+                             j < gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.m_gmcMessageChannels.Count;
+                             j++)
                         {
-                            //if the vote is for the channel
-                            //TODO:: not sure this if is needed, this will limit votes from other chaneels to only the votes that effect this channel?
-                            if(gcsVotingChannel.m_chvVotes[i].m_lPeerID == gcsChannelState.m_lChannelPeer)
+                            GlobalMessageChannelState gcsVotingChannel = gmpGlobalMessagingProcessor.m_gmbMessageBuffer
+                                .LatestState.m_gmcMessageChannels[j];
+
+                            if (gcsVotingChannel.m_staState == GlobalMessageChannelState.State.Assigned ||
+                                gcsVotingChannel.m_staState == GlobalMessageChannelState.State.VoteKick)
                             {
-                                if (gcsVotingChannel.m_chvVotes[i].IsActive(tnpTimeProcessor.NetworkTime, gmpGlobalMessagingProcessor.m_chmChainManager.VoteTimeout) == true)
+                                //if the vote is for the channel
+                                //TODO:: not sure this if is needed, this will limit votes from other chaneels to only the votes that effect this channel?
+                                if (gcsVotingChannel.m_chvVotes[i].m_lPeerID == gcsChannelState.m_lChannelPeer)
                                 {
-                                    //
-                                    iOldStyleVotes++;
+                                    if (gcsVotingChannel.m_chvVotes[i].IsActive(tnpTimeProcessor.NetworkTime,
+                                            gmpGlobalMessagingProcessor.m_chmChainManager.VoteTimeout) == true)
+                                    {
+                                        //
+                                        iOldStyleVotes++;
+                                    }
                                 }
                             }
                         }
-                    }
-                    
-                    int iNewStyleVotes = 0;
-                    int iNewStyleForVotes = 0;
-                    int iNewStyleAgainstVotes = 0;
-                    
-                    //get the connection
-                    iNewStyleVotes = gcsChannelState.m_vtyVotesOnChannelByPeers.Count;
-                    
-                    //loop through all votes and add up valid votes
-                    foreach (var kvpVote in gcsChannelState.m_vtyVotesOnChannelByPeers)
-                    {
-                        //check if the vote is valid
-                        if (gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(kvpVote.Key,
-                                out iIndex))
+
+                        int iNewStyleVotes = 0;
+                        int iNewStyleForVotes = 0;
+                        int iNewStyleAgainstVotes = 0;
+
+                        //get the connection
+                        iNewStyleVotes = gcsChannelState.m_vtyVotesOnChannelByPeers.Count;
+
+                        //loop through all votes and add up valid votes
+                        foreach (var kvpVote in gcsChannelState.m_vtyVotesOnChannelByPeers)
                         {
-                            //check if the vote is for or against 
-                            if (kvpVote.Value == GlobalMessageChannelState.ChannelVote.VoteType.Add ||
-                                kvpVote.Value == GlobalMessageChannelState.ChannelVote.VoteType.Kick)
+                            //check if the vote is valid
+                            if (gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.TryGetIndexForPeer(
+                                    kvpVote.Key,
+                                    out iIndex))
                             {
-                                iNewStyleForVotes++;
-                            }
-                            else
-                            {
-                                iNewStyleAgainstVotes++;
+                                //check if the vote is for or against 
+                                if (kvpVote.Value == GlobalMessageChannelState.ChannelVote.VoteType.Add ||
+                                    kvpVote.Value == GlobalMessageChannelState.ChannelVote.VoteType.Kick)
+                                {
+                                    iNewStyleForVotes++;
+                                }
+                                else
+                                {
+                                    iNewStyleAgainstVotes++;
+                                }
                             }
                         }
-                    }
-                    
-                    DateTime dtmStateLastTime = gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.TimeOfLastMessage();
-                    
-                    //get the time this vote expires
-                    DateTime dtmVoteExpire = dtmStateLastTime;
-                    dtmVoteExpire = gcsChannelState.m_staState == GlobalMessageChannelState.State.VoteJoin? gcsChannelState.m_dtmJoinVoteTime : dtmVoteExpire;
-                    dtmVoteExpire = gcsChannelState.m_staState == GlobalMessageChannelState.State.VoteKick? gcsChannelState.m_dtmKickVoteTime : dtmVoteExpire;
-                    
-                    //get the time dif from now to the time of expire
-                    TimeSpan tspTimeUntilExpire = dtmVoteExpire - dtmStateLastTime;
-                                                  
-                    
-                    
 
-                    m_gmsGlobalMessagingState.Add(new ActiveGameManagerSceneTesterGlobalMessageChannel()
-                    {
-                        m_lActivePeerID = gcsChannelState.m_lChannelPeer,
-                        m_staState = gcsChannelState.m_staState,
-                        m_iOldStyleVotes = iOldStyleVotes,
-                        m_iNewStyleForVotes = iNewStyleForVotes,
-                        m_iNewStyleAgainstVotes = iNewStyleAgainstVotes,
-                        m_fSecondsUntilVoteFinished = tspTimeUntilExpire.Seconds
-                    });
+                        DateTime dtmStateLastTime =
+                            gmpGlobalMessagingProcessor.m_gmbMessageBuffer.LatestState.TimeOfLastMessage();
+
+                        //get the time this vote expires
+                        DateTime dtmVoteExpire = dtmStateLastTime;
+                        dtmVoteExpire = gcsChannelState.m_staState == GlobalMessageChannelState.State.VoteJoin
+                            ? gcsChannelState.m_dtmJoinVoteTime
+                            : dtmVoteExpire;
+                        dtmVoteExpire = gcsChannelState.m_staState == GlobalMessageChannelState.State.VoteKick
+                            ? gcsChannelState.m_dtmKickVoteTime
+                            : dtmVoteExpire;
+
+                        //get the time dif from now to the time of expire
+                        TimeSpan tspTimeUntilExpire = dtmVoteExpire - dtmStateLastTime;
+
+
+
+
+                        m_gmsGlobalMessagingState.Add(new ActiveGameManagerSceneTesterGlobalMessageChannel()
+                        {
+                            m_lActivePeerID = gcsChannelState.m_lChannelPeer,
+                            m_staState = gcsChannelState.m_staState,
+                            m_iOldStyleVotes = iOldStyleVotes,
+                            m_iNewStyleForVotes = iNewStyleForVotes,
+                            m_iNewStyleAgainstVotes = iNewStyleAgainstVotes,
+                            m_fSecondsUntilVoteFinished = tspTimeUntilExpire.Seconds
+                        });
+                    }
                 }
             }
 

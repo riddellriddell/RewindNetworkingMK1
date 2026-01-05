@@ -288,7 +288,15 @@ namespace Networking
             //check if message is next in peer message chain
             if (iCurrentChannelIndex + 1 != iMessageChannelIndex)
             {
-                Debug.LogError($"tried to process message that was not correctly ordered for channel:{iMessageChannel}, current index:{iCurrentChannelIndex}, message index:{iMessageChannelIndex}");
+                Debug.LogError($"tried to process message that was not correctly ordered for channel:{iMessageChannel}," +
+                               $" current index:{iCurrentChannelIndex}, message index:{iMessageChannelIndex}" +
+                               $" New message is a: {pmnMessageNode.m_bMessageType.ToString()} " +
+                               $" with a sort value of : {pmnMessageNode.m_svaMessageSortingValue.ToString()} " +
+                               $" and a hash of: {pmnMessageNode.m_lMessagePayloadHash.ToString()} " +
+                               $" The last message for the channel had a sort value of: { m_gmcMessageChannels[iMessageChannel].m_msvLastSortValue.ToString()} " +
+                               $" and a hash of :  { m_gmcMessageChannels[iMessageChannel].m_lHashOfLastNodeProcessed.ToString()} ");
+                
+                
                 return false;
             }
 
@@ -306,6 +314,7 @@ namespace Networking
             //update the hash head for this channel
             m_gmcMessageChannels[iMessageChannel].m_lHashOfLastNodeProcessed = pmnMessageNode.m_lMessagePayloadHash;
             m_gmcMessageChannels[iMessageChannel].m_iLastMessageIndexProcessed = iMessageChannelIndex;
+            m_gmcMessageChannels[iMessageChannel].m_msvLastSortValue = pmnMessageNode.m_svaMessageSortingValue;
 
             //update the chain link this channel is using as head 
             m_gmcMessageChannels[iMessageChannel].m_lChainLinkHeadHash = pmnMessageNode.m_lChainLinkHeadHash;
@@ -718,7 +727,7 @@ namespace Networking
 
         }
 
-        //perfotm split
+        //perform split
         protected void KickPeers(List<int> iKickList)
         {
             //for each item in the kick list

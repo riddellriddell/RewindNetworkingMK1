@@ -93,6 +93,9 @@ namespace Networking
             }
 
             chkChainLink.m_bIsChannelBranch[0] = true;
+            
+            //for debugging register the chain link with the chain link tracker
+            ChainLinkVerifier.RegisterLinkAsPeerHistory(chkChainLink,chkChainLink,lLocalPeerID);
         }
 
         public void AddChainLink(long lLocalPeerID, ChainLink chlLink, GlobalMessageKeyManager gkmKeyManager, GlobalMessageBuffer gmbGlobalMessageBuffer, NetworkingDataBridge ndbNetworkingDataBridge, out bool bDirtyUnconfirmedMessageBufferState)
@@ -247,11 +250,8 @@ namespace Networking
                     }
 
                     //make sure the sim reprocess the message queue starting from the end of the last chain
-                    ndbNetworkingDataBridge.UpdateProcessedTimeOnNewMessageAdded(svaOldestConfirmedMessage);
-            
-                    //remove all the messages after the parent chain last message
-                    ndbNetworkingDataBridge.m_squInMessageQueue.ClearFrom(svaOldestConfirmedMessage);
-            
+                    ndbNetworkingDataBridge.ResetValidationPointToTime(svaOldestConfirmedMessage);
+
                     break;
                 }
                 else
@@ -271,6 +271,9 @@ namespace Networking
                     gsmMessageState.ProcessMessage(chlLinkChanges[i].m_pmnMessages[j], VoteTimeout, MaxChannelCount, ndbNetworkingDataBridge);
                 }
             }
+            
+            //trim off any extra messages that were not validated
+            ndbNetworkingDataBridge.RemoveUnvalidatedMessages();
         }
 
         public void SetChannelAcknowledgements(int iChannelIndex, ChainLink chlAcknowledgedLink)
@@ -343,7 +346,13 @@ namespace Networking
                     chlLink.m_iChainLength = 0;
                     chlLink.m_lChainMessageCount = (ulong)chlLink.m_pmnMessages.Count;
 
-                    Debug.LogError("Not able to find parent for chain link");
+                    bool bIsIndexed = m_gmsChainStartState.TryGetIndexForPeer(chlLink.m_lPeerID, out int iIndex);
+
+                    int iLinkAuthorChannelIndex = bIsIndexed ? iIndex : -1;
+                    
+                    
+                    
+                    Debug.LogError($"Not able to find parent for chain link, previous chain hash was:{chlLink.m_lPreviousLinkHash} and has an index of :{chlLink.m_iLinkIndex} and was made by peer {chlLink.m_lPeerID} with a channel index of { iLinkAuthorChannelIndex}");
                     
                     //cant do chain link analysis 
                     return;
@@ -600,6 +609,12 @@ namespace Networking
         //set the first chain link and associated start state
         public void SetChainStartState(long lLocalPeerID, int iMaxPlayerCount, GlobalMessagingState gmsStartState, ChainLink chlFirstLink, NetworkingDataBridge ndbNetworkingDataBridge)
         {
+            //validate that this chain link exists in other chain links
+            if (!ChainLinkVerifier.DoAllPeersHaveChainLinkInHistory(chlFirstLink.m_svaChainSortingValue))
+            {
+                Debug.LogError("new chain base is not in the history of any other peer");
+            }
+            
             m_gmsChainStartState = gmsStartState;
             m_chlChainBase = chlFirstLink;
             m_chlBestChainHead = chlFirstLink;
@@ -611,6 +626,14 @@ namespace Networking
 
             SetupChannelAckArray(chlFirstLink, iMaxPlayerCount);
 
+            //check that the network data bridge is clear
+            if (ndbNetworkingDataBridge.Count > 0)
+            {
+                Debug.LogWarning($"{ndbNetworkingDataBridge.Count} messages found on bridge before chain simulation started, this could be a cause of desyncs");
+                
+                ndbNetworkingDataBridge.Clear();
+            }
+            
             //get state at end of first link
             chlFirstLink.CaluclateGlobalMessagingStateAtEndOflink(lLocalPeerID, gmsStartState, VoteTimeout, MaxChannelCount, ndbNetworkingDataBridge);
 
@@ -1007,6 +1030,10 @@ namespace Networking
 
             //check if base states match 
             ChainBaseStateVerifier.RegisterAllStatesUpToLink(chlNewBase, lLocalPeerID);
+            
+            //update chain link history for peer
+            //for debugging register the chain link with the chain link tracker
+            ChainLinkVerifier.RegisterLinkAsPeerHistory(chlNewBase,m_chlBestChainHead,lLocalPeerID);
 
             //set base state
             m_gmsChainStartState.ResetToState(chlNewBase.m_chlParentChainLink.m_gmsState);

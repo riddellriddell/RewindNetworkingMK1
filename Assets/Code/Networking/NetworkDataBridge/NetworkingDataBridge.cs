@@ -49,10 +49,26 @@ namespace Networking
 
         //indicates the sim has processed all the messages up to this message
         public SortingValue m_svaSimProcessedMessagesUpToAndIncluding = SortingValue.MinValue;
+        
+        //the old sim processed up to time, this is used when re queuing messages so the same sequence of inputs does not 
+        //get re simulated multiple times
+        public SortingValue m_svaOldSimProcessedMessagesUpToAndIncluding = SortingValue.MinValue;
+
+        //the most recent message added to the buffer
+        //this is used to track changes to the buffer and catch messages that were deleted off the front of the buffer
+        public SortingValue m_svaValidatedUpTo = SortingValue.MinValue;
 
         //no messages this old or older are allowed in the message buffer
         public SortingValue m_svaOldestMessageToStoreInBuffer;
 
+        
+        //get the number of messages on the bridge
+        public int Count
+        {
+            get { return m_squInMessageQueue.Count; }
+        }
+
+        
         //TODO::Wrap this in a #define
         //DO Not Use In Simulation code
         //this is only for use when debugging
@@ -147,19 +163,31 @@ namespace Networking
         }
 
 
+        // public void QueueSimMessageDeprecated(SortingValue svaTime, in IInput inpInput)
+        // {
+        //     //check if a player is changing before the start of the message queue
+        //     if (svaTime < m_svaOldestMessageToStoreInBuffer)
+        //     {
+        //         m_squInMessageQueue.Clear();
+        //         m_svaSimProcessedMessagesUpToAndIncluding = m_svaOldestMessageToStoreInBuffer;
+        //     }
+        //     else
+        //     {
+        //         UpdateProcessedTimeOnNewMessageAdded(svaTime);
+        //         m_squInMessageQueue.EnterPurgeInsert(svaTime, inpInput);
+        //     }
+        //     
+        //     //check if queuing up messages before start state
+        //     if ((svaTime <= m_svaOldestActiveSimTime))
+        //     {
+        //         //throw error as we are adding messages without a base state to process from
+        //         Debug.LogError( $"Queuing up message before the oldest simulation state, " +
+        //                         $"we will not be able to process this message");
+        //     }
+        // }
+
         public void QueueSimMessage(SortingValue svaTime, in IInput inpInput)
         {
-            //check if a player is changing before the start of the message queue
-            if (svaTime < m_svaOldestMessageToStoreInBuffer)
-            {
-                m_squInMessageQueue.Clear();
-                m_svaSimProcessedMessagesUpToAndIncluding = m_svaOldestMessageToStoreInBuffer;
-            }
-            else
-            {
-                UpdateProcessedTimeOnNewMessageAdded(svaTime);
-                m_squInMessageQueue.EnterPurgeInsert(svaTime, inpInput);
-            }
             
             //check if queuing up messages before start state
             if ((svaTime <= m_svaOldestActiveSimTime))
@@ -168,8 +196,90 @@ namespace Networking
                 Debug.LogError( $"Queuing up message before the oldest simulation state, " +
                                 $"we will not be able to process this message");
             }
-        }
+            
+            //check if a player is changing before the start of the message queue
+            if (svaTime < m_svaOldestMessageToStoreInBuffer)
+            {
+                m_squInMessageQueue.Clear();
+                m_svaSimProcessedMessagesUpToAndIncluding = m_svaOldestMessageToStoreInBuffer;
+                
+                //queue this message
+                m_squInMessageQueue.EnterPurgeInsert( svaTime,inpInput);
 
+                return;
+            }
+
+            
+            //If this message is behind the "sim processed up to" then messages might have already been simulated
+            if (svaTime <= m_svaSimProcessedMessagesUpToAndIncluding)
+            {
+                //store the sim processed up to value so we can later check if a message has been simulated
+                m_svaOldSimProcessedMessagesUpToAndIncluding = m_svaSimProcessedMessagesUpToAndIncluding;
+
+                m_svaSimProcessedMessagesUpToAndIncluding = svaTime.LastSortValue();
+                
+                //reset the most recent message time
+                m_svaValidatedUpTo = svaTime;
+            }
+
+            bool bAlreadySimmulated = false;
+
+            //check if this message is inside the simulated message window
+            if (svaTime <= m_svaOldSimProcessedMessagesUpToAndIncluding )
+            {
+
+                //check if the previous message was processed by the sim
+                //this checks if the message was already in the sim in which case the simulation would have simulated it
+                //it also checks if there was a message between this and the last confirmed processed message, in which case 
+                //this message would be flagged as not correctly processed 
+                if (m_squInMessageQueue.TryGetIndexOf(svaTime, out int iNewMessageIndex) && iNewMessageIndex != 0 )
+                {
+                    SortingValue svaPreviousInputTime = m_squInMessageQueue.GetKeyAtIndex(iNewMessageIndex -1 );
+                
+                    // if this message exists and the previous message was processed and we are not past the old processed 
+                    // up to time then this message would have also been processed so there is no need to nuke the message chain
+                    if (svaPreviousInputTime <=  m_svaSimProcessedMessagesUpToAndIncluding)
+                    {
+                        m_svaSimProcessedMessagesUpToAndIncluding = svaTime;
+
+                        bAlreadySimmulated = true;
+                    }
+                }
+                
+                //update the time of the most recent message
+                //update the newest message time
+                //this is assuming messages are added chronologically 
+                //if we are outside of the simulated window then this value is not getting reset 
+                //and this check is invalid and will give false positives when re evaluating messages
+                //past the simulated up to time
+                if (svaTime < m_svaValidatedUpTo)
+                {
+                    //throw error as we are adding messages without a base state to process from
+                    Debug.LogError( "this code assumes we are adding messages chronologically " +
+                                    "if we are hitting this then either messages are coming in out of order " + 
+                                    "or we have not correctly reset for another batch of messages");
+
+                    return; 
+                }
+            }
+
+            //update the most recent message time
+            m_svaValidatedUpTo = svaTime;
+                
+            //if the message already exists then we don't need to do anything
+            if (!bAlreadySimmulated)
+            {
+                // remove all messages between this one and the sim processed up to time
+                // this is to also remove any messages that might be between the simulated up to time
+                // and this message
+                m_squInMessageQueue.ClearFrom(m_svaSimProcessedMessagesUpToAndIncluding );
+                    
+                //queue this message
+                m_squInMessageQueue.EnterPurgeInsert( svaTime,inpInput);
+            }
+
+        }
+        
         //update the oldest message that is yet to be processed by the sim
         public void UpdateProcessedTimeOnNewMessageAdded(SortingValue svaNewMessageTime)
         {
@@ -185,8 +295,88 @@ namespace Networking
                                 $"before the oldest simulation state {m_svaOldestActiveSimTime} , " +
                                 $"we will not be able to process this message");
             }
+
+            //This code has been moved to the new queue message function
+            //if it is not revived make sure to remove it 
+            
+            // if( (svaNewMessageTime <= m_svaOldestActiveSimTime))
+            // {
+            //     //throw error as we are adding messages without a base state to process from
+            //     Debug.LogError( $"Peer {GetLocalPeerID()} is Queuing up message at sort value {svaNewMessageTime} " +
+            //                     $"before the oldest simulation state {m_svaOldestActiveSimTime} , " +
+            //                     $"we will not be able to process this message");
+            //
+            //     return;
+            // }
+            //
+            // //update the newest message time
+            // //this is assuming messages are added chronologically 
+            // if (svaNewMessageTime < m_svaLastMessageAddedToBuffer)
+            // {
+            //     //throw error as we are adding messages without a base state to process from
+            //     Debug.LogError( "this code assumes we are adding messages chronologically " +
+            //                     "if we are hitting this then either messages are coming in out of order " + 
+            //                     "or we have not correctly reset for another batch of messages");
+            //
+            //     return;
+            // }
+            //
+            // m_svaLastMessageAddedToBuffer = svaNewMessageTime;
+            //
+            // //check if we are past the head time
+            // if (m_svaOldSimProcessedMessagesUpToAndIncluding < svaNewMessageTime)
+            // {
+            //     return;
+            // }
+            //
+            // //check if this message is before the processed up to value, if it is then we can reset the processed up to head
+            // if (svaNewMessageTime < m_svaSimProcessedMessagesUpToAndIncluding)
+            // {
+            //     m_svaOldSimProcessedMessagesUpToAndIncluding = m_svaSimProcessedMessagesUpToAndIncluding;
+            //
+            //     //get the time before this
+            //     m_svaSimProcessedMessagesUpToAndIncluding = svaNewMessageTime.LastSortValue();
+            // }
+            //
+            // //check if the previous message was processed by the sim
+            // //this checks if the message was already in the sim in which case the simulation would have simulated it
+            // //it also checks if there was a message between this and the last confirmed processed message, in which case 
+            // //this message would be flagged as not correctly processed 
+            // if (m_squInMessageQueue.TryGetIndexOf(svaNewMessageTime, out int iNewMessageIndex) && iNewMessageIndex != 0 )
+            // {
+            //     SortingValue svaPreviousInputTime = m_squInMessageQueue.GetKeyAtIndex(iNewMessageIndex -1 );
+            //     
+            //     // if this message exists and the previous message was processed and we are not past the old processed 
+            //     // up to time then this message would have also been processed so there is no need to nuke the message chain
+            //     if (svaPreviousInputTime <=  m_svaSimProcessedMessagesUpToAndIncluding)
+            //     {
+            //         m_svaSimProcessedMessagesUpToAndIncluding = svaNewMessageTime;
+            //
+            //         return;
+            //     }
+            // }
         }
 
+        public void ResetValidationPointToTime(SortingValue svaResetTime)
+        {
+            if (svaResetTime <= m_svaSimProcessedMessagesUpToAndIncluding)
+            {
+                //If this message is behind the "sim processed up to" then messages might have already been simulated
+                //store the sim processed up to value so we can later check if a message has been simulated
+                m_svaOldSimProcessedMessagesUpToAndIncluding = m_svaSimProcessedMessagesUpToAndIncluding;
+
+                m_svaSimProcessedMessagesUpToAndIncluding = svaResetTime;
+
+                //reset the most recent message time
+                m_svaValidatedUpTo = svaResetTime;
+            }
+        }
+        
+        public void RemoveUnvalidatedMessages()
+        {
+            m_squInMessageQueue.ClearFrom(m_svaValidatedUpTo);
+        }
+        
         public void SetValidatedMesageBaseTime(SortingValue svaNewestConfimedMessageTime)
         {
             m_svaConfirmedMessageTime = svaNewestConfimedMessageTime;
@@ -217,15 +407,20 @@ namespace Networking
             {
                 m_svaOldestMessageToStoreInBuffer = svaNewOldestMessageToStore;
 
-                Clear(m_svaOldestMessageToStoreInBuffer);
+                ClearTo(m_svaOldestMessageToStoreInBuffer);
             }
         }
 
         //remove inputs from buffer that will never be used again
         //TODO: maybe add some kind of archieving funcitonality 
-        public void Clear(SortingValue svaClearUpTo)
+        public void ClearTo(SortingValue svaClearUpTo)
         {
             m_squInMessageQueue.ClearTo(svaClearUpTo);
+        }
+
+        public void Clear()
+        {
+            m_squInMessageQueue.Clear();
         }
 
         public void UpdateSimStateAtTime(DateTime dtmTime, byte[] bSimData)

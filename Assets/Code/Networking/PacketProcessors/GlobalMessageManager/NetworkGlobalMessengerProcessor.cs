@@ -838,6 +838,9 @@ namespace Networking
                 //not part of the peer message system so cant send message 
                 return;
             }
+            
+            //get the last seen message index and hash from peer
+            Tuple<UInt32,long> tupIndexAndHash = m_gmbMessageBuffer.GetMostRecentPeerMessageIndexAndHash(lPeerID);
 
             //create new message node 
             PeerMessageNode pmnMessageNode = new PeerMessageNode();
@@ -852,9 +855,9 @@ namespace Networking
 
             pmnMessageNode.m_gmbMessage = gmbMessageToSend;
 
-            pmnMessageNode.m_iPeerMessageIndex = m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iChannelIndex].m_iLastMessageIndexProcessed + 1;
+            pmnMessageNode.m_iPeerMessageIndex = tupIndexAndHash.Item1 + 1;
 
-            pmnMessageNode.m_lPreviousMessageHash = m_gmbMessageBuffer.LatestState.m_gmcMessageChannels[iChannelIndex].m_lHashOfLastNodeProcessed;
+            pmnMessageNode.m_lPreviousMessageHash = tupIndexAndHash.Item2;
 
             pmnMessageNode.BuildPayloadArray();
 
@@ -878,19 +881,19 @@ namespace Networking
         public void ProcessMessage(PeerMessageNode pmnMessage)
         {
             //get the last message in the chain system
-            SortingValue svaSortingValue;
+            SortingValue svaChainSortingValue;
 
             if(m_chmChainManager.m_chlBestChainHead != null && m_chmChainManager.m_chlBestChainHead.m_gmsState != null)
             {
-                svaSortingValue = m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue;
+                svaChainSortingValue = m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue;
             }
             else
             {
-                svaSortingValue = SortingValue.MinValue;
+                svaChainSortingValue = SortingValue.MinValue;
             }                         
 
             //add to message buffer
-            m_gmbMessageBuffer.AddMessageToBuffer(pmnMessage, svaSortingValue);
+            m_gmbMessageBuffer.AddMessageToBuffer(pmnMessage, svaChainSortingValue);
 
             //if connected or active
             if (m_staState == State.Connected || m_staState == State.Active)
