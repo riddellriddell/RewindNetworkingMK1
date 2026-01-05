@@ -9,7 +9,7 @@ namespace Sim
 {
     public class SimProcessManager<TFrameData, TConstData, TSettingsData> where TFrameData: IFrameData
     {
-        public bool m_bCheckForDeSync = true;
+        public bool m_bCheckForDeSync = false;
 
         public bool m_bHashFrameData = false;
 
