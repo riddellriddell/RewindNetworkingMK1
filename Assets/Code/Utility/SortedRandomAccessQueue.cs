@@ -648,7 +648,7 @@ public class SortedRandomAccessQueue<TKey, TValue> where TKey : IComparable
             return;
         }
 
-        //caclc index of insert 
+        //calc index of insert 
         iIndex++;
 
         //check if array is large enough

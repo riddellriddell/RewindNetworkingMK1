@@ -336,7 +336,7 @@ namespace Networking
                 //link parent hash
                 SetParentForLink(chlLink);
 
-                //check if parent link was found 
+                //check if parent link was not found 
                 if (chlLink.m_chlParentChainLink == null)
                 {
                     chlLink.m_bIsConnectedToBase = false;
@@ -451,7 +451,7 @@ namespace Networking
         {
             foreach (GlobalMessageStartStateCandidate sscCandidate in StartStateCandidates.Values)
             {
-                //check if not oldest start state in chain 
+                //check if not the oldest start state in chain 
                 if (sscCandidate.m_bIsOldestStateOnChain == false)
                 {
                     continue;
@@ -513,7 +513,7 @@ namespace Networking
                             continue;
                         }
 
-                        //set the prevouse state to buld off
+                        //set the previous state to build off
                         gmsPreviousLinkEndState = ChainLinks.Values[i].m_chlParentChainLink.m_gmsState;
 
                         //check if a start candidate exists for chain link
@@ -1021,7 +1021,7 @@ namespace Networking
                 ChainLinks.RemoveAt(0);
             }
 
-            //remove refference to old links
+            //remove reference to old links
             m_chlChainBase.m_chlParentChainLink = null;
 
             //remove old messages

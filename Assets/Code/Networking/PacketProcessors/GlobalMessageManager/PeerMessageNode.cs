@@ -34,7 +34,7 @@ namespace Networking
         //the order number of this message from this peer
         public uint m_iPeerMessageIndex;
 
-        //the hash of the previouse message from this peer 
+        //the hash of the previous message from this peer 
         public long m_lPreviousMessageHash;
 
         //the time the message was created

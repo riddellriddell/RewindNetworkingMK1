@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Networking
 {
-    //this class acts as a bridge for other classes to send and recieve data through the networking layer
+    //this class acts as a bridge for other classes to send and receive data through the networking layer
     public class NetworkingDataBridge : ISimTimeProvider, ILocalPeerProvider
     {       
         //queue of all the outbound messages 
@@ -305,7 +305,7 @@ namespace Networking
             SortingValue svaTo = new SortingValue((ulong)dtmEndTimeInclusive.Ticks + 1, ulong.MinValue);
 
             //if the time processed up to is less than the start range of the values processed then 
-            //dont update the processed up to value as there might be a message in the gap between 
+            //don't update the processed up to value as there might be a message in the gap between 
             //what has been processed in the past and this update
             if(m_svaSimProcessedMessagesUpToAndIncluding < svaFrom)
             {
