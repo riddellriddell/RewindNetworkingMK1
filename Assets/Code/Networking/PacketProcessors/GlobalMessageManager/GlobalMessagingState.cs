@@ -65,7 +65,7 @@ namespace Networking
             if (pmnMessageNode.m_lPeerID != long.MinValue && TryGetIndexForPeer(pmnMessageNode.m_lPeerID, out int iIndexOfMessageChannel))
             {
                 //validate message (check if it is the next message for this peer and is based on the correct previous message) 
-                bool bIsValidMessage = ValidateAndApplyMessageChangeToChannel(iIndexOfMessageChannel, pmnMessageNode);
+                bool bIsValidMessage = ValidateAndApplyMessageChangeToChannel(iIndexOfMessageChannel, pmnMessageNode, ndbNetworkingDataBridge == null ? ndbNetworkingDataBridge.m_lLocalPeerID : 0);
 
                 //filter invalid messages
                 if (bIsValidMessage == true)
@@ -279,7 +279,7 @@ namespace Networking
         }
 
         //validate a message and apply any relevent changes to channel state
-        protected bool ValidateAndApplyMessageChangeToChannel(int iMessageChannel, PeerMessageNode pmnMessageNode)
+        protected bool ValidateAndApplyMessageChangeToChannel(int iMessageChannel, PeerMessageNode pmnMessageNode, long lLocalPeer)
         {
             //check if message is next in queue for peer
             UInt32 iMessageChannelIndex = pmnMessageNode.m_iPeerMessageIndex;
@@ -288,7 +288,7 @@ namespace Networking
             //check if message is next in peer message chain
             if (iCurrentChannelIndex + 1 != iMessageChannelIndex)
             {
-                Debug.LogError($"tried to process message that was not correctly ordered for channel:{iMessageChannel}," +
+                Debug.LogError($"peer: {lLocalPeer} tried to process message that was not correctly ordered for channel:{iMessageChannel}," +
                                $" current index:{iCurrentChannelIndex}, message index:{iMessageChannelIndex}" +
                                $" New message is a: {pmnMessageNode.m_bMessageType.ToString()} " +
                                $" with a sort value of : {pmnMessageNode.m_svaMessageSortingValue.ToString()} " +
