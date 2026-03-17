@@ -65,7 +65,7 @@ namespace Networking
             if (pmnMessageNode.m_lPeerID != long.MinValue && TryGetIndexForPeer(pmnMessageNode.m_lPeerID, out int iIndexOfMessageChannel))
             {
                 //validate message (check if it is the next message for this peer and is based on the correct previous message) 
-                bool bIsValidMessage = ValidateAndApplyMessageChangeToChannel(iIndexOfMessageChannel, pmnMessageNode, ndbNetworkingDataBridge == null ? ndbNetworkingDataBridge.m_lLocalPeerID : 0);
+                bool bIsValidMessage = ValidateAndApplyMessageChangeToChannel(iIndexOfMessageChannel, pmnMessageNode, ndbNetworkingDataBridge == null ? 0 : ndbNetworkingDataBridge.m_lLocalPeerID);
 
                 //filter invalid messages
                 if (bIsValidMessage == true)

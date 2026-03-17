@@ -526,16 +526,16 @@ namespace Networking
             //if there is a state that has received enough validation set it as the start state 
             if (IsAcknowledgedStartState)
             {
-                m_staState = State.Connected;
-
                 //set the global message chain to base everything off
-                m_chmChainManager.SetChainStartState(ParentNetworkConnection.m_lPeerID,  MaxChannelCount, sscStartStateCandidate.m_gmsStateCandidate, sscStartStateCandidate.m_chlNextLink, m_ndbNetworkDataBridge);
+                m_chmChainManager.SetChainStartState(m_staState.ToString(), ParentNetworkConnection.m_lPeerID,  MaxChannelCount, sscStartStateCandidate.m_gmsStateCandidate, sscStartStateCandidate.m_chlNextLink, m_ndbNetworkDataBridge);
 
                 //reset the last message processed value on the message buffer
                 m_gmbMessageBuffer.m_svaStateProcessedUpTo = m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue;
 
                 //update message buffer final state
                 m_gmbMessageBuffer.UpdateFinalMessageState(m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge, m_chmChainManager.VoteTimeout, m_chmChainManager.MaxChannelCount);
+                
+                m_staState = State.Connected;
             }
         }
 
@@ -618,7 +618,7 @@ namespace Networking
             //create chain link
             ChainLink chlNewLink = new ChainLink();
 
-            //setup new link to link to best chain head and to have all messages that have happened since chain head 
+            //setup new link to best chain head and to have all messages that have happened since chain head 
             chlNewLink.Init(pmnLinkMessages, ParentNetworkConnection.m_lPeerID, iChainLinkIndex, m_chmChainManager.m_chlBestChainHead.m_lLinkPayloadHash);
 
             return chlNewLink;
@@ -866,6 +866,15 @@ namespace Networking
             pmnMessageNode.SignMessage();
 
             pmnMessageNode.CalculateSortingValue();
+            
+            //TODO::JackR remove this once message index creation out of order error is resolved
+            if (PeerMessageNumberVerifier.ValidateNewMessageIndex(pmnMessageNode.m_lPeerID,
+                    pmnMessageNode.m_iPeerMessageIndex) == false)
+            {
+                Debug.LogError($"peer: {pmnMessageNode.m_lPeerID} tried to create a message with index: " +
+                               $"{ pmnMessageNode.m_iPeerMessageIndex} when the previous message index was:" +
+                               $" {PeerMessageNumberVerifier.GetPeerMessageIndex(pmnMessageNode.m_lPeerID)}");
+            }
 
             //process new message and add it to the local unconfirmed message buffer 
             ProcessMessage(pmnMessageNode);

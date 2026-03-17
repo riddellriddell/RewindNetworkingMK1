@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using UnityEngine;
 using Utility;
 
 namespace Networking
@@ -48,7 +49,7 @@ namespace Networking
         //the parent chain link
         public ChainLink m_chlParentChainLink;
 
-        //check if this link is conencted to base
+        //check if this link is connected to base
         public bool m_bIsConnectedToBase;
 
         //the lenght of this chain
@@ -76,8 +77,11 @@ namespace Networking
             BuildPayloadHash();
             //use hash to sign link
             SignData();
-            //use hash to calcuate sorting order
+            //use hash to calculate sorting order
             CalculateSortingValue();
+            
+            //log out creation to help with debugging later
+            Debug.Log($"Networking.ChainLink| peer: {lCreatingPeer} created link with args Index: {iLinkIndex} Previous Link Hash: {lPreviousLinkHash} Calculated hash: {m_lLinkPayloadHash}");
         }
 
         //TODO: this should be moved into a byte stream Data Size Function

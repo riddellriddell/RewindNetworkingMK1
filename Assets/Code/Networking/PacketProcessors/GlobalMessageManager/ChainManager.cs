@@ -607,12 +607,13 @@ namespace Networking
         }
 
         //set the first chain link and associated start state
-        public void SetChainStartState(long lLocalPeerID, int iMaxPlayerCount, GlobalMessagingState gmsStartState, ChainLink chlFirstLink, NetworkingDataBridge ndbNetworkingDataBridge)
+        public void SetChainStartState(string conConnectionState, long lLocalPeerID, int iMaxPlayerCount, GlobalMessagingState gmsStartState, ChainLink chlFirstLink, NetworkingDataBridge ndbNetworkingDataBridge)
         {
             //validate that this chain link exists in other chain links
             if (!ChainLinkVerifier.DoAllPeersHaveChainLinkInHistory(chlFirstLink.m_svaChainSortingValue))
             {
-                Debug.LogError("new chain base is not in the history of any other peer");
+                Debug.LogError($"new chain base is not in the history of any other peer. the local peer is: {lLocalPeerID} and is currently in state: {conConnectionState}" +
+                               $"The Chain link index is: {chlFirstLink.m_iLinkIndex} with a hash of: {chlFirstLink.m_lLinkPayloadHash} and a previous hash of: { chlFirstLink.m_lPreviousLinkHash}");
             }
             
             m_gmsChainStartState = gmsStartState;
