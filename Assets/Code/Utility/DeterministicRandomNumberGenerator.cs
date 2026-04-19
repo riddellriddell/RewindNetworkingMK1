@@ -16,8 +16,6 @@ namespace Utility
 
         public DeterministicRandomNumberGenerator(long lSeed)
         {
-            lSeed = unchecked(lSeed * lSeed * lSeed * lSeed);
-
             byte[] seedBits = BitConverter.GetBytes(lSeed);
 
             m_w = BitConverter.ToUInt32(seedBits, 0);
@@ -30,11 +28,33 @@ namespace Utility
             m_z = (uint)((lSeed << 32) >> 32);
         }
 
+        public DeterministicRandomNumberGenerator(DateTime dateTime)
+        {
+            byte[] seedBits = BitConverter.GetBytes(dateTime.Ticks);
+
+            m_w = BitConverter.ToUInt32(seedBits, 0);
+            m_z = BitConverter.ToUInt32(seedBits, 4);
+        }
+
+        public void SetSeed(long lSeed)
+        {
+            byte[] seedBits = BitConverter.GetBytes(lSeed);
+
+            m_w = BitConverter.ToUInt32(seedBits, 0);
+            m_z = BitConverter.ToUInt32(seedBits, 4);
+        }
+
         public uint GetRandomInt()
         {
             m_z = 36969 * (m_z & 65535) + (m_z >> 16);
             m_w = 18000 * (m_w & 65535) + (m_w >> 16);
             return (m_z << 16) + m_w;  /* 32-bit result */
+        }
+
+        public uint GetRandomRangeInt(uint iMinInclusive, uint iMaxInclusive)
+        {
+            //get a random int 
+            
         }
 
         public Fix GetRandomFix()
@@ -78,6 +98,17 @@ namespace Utility
 
             //pick random polar coordinate 
             return new FixVec2(fixRandomRadius * FixMath.Cos(fixRandomAngle), fixRandomRadius * FixMath.Sin(fixRandomAngle));
+        }
+
+        public float GetRandomRangeFloat(float fMin, float fMax)
+        {
+            uint iRngBase = GetRandomInt();
+
+            float fRange = fMax - fMin;
+            
+            float fPercent = (float)uint.MaxValue / (float)iRngBase; 
+            
+            return fMin + (fPercent * (fRange));
         }
     }
 

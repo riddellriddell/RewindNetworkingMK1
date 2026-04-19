@@ -2,7 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
+using Utility;
 using Random = UnityEngine.Random;
 
 namespace Networking
@@ -13,13 +15,6 @@ namespace Networking
     /// </summary>
     public class FakeWebAPI : MonoBehaviour
     {
-        public static string GenerateRandomString(int iCharacters)
-        {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            return new string(Enumerable.Repeat(chars, iCharacters)
-              .Select(s => s[Random.Range(0,s.Length)]).ToArray());
-        }
-
         //simulated API Database
         protected class FakeDatabase
         {
@@ -33,6 +28,8 @@ namespace Networking
             public Dictionary<long, UserMessages> m_umsUserMessages = new Dictionary<long, UserMessages>();
             public Dictionary<long, Gateway> m_gtwGateways = new Dictionary<long, Gateway>();
             
+            public DeterministicRandomNumberGenerator m_randomNumberGenerator = new DeterministicRandomNumberGenerator(1231456789ul);
+            
             //gets the id for the passed in identifier or returns long min value if not found
             public UserIDDetails GetUserIDWithCredentials(string strLoginCredentials)
             {
@@ -44,7 +41,7 @@ namespace Networking
                 {
                     UserIDDetails uidNewUser = new UserIDDetails()
                     {
-                        m_lUserID = Random.Range(int.MinValue,int.MaxValue),
+                        m_lUserID = m_randomNumberGenerator.Range(int.MinValue,int.MaxValue),
                         m_lUserKey = Random.Range(int.MinValue, int.MaxValue)
                     };
 
@@ -252,6 +249,11 @@ namespace Networking
             }
         }
 
+        protected interface IDelayedAction
+        {
+            public abstract void Execute();
+
+        }
         public static FakeWebAPI Instance { get; private set; } = null;
 
 
@@ -277,6 +279,9 @@ namespace Networking
 
         [SerializeField]
         public float m_fActionErrorChance = 0.25f;
+        
+        [SerializeField]
+        public TimeSourceComponentBase m_tscTimeSource;
 
         protected string m_strServerErrorResponse = "500 Internal Server Error";
 
@@ -285,6 +290,8 @@ namespace Networking
         protected string m_strDoNotHavePermissionResponse = "403 Action Denied Error";
         
         protected FakeDatabase m_fdbFakeDatabase = new FakeDatabase();
+
+        protected SortedList<DateTime, Action> m_actDelayedActions = new SortedList<DateTime, Action>();
 
         public void Start()
         {
@@ -306,197 +313,222 @@ namespace Networking
             }
         }
 
+        public void Update()
+        {
+            //get the time
+            DateTime dtmNow = m_tscTimeSource.UTCNow;
+            
+            //loop through the delayed actions and execute them
+            while (m_actDelayedActions.Count > 0)
+            {
+                DateTime dtmActionExecuteTime = GetNextActionTime();
+
+                if (dtmActionExecuteTime >= dtmNow)
+                {
+                    break;
+                }
+
+                Action actActionToExecute = DequeueAction();
+                
+                actActionToExecute.Invoke();
+            }
+        }
+
         public void GetUserWithLoginCredentials(string strLoginCredentials, Action<bool, string> actGetUserCallback)
         {
-            StartCoroutine(InternalGetUserWithLoginCredentials(strLoginCredentials, actGetUserCallback));
+            InternalGetUserWithLoginCredentials(strLoginCredentials, actGetUserCallback);
         }
 
         public void GetDeleteUserMessages(string strUserIDandKey, Action<bool, string> actGetMessagesCallback)
         {
-            StartCoroutine(InternalGetDeleteUserMessages(strUserIDandKey, actGetMessagesCallback));
+            InternalGetDeleteUserMessages(strUserIDandKey, actGetMessagesCallback);
         }
 
         public void AddNewMessage(string strNewMessageDetails, Action<bool, string> actAddMessageCallback)
         {
-            StartCoroutine(InternalAddNewMessage(strNewMessageDetails, actAddMessageCallback));
+            InternalAddNewMessage(strNewMessageDetails, actAddMessageCallback);
         }
 
         public void SetGateway(string strSetGatewayCommand, Action<bool, string> actGatewayUpdateCallback)
         {
-            StartCoroutine(InternalSetGateway(strSetGatewayCommand, actGatewayUpdateCallback));
+            InternalSetGateway(strSetGatewayCommand, actGatewayUpdateCallback);
         }
 
         public void SearchForGateway(string strGatewayRequest, Action<bool, string> actSearchForGateCallback)
         {
-            StartCoroutine(InternalSearchForGateway(strGatewayRequest, actSearchForGateCallback));
+            InternalSearchForGateway(strGatewayRequest, actSearchForGateCallback);
         }
 
         public void SearchForGatewayList(string strUserID, Action<bool, string> actSearchForGateCallback)
         {
-            StartCoroutine(InternalSearchForGatewayList(strUserID, actSearchForGateCallback));
+            InternalSearchForGatewayList(strUserID, actSearchForGateCallback);
         }
 
-        protected IEnumerator InternalGetUserWithLoginCredentials(string strLoginCredentials, Action<bool, string> actGetUserCallback)
+        protected void InternalGetUserWithLoginCredentials(string strLoginCredentials, Action<bool, string> actGetUserCallback)
         {
 
             //check for timeout 
             if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
             {
-                yield return new WaitForSeconds(m_fTimeOutTime);
+                QueueAction(m_fTimeOutTime, () => { actGetUserCallback?.Invoke(false, m_strTimeOutResponse); }  );
 
-                actGetUserCallback?.Invoke(false, m_strTimeOutResponse);
-
-                yield break;
+                return;
             }
 
-            yield return new WaitForSeconds(m_fLatncy);
-
-            //check if user could not be created due to conflicts / bad connection or other conflicts
-            if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
+            QueueAction(m_fLatncy, () =>
             {
-                //return error result
-                actGetUserCallback?.Invoke(false, m_strServerErrorResponse);
+                //check if user could not be created due to conflicts / bad connection or other conflicts
+                if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
+                {
+                    //return error result
+                    actGetUserCallback?.Invoke(false, m_strServerErrorResponse);
 
-                yield break;
-            }
+                    return;
+                }
 
-            //try get user
-            UserIDDetails strUserDetails = m_fdbFakeDatabase.GetUserIDWithCredentials(strLoginCredentials);
+                //try get user
+                UserIDDetails strUserDetails = m_fdbFakeDatabase.GetUserIDWithCredentials(strLoginCredentials);
 
-            if (LogHelp.LogVerbose(dllLogLevel)) Debug.Log($"get user account with credentials: {strLoginCredentials} returned : {strUserDetails} ");
+                if (LogHelp.LogVerbose(dllLogLevel))
+                    Debug.Log($"get user account with credentials: {strLoginCredentials} returned : {strUserDetails} ");
 
-            //return success
-            actGetUserCallback?.Invoke(true, JsonUtility.ToJson(strUserDetails));
+                //return success
+                actGetUserCallback?.Invoke(true, JsonUtility.ToJson(strUserDetails));
+            });
         }
 
-        protected IEnumerator InternalGetDeleteUserMessages(string strUserDetails, Action<bool, string> actGetMessagesCallback)
+        protected void InternalGetDeleteUserMessages(string strUserDetails, Action<bool, string> actGetMessagesCallback)
         {
             //check for timeout 
             if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
             {
-                yield return new WaitForSeconds(m_fTimeOutTime);
+                QueueAction(m_fTimeOutTime, () => { actGetMessagesCallback?.Invoke(false, m_strTimeOutResponse); }  );
 
-                actGetMessagesCallback?.Invoke(false, m_strTimeOutResponse);
-
-                yield break;
-            }
-
-            yield return new WaitForSeconds(m_fLatncy);
-
-            //check if user could not be created due to conflicts / bad connection or other conflicts
-            if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
-            {
-                //return error result
-                actGetMessagesCallback?.Invoke(false, m_strServerErrorResponse);
-
-                yield break;
-            }
-
-            GetMessageRequest gmdGetMessageRequest = JsonUtility.FromJson<GetMessageRequest>(strUserDetails);
-
-            //check if message request was properly formed
-            if (gmdGetMessageRequest.m_lUserKey == 0 || gmdGetMessageRequest.m_lUserID == 0)
-            {
-                if (LogHelp.LogError(dllLogLevel)) Debug.LogError($"Failed to parse user details : {strUserDetails}");
-
-                //return error result
-                actGetMessagesCallback?.Invoke(false, m_strServerErrorResponse);
-
-                yield break;
-            }
-
-            //check that the user key matches
-            UserIDDetails uidUserDetails = m_fdbFakeDatabase.m_uicUserIDs[gmdGetMessageRequest.m_lUserID];
-
-            if(uidUserDetails.m_lUserKey != gmdGetMessageRequest.m_lUserKey)
-            {
-                if (LogHelp.LogError(dllLogLevel)) Debug.LogError($"User access key incorrect  Request:{strUserDetails} User Key: {gmdGetMessageRequest.m_lUserKey}");
-
-                //return error result
-                actGetMessagesCallback?.Invoke(false, m_strServerErrorResponse);
-
-                yield break;
-            }
-
-            List<UserMessage> mesMessages = m_fdbFakeDatabase.GetDeleteUserMessages(gmdGetMessageRequest.m_lUserID);
-
-            GetMessageReturn gmrReturn = new GetMessageReturn()
-            {
-                m_usmUserMessages = mesMessages.ToArray()
-            };
-
-            //serialize result 
-            string strResult = JsonUtility.ToJson(gmrReturn);
-
-            if (LogHelp.LogVerbose(dllLogLevel)) Debug.Log($"Get Delete Messages with ID: {strUserDetails} returned: {strResult}");
-
-            actGetMessagesCallback?.Invoke(true, strResult);
-        }
-
-        protected IEnumerator InternalAddNewMessage(string strNewMessageDetails, Action<bool, string> actSendMessageCallback)
-        {
-            //check for timeout 
-            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
-            {
-                yield return new WaitForSeconds(m_fTimeOutTime);
-
-                actSendMessageCallback?.Invoke(false, m_strTimeOutResponse);
-
-                yield break;
-            }
-
-            yield return new WaitForSeconds(m_fLatncy);
-
-            //check if user could not be created due to conflicts / bad connection or other conflicts
-            if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
-            {
-                //return error result
-                actSendMessageCallback?.Invoke(false, m_strServerErrorResponse);
-
-                yield break;
+                return;
             }
             
-            //try and convert user details to long
-            SendMessageCommand smcSendMessageCommand = JsonUtility.FromJson<SendMessageCommand>(strNewMessageDetails);
-
-            //try to add the message to the users database entry
-            bool bWasMessageAdded = m_fdbFakeDatabase.AddNewMessage(smcSendMessageCommand.m_lToID, smcSendMessageCommand.m_lFromID, smcSendMessageCommand.m_iType, smcSendMessageCommand.m_strMessage);
-
-            if (bWasMessageAdded == false)
+            QueueAction(m_fLatncy, () =>
             {
-                //return error if accound does not exist
-                actSendMessageCallback?.Invoke(false, m_strItemDoesNoteExistResponse);
 
-                yield break;
-            }
+                //check if user could not be created due to conflicts / bad connection or other conflicts
+                if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
+                {
+                    //return error result
+                    actGetMessagesCallback?.Invoke(false, m_strServerErrorResponse);
 
-            //Debug.Log($"message {strNewMessageDetails} sent successfully");
+                    return;
+                }
 
-            //message sent successfully
-            actSendMessageCallback?.Invoke(true, string.Empty);
+                GetMessageRequest gmdGetMessageRequest = JsonUtility.FromJson<GetMessageRequest>(strUserDetails);
+
+                //check if message request was properly formed
+                if (gmdGetMessageRequest.m_lUserKey == 0 || gmdGetMessageRequest.m_lUserID == 0)
+                {
+                    if (LogHelp.LogError(dllLogLevel))
+                        Debug.LogError($"Failed to parse user details : {strUserDetails}");
+
+                    //return error result
+                    actGetMessagesCallback?.Invoke(false, m_strServerErrorResponse);
+
+                    return;
+                }
+
+                //check that the user key matches
+                UserIDDetails uidUserDetails = m_fdbFakeDatabase.m_uicUserIDs[gmdGetMessageRequest.m_lUserID];
+
+                if (uidUserDetails.m_lUserKey != gmdGetMessageRequest.m_lUserKey)
+                {
+                    if (LogHelp.LogError(dllLogLevel))
+                        Debug.LogError(
+                            $"User access key incorrect  Request:{strUserDetails} User Key: {gmdGetMessageRequest.m_lUserKey}");
+
+                    //return error result
+                    actGetMessagesCallback?.Invoke(false, m_strServerErrorResponse);
+
+                    return;
+                }
+
+                List<UserMessage> mesMessages = m_fdbFakeDatabase.GetDeleteUserMessages(gmdGetMessageRequest.m_lUserID);
+
+                GetMessageReturn gmrReturn = new GetMessageReturn()
+                {
+                    m_usmUserMessages = mesMessages.ToArray()
+                };
+
+                //serialize result 
+                string strResult = JsonUtility.ToJson(gmrReturn);
+
+                if (LogHelp.LogVerbose(dllLogLevel))
+                    Debug.Log($"Get Delete Messages with ID: {strUserDetails} returned: {strResult}");
+
+                actGetMessagesCallback?.Invoke(true, strResult);
+            });
         }
 
-        protected IEnumerator InternalSetGateway(string strSetGatewayCommand, Action<bool, string> actSetGateway)
+        protected void InternalAddNewMessage(string strNewMessageDetails, Action<bool, string> actSendMessageCallback)
         {
             //check for timeout 
             if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
             {
-                yield return new WaitForSeconds(m_fTimeOutTime);
+                QueueAction(m_fTimeOutTime, () => { actSendMessageCallback?.Invoke(false, m_strTimeOutResponse); }  );
 
-                actSetGateway?.Invoke(false, m_strTimeOutResponse);
-
-                yield break;
+                return;
             }
 
-            yield return new WaitForSeconds(m_fLatncy);
+            QueueAction(m_fLatncy, () =>
+            {
+
+                //check if user could not be created due to conflicts / bad connection or other conflicts
+                if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
+                {
+                    //return error result
+                    actSendMessageCallback?.Invoke(false, m_strServerErrorResponse);
+
+                    return;
+                }
+
+                //try and convert user details to long
+                SendMessageCommand smcSendMessageCommand =
+                    JsonUtility.FromJson<SendMessageCommand>(strNewMessageDetails);
+
+                //try to add the message to the users database entry
+                bool bWasMessageAdded = m_fdbFakeDatabase.AddNewMessage(smcSendMessageCommand.m_lToID,
+                    smcSendMessageCommand.m_lFromID, smcSendMessageCommand.m_iType, smcSendMessageCommand.m_strMessage);
+
+                if (bWasMessageAdded == false)
+                {
+                    //return error if accound does not exist
+                    actSendMessageCallback?.Invoke(false, m_strItemDoesNoteExistResponse);
+
+                    return;
+                }
+
+                //Debug.Log($"message {strNewMessageDetails} sent successfully");
+
+                //message sent successfully
+                actSendMessageCallback?.Invoke(true, string.Empty);
+            });
+        }
+
+        protected void InternalSetGateway(string strSetGatewayCommand, Action<bool, string> actSetGateway)
+        {
+            //check for timeout 
+            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
+            {
+                QueueAction(m_fTimeOutTime, () => { actSetGateway?.Invoke(false, m_strTimeOutResponse); }  );
+
+                return;
+            }
+
+            QueueAction(m_fLatncy, () => 
+                {
 
             //check if user could not be created due to conflicts / bad connection or other conflicts
             if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
             {
                 //return error result
                 actSetGateway?.Invoke(false, m_strServerErrorResponse);
-
-                yield break;
+                return;
             }
 
             //deserialize gateway changes
@@ -509,6 +541,7 @@ namespace Networking
             {
                 //return error result
                 actSetGateway?.Invoke(false, m_strServerErrorResponse);
+                return;
             }
 
             //try and find the target gateway
@@ -522,138 +555,184 @@ namespace Networking
             {
                 //return error result
                 actSetGateway?.Invoke(false, m_strServerErrorResponse);
-
-                yield break;
+                return;
             }
 
             actSetGateway?.Invoke(true, string.Empty);
+            }  );
         }
-
-        protected IEnumerator InternalSearchForGateway(string strGatewayDetails, Action<bool, string> actSearchCallback)
+        
+        protected void InternalSearchForGateway(string strGatewayDetails, Action<bool, string> actSearchCallback)
         {
             //check for timeout 
             if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
             {
-                yield return new WaitForSeconds(m_fTimeOutTime);
+                QueueAction(m_fTimeOutTime, () => { actSearchCallback?.Invoke(false, m_strTimeOutResponse); }  );
 
-                actSearchCallback?.Invoke(false, m_strTimeOutResponse);
-
-                yield break;
+                return;
             }
 
-            yield return new WaitForSeconds(m_fLatncy);
-
-            //check if user could not be created due to conflicts / bad connection or other conflicts
-            if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
+            QueueAction(m_fLatncy, () =>
             {
-                //return error result
-                actSearchCallback?.Invoke(false, m_strServerErrorResponse);
 
-                yield break;
-            }
-
-            GetGatewayRequest gwrRequest = JsonUtility.FromJson<GetGatewayRequest>(strGatewayDetails);
-
-            Gateway? gtwGate = m_fdbFakeDatabase.SearchForGateway(gwrRequest.m_lGameType,gwrRequest.m_lFlags);
-
-            if (gtwGate.HasValue == false)
-            {
-                actSearchCallback?.Invoke(false, m_strItemDoesNoteExistResponse);
-
-                yield break;
-            }
-
-            GatewayReturnDetails sgrReturnValue = new GatewayReturnDetails
-            {
-                m_lGateOwnerUserID = gtwGate.Value.m_lUserID,
-                m_gwsGateState = gtwGate.Value.m_gwsGateState,
-                m_lGameFlags = gtwGate.Value.m_lFlags,
-                m_lGameState = gtwGate.Value.m_gstGameState
-            };
-
-            string strGateReturnValue = JsonUtility.ToJson(sgrReturnValue);
-
-            actSearchCallback?.Invoke(true, strGateReturnValue);
-        }
-
-        protected IEnumerator InternalSearchForGatewayList(string strGatewayDetails, Action<bool, string> actSearchCallback)
-        {
-            //check for timeout 
-            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
-            {
-                yield return new WaitForSeconds(m_fTimeOutTime);
-
-                actSearchCallback?.Invoke(false, m_strTimeOutResponse);
-
-                yield break;
-            }
-
-            yield return new WaitForSeconds(m_fLatncy);
-
-            //check if user could not be created due to conflicts / bad connection or other conflicts
-            if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
-            {
-                //return error result
-                actSearchCallback?.Invoke(false, m_strServerErrorResponse);
-
-                yield break;
-            }
-
-            GetGatewayRequest gwrRequest = new GetGatewayRequest();
-
-            //get user id
-            try
-            {
-                gwrRequest = JsonUtility.FromJson<GetGatewayRequest>(strGatewayDetails);
-            }
-            catch
-            {
-                Debug.LogError("bad gate request json message, recieved: " + strGatewayDetails + " but was expecting something like: " + JsonUtility.ToJson(gwrRequest));    
-            }
-
-            Gateway[] gtwGate = m_fdbFakeDatabase.SearchForGatewayList(gwrRequest.m_lGameType, gwrRequest.m_lFlags);
-
-            if (gtwGate.Length == 0)
-            {
-                actSearchCallback?.Invoke(false, m_strItemDoesNoteExistResponse);
-
-                yield break;
-            }
-
-            GatewayReturnDetails[] sgrReturnValue = new GatewayReturnDetails[gtwGate.Length];
-
-            for(int i = 0; i < gtwGate.Length; i++)
-            {
-                sgrReturnValue[i] = new GatewayReturnDetails
+                //check if user could not be created due to conflicts / bad connection or other conflicts
+                if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
                 {
-                    m_lGateOwnerUserID = gtwGate[i].m_lUserID,
-                    m_gwsGateState = gtwGate[i].m_gwsGateState,
-                    m_lGameFlags = gtwGate[i].m_lFlags,
-                    m_lGameState = gtwGate[i].m_gstGameState
+                    //return error result
+                    actSearchCallback?.Invoke(false, m_strServerErrorResponse);
+
+                    return;
+                }
+
+                GetGatewayRequest gwrRequest = JsonUtility.FromJson<GetGatewayRequest>(strGatewayDetails);
+
+                Gateway? gtwGate = m_fdbFakeDatabase.SearchForGateway(gwrRequest.m_lGameType, gwrRequest.m_lFlags);
+
+                if (gtwGate.HasValue == false)
+                {
+                    actSearchCallback?.Invoke(false, m_strItemDoesNoteExistResponse);
+
+                    return;
+                }
+
+                GatewayReturnDetails sgrReturnValue = new GatewayReturnDetails
+                {
+                    m_lGateOwnerUserID = gtwGate.Value.m_lUserID,
+                    m_gwsGateState = gtwGate.Value.m_gwsGateState,
+                    m_lGameFlags = gtwGate.Value.m_lFlags,
+                    m_lGameState = gtwGate.Value.m_gstGameState
                 };
-            }
 
-            SearchForGatewayReturnList grlGateList = new SearchForGatewayReturnList();
+                string strGateReturnValue = JsonUtility.ToJson(sgrReturnValue);
 
-            grlGateList.m_grdGateList = sgrReturnValue;
-
-            //string strGateReturnValue = "[";
-            //for (int i = 0; i < sgrReturnValue.Length; i++)
-            //{
-            //    strGateReturnValue += JsonUtility.ToJson(sgrReturnValue[i]);
-            //
-            //    if(i != sgrReturnValue.Length -1)
-            //    {
-            //        strGateReturnValue += ",";
-            //    }
-            //}
-            //strGateReturnValue += "]";
-
-            string strGateReturnValue = JsonUtility.ToJson(grlGateList);
-
-
-            actSearchCallback?.Invoke(true, strGateReturnValue);
+                actSearchCallback?.Invoke(true, strGateReturnValue);
+            });
         }
 
+        protected void InternalSearchForGatewayList(string strGatewayDetails, Action<bool, string> actSearchCallback)
+        {
+            //check for timeout 
+            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
+            {
+                QueueAction(m_fTimeOutTime, () => { actSearchCallback?.Invoke(false, m_strTimeOutResponse); });
+                return;
+            }
+
+            QueueAction(m_fLatncy, () =>
+            {
+                //check if user could not be created due to conflicts / bad connection or other conflicts
+                if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
+                {
+                    //return error result
+                    actSearchCallback?.Invoke(false, m_strServerErrorResponse);
+
+                    return;
+                }
+
+                GetGatewayRequest gwrRequest = new GetGatewayRequest();
+
+                //get user id
+                try
+                {
+                    gwrRequest = JsonUtility.FromJson<GetGatewayRequest>(strGatewayDetails);
+                }
+                catch
+                {
+                    Debug.LogError("bad gate request json message, recieved: " + strGatewayDetails +
+                                   " but was expecting something like: " + JsonUtility.ToJson(gwrRequest));
+                }
+
+                Gateway[] gtwGate = m_fdbFakeDatabase.SearchForGatewayList(gwrRequest.m_lGameType, gwrRequest.m_lFlags);
+
+                if (gtwGate.Length == 0)
+                {
+                    actSearchCallback?.Invoke(false, m_strItemDoesNoteExistResponse);
+
+                    return;
+                }
+
+                GatewayReturnDetails[] sgrReturnValue = new GatewayReturnDetails[gtwGate.Length];
+
+                for (int i = 0; i < gtwGate.Length; i++)
+                {
+                    sgrReturnValue[i] = new GatewayReturnDetails
+                    {
+                        m_lGateOwnerUserID = gtwGate[i].m_lUserID,
+                        m_gwsGateState = gtwGate[i].m_gwsGateState,
+                        m_lGameFlags = gtwGate[i].m_lFlags,
+                        m_lGameState = gtwGate[i].m_gstGameState
+                    };
+                }
+
+                SearchForGatewayReturnList grlGateList = new SearchForGatewayReturnList();
+
+                grlGateList.m_grdGateList = sgrReturnValue;
+
+                //string strGateReturnValue = "[";
+                //for (int i = 0; i < sgrReturnValue.Length; i++)
+                //{
+                //    strGateReturnValue += JsonUtility.ToJson(sgrReturnValue[i]);
+                //
+                //    if(i != sgrReturnValue.Length -1)
+                //    {
+                //        strGateReturnValue += ",";
+                //    }
+                //}
+                //strGateReturnValue += "]";
+
+                string strGateReturnValue = JsonUtility.ToJson(grlGateList);
+
+
+                actSearchCallback?.Invoke(true, strGateReturnValue);
+            });
+        }
+
+
+        protected void QueueAction(DateTime dtmTimeToExecute, Action actDelayedAction)
+        {
+            m_actDelayedActions.Add(dtmTimeToExecute, actDelayedAction);
+        }
+        
+        protected void QueueAction(TimeSpan tspDelayUntilExecute, Action actDelayedAction)
+        {
+            DateTime dtmNow = m_tscTimeSource.UTCNow;
+            m_actDelayedActions.Add(dtmNow + tspDelayUntilExecute, actDelayedAction);
+        }
+
+        protected void QueueAction(float fDelayUntilExecute, Action actDelayedAction)
+        {
+            DateTime dtmNow = m_tscTimeSource.UTCNow;
+
+            DateTime dtmKey = dtmNow + TimeSpan.FromSeconds(fDelayUntilExecute);
+            
+            
+            //check if something already exists, if it does then delay the smallest amount possible
+            while (m_actDelayedActions.ContainsKey(dtmKey))
+            {
+                dtmKey += TimeSpan.FromTicks(1);
+            }
+            
+            m_actDelayedActions.Add(dtmKey, actDelayedAction);
+        }
+        
+        protected DateTime GetNextActionTime()
+        {
+            if (m_actDelayedActions.Count > 0)
+            {
+                return m_actDelayedActions.Keys.First();
+            }
+
+            return DateTime.MaxValue;
+        }
+
+        protected Action DequeueAction()
+        {
+            
+            Action actFirstAction = m_actDelayedActions.FirstOrDefault().Value;
+            
+            m_actDelayedActions.RemoveAt(0);
+
+            return actFirstAction;
+        }
     }
 }

@@ -21,7 +21,7 @@ public class BaseDataSyncVerifier<TTimeStamp, TID, TDataType> where TTimeStamp :
                     strExistingIDs += tupDataEnrey.Item2[i] + ", ";
                 }
 
-                Debug.LogError($"New data entry hash does not match existing entry for datapoint at timestamp {ttsTimeStamp} the new data has id {tidID} and there are {tupDataEnrey.Item2.Count} existing hashes with the following ID's: {strExistingIDs}");
+                Debug.LogError($"New data entry hash: {lDataHash} does not match existing entry for datapoint at timestamp {ttsTimeStamp} the new data has id {tidID} and there are {tupDataEnrey.Item2.Count} existing hashes with the following ID's: {strExistingIDs}");
             }
             else
             {
