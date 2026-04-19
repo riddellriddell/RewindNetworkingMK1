@@ -6,17 +6,16 @@ namespace Networking
 {
     public class TimeNetworkProcessor : ManagedNetworkPacketProcessor<TimeConnectionProcessor>
     {
-        public static float s_iTimeOffsetIndex = 0;
 
-        public static DateTime StaticBaseTime
+        public DateTime StaticBaseTime
         {
             get
             {
-                return DateTime.UtcNow;
+                return ParentNetworkConnection.m_tscTimeSource.UTCNow;
             }
         }
 
-        public static DateTime CalculateNetworkTime(in TimeSpan tspCurrentOffset, ref DateTime dtmOldestTime)
+        public DateTime CalculateNetworkTime(in TimeSpan tspCurrentOffset, ref DateTime dtmOldestTime)
         {
             //calcualte network time
             DateTime dtmNetworkTime = StaticBaseTime + tspCurrentOffset;
@@ -36,7 +35,7 @@ namespace Networking
             return dtmNetworkTime;
         }
 
-        public static DateTime ConvertFromBaseToNetworkTime(DateTime dtmBaseTime , TimeSpan tspNetworkTimeOffset)
+        public DateTime ConvertFromBaseToNetworkTime(DateTime dtmBaseTime , TimeSpan tspNetworkTimeOffset)
         {
             return dtmBaseTime + tspNetworkTimeOffset;
 
@@ -125,6 +124,7 @@ namespace Networking
         public TimeNetworkProcessor(NetworkingDataBridge ndbNetworkDataBridge):base()
         {
             NetworkDataBridge = ndbNetworkDataBridge;
+            NetworkDataBridge.m_tnpTimeNetworkProcessor = this;
         }
 
         protected override TimeConnectionProcessor NewConnectionProcessor(NetworkConnectionSettings ncsNetworkSettings)

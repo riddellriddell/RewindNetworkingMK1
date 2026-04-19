@@ -195,8 +195,11 @@ namespace Networking
                     //check if peer has been assigned to a channel
                     if (gmsState.TryGetIndexForPeer(ParentNetworkConnection.m_lPeerID, out int iIndex))
                     {
+                        //get the network connection
+                        TimeNetworkProcessor tnpTimeProcessor = ParentNetworkConnection.GetPacketProcessor<TimeNetworkProcessor>();
+                        
                         //convert the date time of the connection to synced network time 
-                        DateTime NetworkTimeOfConnectionEst = TimeNetworkProcessor.ConvertFromBaseToNetworkTime(
+                        DateTime NetworkTimeOfConnectionEst = tnpTimeProcessor.ConvertFromBaseToNetworkTime(
                             m_dtmConnectionStartTime, 
                             m_tnpNetworkTime.CalculateTimeOffsetExcludingLocalPeer());
 

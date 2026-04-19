@@ -452,7 +452,7 @@ namespace Networking
         {
             get
             {
-                return TimeNetworkProcessor.ConvertFromBaseToNetworkTime(
+                return m_tnpNetworkTime.ConvertFromBaseToNetworkTime(
                             m_dtmBaseTimeOfConnection,
                             m_tnpNetworkTime.TimeOffset);
             }

@@ -61,6 +61,9 @@ namespace Networking
         //no messages this old or older are allowed in the message buffer
         public SortingValue m_svaOldestMessageToStoreInBuffer;
 
+        //network aware time source to pull synced time from
+        public TimeNetworkProcessor m_tnpTimeNetworkProcessor;
+
         
         //get the number of messages on the bridge
         public int Count
@@ -123,7 +126,7 @@ namespace Networking
         {
             //lock network time values
 
-            return TimeNetworkProcessor.CalculateNetworkTime(m_tspNetworkTimeOffset, ref m_dtmNetworkOldestTime);
+            return m_tnpTimeNetworkProcessor.CalculateNetworkTime(m_tspNetworkTimeOffset, ref m_dtmNetworkOldestTime);
             
             //unlock network time values
         }

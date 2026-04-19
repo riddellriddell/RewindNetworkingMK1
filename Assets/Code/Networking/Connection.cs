@@ -130,15 +130,15 @@ namespace Networking
 
         public Connection(DateTime dtmNegotiationStart, NetworkConnection ncnParetnNetwork, long lUserUniqueID, ClassWithIDFactory cifPacketFactory, IPeerTransmitterFactory ptfPeerFactory )
         {
+            m_ncnParentNetworkConneciton = ncnParetnNetwork;
+            
             m_dtmConnectionSetupStart = dtmNegotiationStart;
 
-            m_dtmTimeOfLastActivity = DateTime.UtcNow; 
+            m_dtmTimeOfLastActivity = m_ncnParentNetworkConneciton.m_tscTimeSource.UTCNow; 
 
             m_dtmConnectionEstablishTime = DateTime.MinValue;
 
-            m_dtmTimeOfLastMessageSent = DateTime.UtcNow;
-
-            m_ncnParentNetworkConneciton = ncnParetnNetwork;
+            m_dtmTimeOfLastMessageSent = m_ncnParentNetworkConneciton.m_tscTimeSource.UTCNow;
 
             m_lUserUniqueID = lUserUniqueID;
 
@@ -174,13 +174,13 @@ namespace Networking
             m_dtmConnectionSetupStart = dtmResetTime;
 
             //reset the last time of activity
-            m_dtmTimeOfLastActivity = DateTime.UtcNow;
+            m_dtmTimeOfLastActivity = m_ncnParentNetworkConneciton.m_tscTimeSource.UTCNow;
                        
             //reset connection establish time
             m_dtmConnectionEstablishTime = DateTime.MinValue;
 
             //reset the last time a message was sent
-            m_dtmTimeOfLastMessageSent = DateTime.UtcNow;
+            m_dtmTimeOfLastMessageSent = m_ncnParentNetworkConneciton.m_tscTimeSource.UTCNow;
 
             //remove any stored date from previouse connection
             //stored in packet processors 
@@ -239,7 +239,7 @@ namespace Networking
         //process network negotiation data
         public void ProcessNetworkNegotiationMessage(string strConnectionData)
         {
-            m_dtmTimeOfLastActivity = DateTime.UtcNow;
+            m_dtmTimeOfLastActivity = m_ncnParentNetworkConneciton.m_tscTimeSource.UTCNow;
             m_ptrTransmitter.ProcessNegotiationMessage(strConnectionData);
         }
 
@@ -280,7 +280,7 @@ namespace Networking
                 SetStatus(ConnectionStatus.Connected);
             }
 
-            m_dtmTimeOfLastActivity = DateTime.UtcNow;
+            m_dtmTimeOfLastActivity = m_ncnParentNetworkConneciton.m_tscTimeSource.UTCNow;
 
             m_bSendConnectionMessage = true;
 
@@ -335,7 +335,7 @@ namespace Networking
                 return;
             }
 
-            TimeSpan tspTimeSinceLastMessage = DateTime.UtcNow - m_dtmTimeOfLastActivity;
+            TimeSpan tspTimeSinceLastMessage = m_ncnParentNetworkConneciton.m_tscTimeSource.UTCNow - m_dtmTimeOfLastActivity;
 
             //allow extra time for connection messages to get through
             if (Status == ConnectionStatus.Initializing)
@@ -357,7 +357,7 @@ namespace Networking
         public void ReceivePacket(byte[] bData)
         {
             //update the time since last message 
-            m_dtmTimeOfLastActivity = DateTime.UtcNow;
+            m_dtmTimeOfLastActivity = m_ncnParentNetworkConneciton.m_tscTimeSource.UTCNow;
 
             //convert raw data to packet wrapper 
             PacketWrapper packetWrapper = new PacketWrapper(bData);
@@ -532,7 +532,7 @@ namespace Networking
             bForceSendMessage = m_bSendConnectionMessage;
 
             //check if max time between packet sends has been reached
-            if (m_tspMaxTimeBetweenMessages < DateTime.UtcNow - m_dtmTimeOfLastMessageSent)
+            if (m_tspMaxTimeBetweenMessages < m_ncnParentNetworkConneciton.m_tscTimeSource.UTCNow - m_dtmTimeOfLastMessageSent)
             {
                 bForceSendMessage = true;
             }
@@ -627,7 +627,7 @@ namespace Networking
             m_bNeedToSendAckPacket = false;
 
             //update the time of last packet sent
-            m_dtmTimeOfLastMessageSent = DateTime.UtcNow;
+            m_dtmTimeOfLastMessageSent = m_ncnParentNetworkConneciton.m_tscTimeSource.UTCNow;
 
         }
 

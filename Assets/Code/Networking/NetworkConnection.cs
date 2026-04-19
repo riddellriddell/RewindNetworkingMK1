@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Utility;
 
 namespace Networking
 {
@@ -58,14 +59,19 @@ namespace Networking
 
         public IPeerTransmitterFactory m_ptfPeerTransmitterFactory;
 
+        public ITimeSource m_tscTimeSource;
+        
         public NetworkConnectionSettings m_ncsConnectionSettings;
 
-        public NetworkConnection(long lUserID, IPeerTransmitterFactory ptfPeerTransmitterFactory, NetworkConnectionSettings ncsSettings)
+
+        public NetworkConnection(long lUserID, IPeerTransmitterFactory ptfPeerTransmitterFactory, ITimeSource tscTimeSource, NetworkConnectionSettings ncsSettings)
         {
             //generate a unique ID
             m_lPeerID = lUserID;
 
             m_ptfPeerTransmitterFactory = ptfPeerTransmitterFactory;
+            
+            m_tscTimeSource = tscTimeSource;
 
             m_ncsConnectionSettings = ncsSettings;
 

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Utility;
 
 namespace Networking
 {
@@ -13,6 +14,8 @@ namespace Networking
         public NetworkConnectionSettings ncsNetworkSettings;
 
         public List<NetworkConnection> m_ncnPeerNetworks;
+        
+        public ITimeSource m_tscTimeSource;
 
         public bool m_bAllPeersConnected = false;
 
@@ -42,7 +45,9 @@ namespace Networking
 
         public void CreateNetworkPeers()
         {
-            DateTime dtmProcessStart = DateTime.UtcNow;
+            m_tscTimeSource = new SimpleTimeSource();
+            
+            DateTime dtmProcessStart = m_tscTimeSource.UTCNow;
 
             m_ncnPeerNetworks = new List<NetworkConnection>();
 
@@ -55,7 +60,7 @@ namespace Networking
 
                 IPeerTransmitterFactory m_ptfTransmitterFactory = CreateTransmitterFactory();
 
-                NetworkConnection ncnNewNetworkConnection = new NetworkConnection(lPeerID,m_ptfTransmitterFactory, ncsNetworkSettings);
+                NetworkConnection ncnNewNetworkConnection = new NetworkConnection(lPeerID,m_ptfTransmitterFactory,m_tscTimeSource, ncsNetworkSettings);
 
                 SetupPeerPacketProcessors(ncnNewNetworkConnection);
 

@@ -6,6 +6,7 @@ using SimDataInterpolation;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Utility;
 
 /// <summary>
 /// the point of this class is to manager the setting up and running the peer to peer network and game sim given the inital inputs
@@ -98,6 +99,8 @@ namespace GameManagers
         public GameStateViewCamera m_gvcGameCamera;
 
         public IPeerTransmitterFactory m_ptfTransmitterFactory;
+        
+        public ITimeSource m_tscTimeSource;
 
         public int m_iDefaultMaxGameSize = 6;
 
@@ -115,11 +118,13 @@ namespace GameManagers
             ConstData cdaConstantSimData, 
             WebInterface winWebInterface, 
             IPeerTransmitterFactory ptfTransmitterFactory,
+            ITimeSource tscTimeSource,
             IGameStateView gsvGameStateViewSpawner,
             UIStateManager usmUIManager,
             GameStateViewCamera gvcGameViewCamera)
         {
             m_ptfTransmitterFactory = ptfTransmitterFactory;
+            m_tscTimeSource = tscTimeSource;
             m_winWebInterface = winWebInterface;
             m_sdaSimSettingsData = sdaSimSettingsData;
             m_ecsInterpolationErrorCorrectionSettings = ecsInterpolationErrorCorrectionSettings;
@@ -775,7 +780,7 @@ namespace GameManagers
             m_ncnNetworkConnection?.OnCleanup();
 
             //create network
-            m_ncnNetworkConnection = new NetworkConnection(m_winWebInterface.UserID, m_ptfTransmitterFactory, m_ncsNetworkConnectionSettings);
+            m_ncnNetworkConnection = new NetworkConnection(m_winWebInterface.UserID, m_ptfTransmitterFactory, m_tscTimeSource, m_ncsNetworkConnectionSettings);
 
             //create network data bridge
             m_ndbDataBridge = new NetworkingDataBridge();

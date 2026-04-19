@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using UnityEngine;
+using Utility;
 using Random = UnityEngine.Random;
 
 namespace Networking
@@ -26,6 +27,8 @@ namespace Networking
         public float m_fChaceOfWrongData = 0.8f;
 
         public float m_fChanceOfCorrectingMistake = 0.05f;
+
+        public ITimeSource m_tscTimeSource;
 
         public DateTime m_dtmSourceDataTime;
 
@@ -59,7 +62,9 @@ namespace Networking
 
             GenerateSourceData(m_iSourceDataBSize, out m_bSourceDataB, out m_lSourceDataBHash);
 
-            m_dtmSourceDataTime = DateTime.UtcNow;
+            m_tscTimeSource = new SimpleTimeSource();
+            
+            m_dtmSourceDataTime = m_tscTimeSource.UTCNow;
 
             List<long> lAuthorativePeers = new List<long>();
             for (int i = 1; i < m_ncnPeerNetworks.Count; i++)

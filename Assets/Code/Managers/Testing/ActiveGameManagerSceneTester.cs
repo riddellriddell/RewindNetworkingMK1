@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
+using Utility;
 using Random = UnityEngine.Random;
 
 namespace GameManagers
@@ -101,6 +102,8 @@ namespace GameManagers
         public WebInterface m_wbiWebInterface;
 
         public IPeerTransmitterFactory m_ptfTransmitterFactory;
+
+        public TimeSourceComponentBase m_tscTimeSource;
 
         public ActiveGameManager m_agmActiveGameManager;
 
@@ -280,6 +283,7 @@ namespace GameManagers
                 m_cdaConstSimData, 
                 m_wbiWebInterface, 
                 m_ptfTransmitterFactory,
+                m_tscTimeSource,
                 m_gsvGameStateView,
                 m_usmGameUIStateManager,
                 m_gvcGameViewCamera);
