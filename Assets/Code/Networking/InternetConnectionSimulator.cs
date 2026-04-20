@@ -3,7 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Random = UnityEngine.Random;
+using Utility;
 
 namespace Networking
 {
@@ -15,7 +15,7 @@ namespace Networking
         {
             public byte[] m_bData;
             public Action<byte[]> m_actRecieveDataCallback;
-            public float m_fTimeOfDelivery;
+            public DateTime m_dtmTimeOfDelivery;
         }
 
         public bool m_bEnableLag = false;
@@ -29,10 +29,14 @@ namespace Networking
         public bool m_bEnablePacketLoss = false;
         public float m_fPacketLoss = 0.3f;
 
+        public TimeSourceComponentBase m_tscTimeSource = null;
+        
         private float m_fTimeUntillNextOutage;
         private float m_fOutageTimeRemainig;
 
         private List<TimeStampedWrapper> m_lstDataInFlight;
+        
+        private DeterministicRandomNumberGenerator m_rng = new DeterministicRandomNumberGenerator(12345678);
 
         [Obsolete]
         public void SendPacket(PacketWrapper packetToSend, Connection conTarget)
@@ -46,13 +50,13 @@ namespace Networking
             //loop through list of packets in flight to find one not in use 
             for (int i = 0; i < m_lstDataInFlight.Count; i++)
             {
-                if (m_lstDataInFlight[i].m_fTimeOfDelivery == 0)
+                if (m_lstDataInFlight[i].m_dtmTimeOfDelivery == DateTime.MinValue)
                 {
                     m_lstDataInFlight[i] = new TimeStampedWrapper()
                     {
                         m_bData = packetToSend.WriteStream.GetData(),
                         m_actRecieveDataCallback = conTarget.ReceivePacket,
-                        m_fTimeOfDelivery = CalcuateDeliveryTime()
+                        m_dtmTimeOfDelivery = CalcuateDeliveryTime()
                     };
 
                     return;
@@ -64,7 +68,7 @@ namespace Networking
             {
                 m_bData = packetToSend.WriteStream.GetData(),
                 m_actRecieveDataCallback = conTarget.ReceivePacket,
-                m_fTimeOfDelivery = CalcuateDeliveryTime()
+                m_dtmTimeOfDelivery = CalcuateDeliveryTime()
             });
         }
 
@@ -79,13 +83,13 @@ namespace Networking
             //loop through list of packets in flight to find one not in use 
             for (int i = 0; i < m_lstDataInFlight.Count; i++)
             {
-                if (m_lstDataInFlight[i].m_fTimeOfDelivery == 0)
+                if (m_lstDataInFlight[i].m_dtmTimeOfDelivery == DateTime.MinValue)
                 {
                     m_lstDataInFlight[i] = new TimeStampedWrapper()
                     {
                         m_bData = bData,
                         m_actRecieveDataCallback = actCallback,
-                        m_fTimeOfDelivery = CalcuateDeliveryTime()
+                        m_dtmTimeOfDelivery = CalcuateDeliveryTime()
                     };
 
                     return;
@@ -97,7 +101,7 @@ namespace Networking
             {
                 m_bData = bData,
                 m_actRecieveDataCallback = actCallback,
-                m_fTimeOfDelivery = CalcuateDeliveryTime()
+                m_dtmTimeOfDelivery = CalcuateDeliveryTime()
             });
         }
 
@@ -123,13 +127,17 @@ namespace Networking
                 //loop through all the packets in flight 
                 for (int i = 0; i < m_lstDataInFlight.Count; i++)
                 {
-                    if (m_lstDataInFlight[i].m_fTimeOfDelivery < Time.timeSinceLevelLoad &&
+                    if (m_lstDataInFlight[i].m_dtmTimeOfDelivery < m_tscTimeSource.UTCNow &&
                         m_lstDataInFlight[i].m_bData != null)
                     {
                         //deliver packet 
                         m_lstDataInFlight[i].m_actRecieveDataCallback?.Invoke(m_lstDataInFlight[i].m_bData);
 
-                        m_lstDataInFlight[i] = new TimeStampedWrapper();
+                        TimeStampedWrapper tswNewWrapper = new TimeStampedWrapper();
+                        
+                        tswNewWrapper.m_dtmTimeOfDelivery = DateTime.MinValue;
+                        
+                        m_lstDataInFlight[i] = tswNewWrapper;
                     }
                 }
             }
@@ -152,8 +160,8 @@ namespace Networking
             }
             else
             {
-                m_fOutageTimeRemainig = Random.Range(m_fMinOutage, m_fMaxOutage);
-                m_fTimeUntillNextOutage = Random.Range(m_fMinTimeBetweenOutages, m_fMaxTimeBetweenOutages);
+                m_fOutageTimeRemainig = m_rng.GetRandomRangeFloat(m_fMinOutage, m_fMaxOutage);
+                m_fTimeUntillNextOutage = m_rng.GetRandomRangeFloat(m_fMinTimeBetweenOutages, m_fMaxTimeBetweenOutages);
             }
         }
 
@@ -164,7 +172,7 @@ namespace Networking
                 return true;
             }
 
-            if (Random.Range(0f, 1f) < m_fPacketLoss && m_bEnablePacketLoss)
+            if (m_rng.GetRandomRangeFloat(0f, 1f) < m_fPacketLoss && m_bEnablePacketLoss)
             {
                 return true;
             }
@@ -172,15 +180,15 @@ namespace Networking
             return false;
         }
 
-        private float CalcuateDeliveryTime()
+        private DateTime CalcuateDeliveryTime()
         {
             if (m_bEnableLag)
             {
-                return Time.timeSinceLevelLoad + Random.Range(m_fMinLag, m_fMaxLag);
+                return m_tscTimeSource.UTCNow + TimeSpan.FromSeconds( m_rng.GetRandomRangeFloat(m_fMinLag, m_fMaxLag));
             }
             else
             {
-                return Time.timeSinceLevelLoad;
+                return m_tscTimeSource.UTCNow ;
             }
         }
     }
