@@ -51,10 +51,24 @@ namespace Utility
             return (m_z << 16) + m_w;  /* 32-bit result */
         }
 
+        public int GetRandomSignedInt()
+        {
+            uint iSeed = GetRandomInt();
+            
+            //bit cast to signed
+            byte[] seedBits = BitConverter.GetBytes(iSeed);
+
+            return BitConverter.ToInt32(seedBits, 0);
+        }
+
         public uint GetRandomRangeInt(uint iMinInclusive, uint iMaxInclusive)
         {
             //get a random int 
+            uint iDif = (uint)(iMaxInclusive - iMinInclusive);
             
+            uint iModOfRandom = GetRandomInt() % iDif;
+
+            return iMinInclusive + iModOfRandom;
         }
 
         public Fix GetRandomFix()

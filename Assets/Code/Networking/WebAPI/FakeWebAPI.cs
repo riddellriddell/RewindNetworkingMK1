@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using Utility;
-using Random = UnityEngine.Random;
 
 namespace Networking
 {
@@ -28,7 +27,7 @@ namespace Networking
             public Dictionary<long, UserMessages> m_umsUserMessages = new Dictionary<long, UserMessages>();
             public Dictionary<long, Gateway> m_gtwGateways = new Dictionary<long, Gateway>();
             
-            public DeterministicRandomNumberGenerator m_randomNumberGenerator = new DeterministicRandomNumberGenerator(1231456789ul);
+            public DeterministicRandomNumberGenerator m_rngRandomNumberGenerator = new DeterministicRandomNumberGenerator(1231456789ul);
             
             //gets the id for the passed in identifier or returns long min value if not found
             public UserIDDetails GetUserIDWithCredentials(string strLoginCredentials)
@@ -41,8 +40,8 @@ namespace Networking
                 {
                     UserIDDetails uidNewUser = new UserIDDetails()
                     {
-                        m_lUserID = m_randomNumberGenerator.Range(int.MinValue,int.MaxValue),
-                        m_lUserKey = Random.Range(int.MinValue, int.MaxValue)
+                        m_lUserID = m_rngRandomNumberGenerator.GetRandomSignedInt(),
+                        m_lUserKey = m_rngRandomNumberGenerator.GetRandomSignedInt()
                     };
 
                     m_uicUserIDCredentialsPairs.Add(strLoginCredentials, uidNewUser);
@@ -293,6 +292,9 @@ namespace Networking
 
         protected SortedList<DateTime, Action> m_actDelayedActions = new SortedList<DateTime, Action>();
 
+        protected DeterministicRandomNumberGenerator m_rngRandomNumberGenerator = new DeterministicRandomNumberGenerator(1231456789ul);
+
+        
         public void Start()
         {
             //ensure singleton pattern 
@@ -368,7 +370,7 @@ namespace Networking
         {
 
             //check for timeout 
-            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
+            if (m_rngRandomNumberGenerator.GetRandomRangeFloat(0.0f, 1.0f) < m_fTimeOutChance)
             {
                 QueueAction(m_fTimeOutTime, () => { actGetUserCallback?.Invoke(false, m_strTimeOutResponse); }  );
 
@@ -378,7 +380,7 @@ namespace Networking
             QueueAction(m_fLatncy, () =>
             {
                 //check if user could not be created due to conflicts / bad connection or other conflicts
-                if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
+                if (m_rngRandomNumberGenerator.GetRandomRangeFloat(0.0f, 1.0f) < m_fActionErrorChance)
                 {
                     //return error result
                     actGetUserCallback?.Invoke(false, m_strServerErrorResponse);
@@ -400,7 +402,7 @@ namespace Networking
         protected void InternalGetDeleteUserMessages(string strUserDetails, Action<bool, string> actGetMessagesCallback)
         {
             //check for timeout 
-            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
+            if (m_rngRandomNumberGenerator.GetRandomRangeFloat(0.0f, 1.0f) < m_fTimeOutChance)
             {
                 QueueAction(m_fTimeOutTime, () => { actGetMessagesCallback?.Invoke(false, m_strTimeOutResponse); }  );
 
@@ -411,7 +413,7 @@ namespace Networking
             {
 
                 //check if user could not be created due to conflicts / bad connection or other conflicts
-                if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
+                if (m_rngRandomNumberGenerator.GetRandomRangeFloat(0.0f, 1.0f) < m_fActionErrorChance)
                 {
                     //return error result
                     actGetMessagesCallback?.Invoke(false, m_strServerErrorResponse);
@@ -468,7 +470,7 @@ namespace Networking
         protected void InternalAddNewMessage(string strNewMessageDetails, Action<bool, string> actSendMessageCallback)
         {
             //check for timeout 
-            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
+            if (m_rngRandomNumberGenerator.GetRandomRangeFloat(0.0f, 1.0f) < m_fTimeOutChance)
             {
                 QueueAction(m_fTimeOutTime, () => { actSendMessageCallback?.Invoke(false, m_strTimeOutResponse); }  );
 
@@ -479,7 +481,7 @@ namespace Networking
             {
 
                 //check if user could not be created due to conflicts / bad connection or other conflicts
-                if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
+                if (m_rngRandomNumberGenerator.GetRandomRangeFloat(0.0f, 1.0f) < m_fActionErrorChance)
                 {
                     //return error result
                     actSendMessageCallback?.Invoke(false, m_strServerErrorResponse);
@@ -513,7 +515,7 @@ namespace Networking
         protected void InternalSetGateway(string strSetGatewayCommand, Action<bool, string> actSetGateway)
         {
             //check for timeout 
-            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
+            if (m_rngRandomNumberGenerator.GetRandomRangeFloat(0.0f, 1.0f) < m_fTimeOutChance)
             {
                 QueueAction(m_fTimeOutTime, () => { actSetGateway?.Invoke(false, m_strTimeOutResponse); }  );
 
@@ -524,7 +526,7 @@ namespace Networking
                 {
 
             //check if user could not be created due to conflicts / bad connection or other conflicts
-            if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
+            if (m_rngRandomNumberGenerator.GetRandomRangeFloat(0.0f, 1.0f) < m_fActionErrorChance)
             {
                 //return error result
                 actSetGateway?.Invoke(false, m_strServerErrorResponse);
@@ -565,7 +567,7 @@ namespace Networking
         protected void InternalSearchForGateway(string strGatewayDetails, Action<bool, string> actSearchCallback)
         {
             //check for timeout 
-            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
+            if (m_rngRandomNumberGenerator.GetRandomRangeFloat(0.0f, 1.0f) < m_fTimeOutChance)
             {
                 QueueAction(m_fTimeOutTime, () => { actSearchCallback?.Invoke(false, m_strTimeOutResponse); }  );
 
@@ -576,7 +578,7 @@ namespace Networking
             {
 
                 //check if user could not be created due to conflicts / bad connection or other conflicts
-                if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
+                if (m_rngRandomNumberGenerator.GetRandomRangeFloat(0.0f, 1.0f) < m_fActionErrorChance)
                 {
                     //return error result
                     actSearchCallback?.Invoke(false, m_strServerErrorResponse);
@@ -612,7 +614,7 @@ namespace Networking
         protected void InternalSearchForGatewayList(string strGatewayDetails, Action<bool, string> actSearchCallback)
         {
             //check for timeout 
-            if (Random.Range(0.0f, 1.0f) < m_fTimeOutChance)
+            if (m_rngRandomNumberGenerator.GetRandomRangeFloat(0.0f, 1.0f) < m_fTimeOutChance)
             {
                 QueueAction(m_fTimeOutTime, () => { actSearchCallback?.Invoke(false, m_strTimeOutResponse); });
                 return;
@@ -621,7 +623,7 @@ namespace Networking
             QueueAction(m_fLatncy, () =>
             {
                 //check if user could not be created due to conflicts / bad connection or other conflicts
-                if (Random.Range(0.0f, 1.0f) < m_fActionErrorChance)
+                if (m_rngRandomNumberGenerator.GetRandomRangeFloat(0.0f, 1.0f) < m_fActionErrorChance)
                 {
                     //return error result
                     actSearchCallback?.Invoke(false, m_strServerErrorResponse);
