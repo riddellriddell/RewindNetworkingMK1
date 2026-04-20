@@ -97,6 +97,8 @@ namespace GameManagers
 
         public bool m_bUseWebRTCTransmitter = false;
 
+        public bool m_bOnlyStepOnTimeSourceChange = false;
+        
         public string m_strUniqueDeviceID;
 
         public WebInterface m_wbiWebInterface;
