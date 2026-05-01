@@ -1,9 +1,11 @@
+using System;
 using GameStateView;
 using Sim;
 using SimDataInterpolation;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace GameStateView
 {
@@ -12,6 +14,10 @@ namespace GameStateView
         public Color m_clrDrawColour = new Color(0,0,0,0);
 
         private ConstData m_cdaConstData;
+
+        private InterpolatedFrameDataGen m_ifdInterpoatedFrameData;
+
+        private SimProcessorSettings m_sdaSettingsData;
 
         public void SetupConstDataViewEntities(ConstData cdaConstData)
         {
@@ -25,14 +31,30 @@ namespace GameStateView
 
         public void UpdateView(InterpolatedFrameDataGen ifdInterpolatedFrameData, SimProcessorSettings sdaSettingsData)
         {
+            m_ifdInterpoatedFrameData = ifdInterpolatedFrameData;
+            m_sdaSettingsData = sdaSettingsData;
+
+        }
+
+        private void Update()
+        {
+            if (m_ifdInterpoatedFrameData != null )
+            {
+                DrawView();
+            }
+        }
+        
+
+        public void DrawView()
+        {
             //draw all the asteroids
             DrawAsteroids();
 
             //draw space ships
-            DrawSpaceShips(ifdInterpolatedFrameData, sdaSettingsData);
+            DrawSpaceShips(m_ifdInterpoatedFrameData, m_sdaSettingsData);
 
             //draw lasers
-            DrawLasers(ifdInterpolatedFrameData, sdaSettingsData);
+            DrawLasers(m_ifdInterpoatedFrameData, m_sdaSettingsData);
         }
 
         private void DrawAsteroids()

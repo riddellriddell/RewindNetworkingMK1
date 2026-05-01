@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Utility;
 
 namespace Code.Managers.Testing
 {
@@ -20,18 +21,22 @@ namespace Code.Managers.Testing
         [SerializeField]
         public List<ClientEnableDelay> m_cedTargets = new List<ClientEnableDelay>();
 
+        public TimeSourceComponentBase m_tscTimeSource;
+        
         private DateTime m_dtmStart;
+        
+        
 
 
         public void Start()
         {
-            m_dtmStart = DateTime.Now;
+            m_dtmStart = m_tscTimeSource.UTCNow;
         }
 
         public void Update()
         {
             //get time since start
-            TimeSpan tspTimeDifference = DateTime.Now - m_dtmStart;
+            TimeSpan tspTimeDifference = m_tscTimeSource.UTCNow - m_dtmStart;
 
             double dSeconds = tspTimeDifference.TotalSeconds;
             

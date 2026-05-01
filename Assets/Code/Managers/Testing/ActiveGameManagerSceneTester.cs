@@ -258,11 +258,16 @@ namespace GameManagers
 
             m_wbiWebInterface.GetPlayerID(m_strUniqueDeviceID);
 
-
+            DateTime dtmTimeOfLastUpdate = m_tscTimeSource.UTCNow;
+            
             while (m_bAlive && m_wbiWebInterface.PlayerIDCommunicationStatus.m_cmsStatus != WebInterface.WebAPICommunicationTracker.CommunctionStatus.Succedded)
             {
-                m_wbiWebInterface.UpdateCommunication();
-
+                if (!m_bOnlyStepOnTimeSourceChange || dtmTimeOfLastUpdate != m_tscTimeSource.UTCNow)
+                {
+                    dtmTimeOfLastUpdate = m_tscTimeSource.UTCNow;
+                    m_wbiWebInterface.UpdateCommunication();
+                }
+                
                 yield return null;
             }
 
@@ -292,14 +297,31 @@ namespace GameManagers
 
             while (m_bAlive)
             {
-                m_wbiWebInterface.UpdateCommunication();
+                DateTime dtmNewNow = m_tscTimeSource.UTCNow;
+                
+                if (!m_bOnlyStepOnTimeSourceChange || dtmTimeOfLastUpdate != dtmNewNow)
+                {
+                    float fDeltaTime = 0;
+                    if (m_bOnlyStepOnTimeSourceChange)
+                    {
+                        fDeltaTime = (float)((dtmNewNow - dtmTimeOfLastUpdate).TotalSeconds);
+                    }
+                    else
+                    {
+                        fDeltaTime = Time.deltaTime;
+                    }
 
-                m_iapInputApplyer?.ApplyInputs(m_agmActiveGameManager.m_lpiLocalPeerInputManager);
+                    dtmTimeOfLastUpdate = dtmNewNow;
 
-                m_agmActiveGameManager.UpdateGame(Time.deltaTime);
+                    m_wbiWebInterface.UpdateCommunication();
+
+                    m_iapInputApplyer?.ApplyInputs(m_agmActiveGameManager.m_lpiLocalPeerInputManager);
+
+                    m_agmActiveGameManager.UpdateGame(fDeltaTime);
 
 #if UNITY_EDITOR
-                UpdateNetworkDebug();
+                    UpdateNetworkDebug();
+                }
 #endif
 
                 yield return null;

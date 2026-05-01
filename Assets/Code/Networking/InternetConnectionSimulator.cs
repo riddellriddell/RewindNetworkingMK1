@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Utility;
 
@@ -30,6 +31,9 @@ namespace Networking
         public float m_fPacketLoss = 0.3f;
 
         public TimeSourceComponentBase m_tscTimeSource = null;
+
+        private DateTime m_dtmTimeOfLastUpdate;
+        private float m_fTimeSinceLastUpdate;
         
         private float m_fTimeUntillNextOutage;
         private float m_fOutageTimeRemainig;
@@ -37,6 +41,8 @@ namespace Networking
         private List<TimeStampedWrapper> m_lstDataInFlight;
         
         private DeterministicRandomNumberGenerator m_rng = new DeterministicRandomNumberGenerator(12345678);
+
+        protected SortedList<DateTime, Action> m_actDelayedActions = new SortedList<DateTime, Action>();
 
         [Obsolete]
         public void SendPacket(PacketWrapper packetToSend, Connection conTarget)
@@ -114,11 +120,16 @@ namespace Networking
             }
 
             m_lstDataInFlight = new List<TimeStampedWrapper>();
+
+            m_dtmTimeOfLastUpdate = m_tscTimeSource.UTCNow;
         }
 
         // Update is called once per frame
         void Update()
         {
+            m_fTimeSinceLastUpdate =  (float)(m_tscTimeSource.UTCNow - m_dtmTimeOfLastUpdate).TotalSeconds;
+            m_dtmTimeOfLastUpdate = m_tscTimeSource.UTCNow;
+            
             //update the packet outage 
             UpdatePacketOutages();
 
@@ -141,8 +152,9 @@ namespace Networking
                     }
                 }
             }
+        
         }
-
+        
         private void UpdatePacketOutages()
         {
             if(!m_bEnableOutages)
@@ -152,11 +164,11 @@ namespace Networking
 
             if (m_fOutageTimeRemainig > 0)
             {
-                m_fOutageTimeRemainig -= Time.deltaTime;
+                m_fOutageTimeRemainig -= m_fTimeSinceLastUpdate;
             }
             else if (m_fTimeUntillNextOutage > 0)
             {
-                m_fTimeUntillNextOutage -= Time.deltaTime;
+                m_fTimeUntillNextOutage -= m_fTimeSinceLastUpdate;
             }
             else
             {
@@ -190,6 +202,73 @@ namespace Networking
             {
                 return m_tscTimeSource.UTCNow ;
             }
+        }
+        
+        public void RunDelayedActions()
+        {
+            //get the time
+            DateTime dtmNow = m_tscTimeSource.UTCNow;
+            
+            //loop through the delayed actions and execute them
+            while (m_actDelayedActions.Count > 0)
+            {
+                DateTime dtmActionExecuteTime = GetNextActionTime();
+
+                if (dtmActionExecuteTime >= dtmNow)
+                {
+                    break;
+                }
+
+                Action actActionToExecute = DequeueAction();
+                
+                actActionToExecute.Invoke();
+            }
+        }
+        protected void QueueAction(DateTime dtmTimeToExecute, Action actDelayedAction)
+        {
+            m_actDelayedActions.Add(dtmTimeToExecute, actDelayedAction);
+        }
+        
+        protected void QueueAction(TimeSpan tspDelayUntilExecute, Action actDelayedAction)
+        {
+            DateTime dtmNow = m_tscTimeSource.UTCNow;
+            m_actDelayedActions.Add(dtmNow + tspDelayUntilExecute, actDelayedAction);
+        }
+
+        public void QueueAction(float fDelayUntilExecute, Action actDelayedAction)
+        {
+            DateTime dtmNow = m_tscTimeSource.UTCNow;
+
+            DateTime dtmKey = dtmNow + TimeSpan.FromSeconds(fDelayUntilExecute);
+            
+            
+            //check if something already exists, if it does then delay the smallest amount possible
+            while (m_actDelayedActions.ContainsKey(dtmKey))
+            {
+                dtmKey += TimeSpan.FromTicks(1);
+            }
+            
+            m_actDelayedActions.Add(dtmKey, actDelayedAction);
+        }
+        
+        protected DateTime GetNextActionTime()
+        {
+            if (m_actDelayedActions.Count > 0)
+            {
+                return m_actDelayedActions.Keys.First();
+            }
+
+            return DateTime.MaxValue;
+        }
+
+        protected Action DequeueAction()
+        {
+            
+            Action actFirstAction = m_actDelayedActions.FirstOrDefault().Value;
+            
+            m_actDelayedActions.RemoveAt(0);
+
+            return actFirstAction;
         }
     }
 }

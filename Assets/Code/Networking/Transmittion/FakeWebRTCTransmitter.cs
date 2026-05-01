@@ -92,12 +92,12 @@ namespace Networking
             OnConnectionEstablished?.Invoke();
         }
 
-        protected IEnumerator MakeOffer()
+        protected void MakeOffer()
         {
             //check state 
             if (State != PeerTransmitterState.New)
             {
-                yield break;
+                return;
             }
 
             //change state to negotiating 
@@ -105,92 +105,103 @@ namespace Networking
 
             Debug.Log($"making offer negotiation message");
 
-            yield return new WaitForSeconds(s_fOfferCreateTime);
-
-            NegotiationMessage nmsMessage = new NegotiationMessage()
+            InternetConnectionSimulator.Instance.QueueAction(s_fOfferCreateTime, () =>
             {
-                m_iSender = m_iTransmitterID,
-                m_iType = (int)NegotiationMessage.Type.Offer,
-                m_strExtraPadding = GenerateRandomDataPadding()
-            };
+                NegotiationMessage nmsMessage = new NegotiationMessage()
+                {
+                    m_iSender = m_iTransmitterID,
+                    m_iType = (int)NegotiationMessage.Type.Offer,
+                    m_strExtraPadding = GenerateRandomDataPadding()
+                };
+                
+                string strOffer = JsonUtility.ToJson(nmsMessage);
 
-            string strOffer = JsonUtility.ToJson(nmsMessage);
+                m_bSessionDescriptionFinished = true;
 
-            m_bSessionDescriptionFinished = true;
+                OnNegotiationMessageCreated?.Invoke(strOffer);
 
-            OnNegotiationMessageCreated?.Invoke(strOffer);
+                int iIceCandidatesSent = 0;
 
-            int iIceCandidatesSent = 0;
-
-            //make all the ice candidates
-            while (State == PeerTransmitterState.Negotiating && iIceCandidatesSent < s_iNumberOfIceCandidates)
-            {
-                yield return InternetConnectionSimulator.Instance.StartCoroutine(MakeIce());
-
-                iIceCandidatesSent++;
-            }
-
-            yield return null;
+                //make all the ice candidates
+                InternetConnectionSimulator.Instance.QueueAction(0.0f, ()=>
+                {
+                        MakeIce(s_iNumberOfIceCandidates);
+                });
+            });
         }
 
-        protected IEnumerator MakeReply()
+        protected void MakeReply()
         {
             //check state 
             if (State != PeerTransmitterState.New && State != PeerTransmitterState.Negotiating)
             {
                 Debug.Log("Error started making reply in non negotiation state");
-                yield break;
+                return;
             }
 
             State = PeerTransmitterState.Negotiating;
 
             Debug.Log($"connection {m_iTransmitterID} making reply negotiation message to {m_iTargetID}");
 
-            yield return new WaitForSeconds(s_fOfferCreateTime);
-
-            NegotiationMessage nmsMessage = new NegotiationMessage()
+            InternetConnectionSimulator.Instance.QueueAction(s_fOfferCreateTime, () =>
             {
-                m_iSender = m_iTransmitterID,
-                m_iType = (int)NegotiationMessage.Type.Reply,
-                m_strExtraPadding = GenerateRandomDataPadding()
-            };
+                NegotiationMessage nmsMessage = new NegotiationMessage()
+                {
+                    m_iSender = m_iTransmitterID,
+                    m_iType = (int)NegotiationMessage.Type.Reply,
+                    m_strExtraPadding = GenerateRandomDataPadding()
+                };
 
-            string strOffer = JsonUtility.ToJson(nmsMessage);
+                string strOffer = JsonUtility.ToJson(nmsMessage);
 
-            m_bSessionDescriptionFinished = true;
+                m_bSessionDescriptionFinished = true;
 
-            OnNegotiationMessageCreated?.Invoke(strOffer);
+                OnNegotiationMessageCreated?.Invoke(strOffer);
+            });
         }
 
-        protected IEnumerator MakeIce()
+        protected void MakeIce(int iCount)
         {
+            if (iCount == 0 || State != PeerTransmitterState.Negotiating)
+            {
+                return;
+            }
+            
             //wait for session description to finish
             if (m_bSessionDescriptionFinished)
             {
-                yield return null;
+                //wait for the session description creation to finish
+                InternetConnectionSimulator.Instance.QueueAction(0.01f, () => { MakeIce(iCount -1); });
+                return;
             }
 
-            yield return new WaitForSeconds(s_fIceCreateTime);
-
-            if (State != PeerTransmitterState.Negotiating)
+            InternetConnectionSimulator.Instance.QueueAction(s_fIceCreateTime, ()=>
             {
-                yield break;
-            }
 
-            Debug.Log($"making ice negotiation message");
+                if (State != PeerTransmitterState.Negotiating)
+                { 
+                    return;
+                }
+    
+                Debug.Log($"making ice negotiation message");
+    
+                NegotiationMessage nmsMessage = new NegotiationMessage()
+                {
+                    m_iSender = m_iTransmitterID,
+                    m_iType = (int)NegotiationMessage.Type.Ice,
+                    m_strExtraPadding = GenerateRandomDataPadding()
+                };
+    
+                string strOffer = JsonUtility.ToJson(nmsMessage);
+    
+                OnNegotiationMessageCreated?.Invoke(strOffer);
+                
+                //queue up follow up messages
+                InternetConnectionSimulator.Instance.QueueAction(0.01f, () => { MakeIce(iCount -1); });
+           
+            });
 
-            NegotiationMessage nmsMessage = new NegotiationMessage()
-            {
-                m_iSender = m_iTransmitterID,
-                m_iType = (int)NegotiationMessage.Type.Ice,
-                m_strExtraPadding = GenerateRandomDataPadding()
-            };
-
-            string strOffer = JsonUtility.ToJson(nmsMessage);
-
-            OnNegotiationMessageCreated?.Invoke(strOffer);
-
-            yield return null;
+            return;
         }
 
         // ----------------------- IPeerTransmitter interface -----------------------------
@@ -224,7 +235,7 @@ namespace Networking
                 //if message was offer start making reply
                 if (nmsNegotiationMessage.m_iType == (int)NegotiationMessage.Type.Offer)
                 {
-                    InternetConnectionSimulator.Instance.StartCoroutine(MakeReply());
+                    MakeReply();
                 }
             }
             else if (m_bMakingOffer)
@@ -268,11 +279,14 @@ namespace Networking
             }
             else
             {
-                //update the number of ice candidates recieved for th e
+                //update the number of ice candidates received for the
                 m_iIceCandidatesRecieved++;
 
                 //make reply ice
-                InternetConnectionSimulator.Instance.StartCoroutine(MakeIce());
+                InternetConnectionSimulator.Instance.QueueAction(0.0f, ()=>
+                {
+                    MakeIce(1);
+                });
             }
 
             return true;
@@ -312,7 +326,10 @@ namespace Networking
         {
             m_bMakingOffer = true;
             m_iIceCandidatesRecieved = 0;
-            InternetConnectionSimulator.Instance.StartCoroutine(MakeOffer());
+            InternetConnectionSimulator.Instance.QueueAction(0.0f,()=>
+            {
+                MakeOffer();
+            });
         }
 
         protected string GenerateRandomDataPadding()
