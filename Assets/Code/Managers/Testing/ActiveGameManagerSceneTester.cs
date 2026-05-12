@@ -245,7 +245,7 @@ namespace GameManagers
 
             Debug.Log("Starting active game manager Test");
 
-            m_wbiWebInterface = new WebInterface(this);
+            m_wbiWebInterface = new WebInterface(this, m_tscTimeSource);
 
             m_wbiWebInterface.TestLocally = m_bTestLocally;
 

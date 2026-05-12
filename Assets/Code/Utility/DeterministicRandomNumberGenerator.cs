@@ -70,6 +70,16 @@ namespace Utility
 
             return iMinInclusive + iModOfRandom;
         }
+        
+        public int GetRandomRangeInt(int iMinInclusive, int iMaxInclusive)
+        {
+            //get a random int 
+            uint iDif = (uint)(iMaxInclusive - iMinInclusive);
+            
+            uint iModOfRandom = GetRandomInt() % iDif;
+
+            return iMinInclusive + (int)iModOfRandom;
+        }
 
         public Fix GetRandomFix()
         {

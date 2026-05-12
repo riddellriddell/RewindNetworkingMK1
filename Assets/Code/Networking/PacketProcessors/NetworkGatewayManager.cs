@@ -42,6 +42,8 @@ namespace Networking
 
         protected NetworkGlobalMessengerProcessor m_gmpGLobalMessagingProcessor;
 
+        protected DebugLoggingLevel m_dllLogLevel = DebugLoggingLevel.Verbose;
+
         public override void Update()
         {
             base.Update();
@@ -120,7 +122,8 @@ namespace Networking
 
                     if (bShouldOpenGate)
                     {
-                        Debug.Log($"User:{ParentNetworkConnection.m_lPeerID} Opening Gateway");
+                        if(LogHelp.LogVerbose(m_dllLogLevel))
+                            Debug.Log($"NetworkGatewayManager.Update: User:{ParentNetworkConnection.m_lPeerID} Opening Gateway");
 
                         //open gate 
                         NeedsOpenGateway = true;
@@ -155,6 +158,10 @@ namespace Networking
 
             //add to send message list
             MessagesToSend.Enqueue(smcSendMessageCommand);
+            
+            if(LogHelp.LogVerbose(m_dllLogLevel))
+                Debug.Log($"NetworkGatewayManager.ProcessMessageFromGateway: Peer:{smcSendMessageCommand.m_lFromID} sending message of type: {dpkDataPacket.GetTypeID} through web gateway to: {smcSendMessageCommand.m_lToID} ");
+
         }
 
         //process message from matchmaking server
@@ -166,7 +173,8 @@ namespace Networking
                usmMessage.m_iMessageType == 0 ||
                usmMessage.m_dtmTimeOfMessage == 0)
             {
-                Debug.LogError($"Mallformed message from server, message was { JsonUtility.ToJson(usmMessage) }");
+                if(LogHelp.LogError(m_dllLogLevel))
+                    Debug.LogError($"NetworkGatewayManager.ProcessMessageFromGateway: Mallformed message from server, message was { JsonUtility.ToJson(usmMessage) }");
 
                 return;
             }
@@ -196,6 +204,9 @@ namespace Networking
                     //process any connection propegation messages 
                     if (dpkPacket is ConnectionNegotiationBasePacket)
                     {
+                        if(LogHelp.LogVerbose(m_dllLogLevel))
+                            Debug.Log($"NetworkGatewayManager.ProcessMessageFromGateway: Peer: {ParentNetworkConnection.m_lPeerID} received Connection negotiation message from: {usmMessage.m_lFromUser} of type: {dpkPacket.GetTypeID}");
+                        
                         NetworkConnectionPropagatorProcessor ncpPropegator = ParentNetworkConnection.GetPacketProcessor<NetworkConnectionPropagatorProcessor>();
 
                         //TODO:: this should be replaced by a less fragile system 

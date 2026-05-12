@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Utility;
 
 namespace Networking
 {
@@ -12,13 +13,14 @@ namespace Networking
 
         protected WebInterface m_winWebInterface1;
         protected WebInterface m_winWebInterface2;
+        protected SimpleTimeSource m_tscSimpleTimeSource;
 
         // Start is called before the first frame update
         void Start()
         {
             //create web interface 
-            m_winWebInterface1 = new WebInterface(this);
-            m_winWebInterface2 = new WebInterface(this);
+            m_winWebInterface1 = new WebInterface(this,m_tscSimpleTimeSource);
+            m_winWebInterface2 = new WebInterface(this,m_tscSimpleTimeSource);
 
             m_winWebInterface1.TestLocally = m_bUseFakeWebApi;
             m_winWebInterface2.TestLocally = m_bUseFakeWebApi;

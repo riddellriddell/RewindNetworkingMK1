@@ -9,10 +9,7 @@ namespace Networking
     {
         public override int Priority
         {
-            get
-            {
-                return 7;
-            }
+            get { return 7; }
         }
 
         protected NetworkLayoutProcessor m_nlpNetworkLayout;
@@ -24,6 +21,11 @@ namespace Networking
 
         //who to send messages through for a peer
         protected Dictionary<long, long> m_dicIntermediaryForPeer;
+
+        public static DebugLoggingLevel s_dllLoggingLevel
+        {
+            get { return DebugLoggingLevel.Verbose; }
+        }
 
         public override void OnAddToNetwork(NetworkConnection ncnNetwork)
         {
@@ -80,6 +82,9 @@ namespace Networking
         {
             DateTime dtmStartTime = m_tnpNetworkTime.BaseTime;
 
+            if(LogHelp.LogVerbose(s_dllLoggingLevel))
+                Debug.Log($"Peer: {ParentNetworkConnection.m_lPeerID} is starting connection request to peer: {lUserID} at time: {dtmStartTime}");
+            
             //make new connection
             Connection conConnection = ParentNetworkConnection.CreateOrResetConnection(dtmStartTime, lUserID);
 
@@ -422,7 +427,10 @@ namespace Networking
         {
             if (ParentConnection.m_dtmConnectionSetupStart > cnpPacket.m_dtmNegotiationStart)
             {
-                Debug.Log("Conneciton Negotiation message is outdated");
+                TimeSpan tspDifference = ParentConnection.m_dtmConnectionSetupStart - cnpPacket.m_dtmNegotiationStart;
+                
+                if(LogHelp.LogVerbose(NetworkConnectionPropagatorProcessor.s_dllLoggingLevel))
+                    Debug.Log($"ConnectionPacketProcessor.IsOutdatedMessage: Message received by peer: {m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID}, To: {cnpPacket.m_lTo}, From: {cnpPacket.m_lFrom}, with negotiation start date: {cnpPacket.m_dtmNegotiationStart} is outdated for connection with start date of: {ParentConnection.m_dtmConnectionSetupStart} Time differance: { tspDifference.TotalSeconds}");
                 return true;
             }
 

@@ -54,6 +54,8 @@ namespace Networking
 
         public int m_iIceCandidatesRecieved = 0;
 
+        public int m_iQueuedIceMessages = 0;
+        
         public FakeWebRTCTransmitter()
         {
             //m_iTransmitterID = 0 - TransmitterRegistery.Count;
@@ -123,7 +125,7 @@ namespace Networking
                 int iIceCandidatesSent = 0;
 
                 //make all the ice candidates
-                InternetConnectionSimulator.Instance.QueueAction(0.0f, ()=>
+                InternetConnectionSimulator.Instance.QueueAction(1.0f, ()=>
                 {
                         MakeIce(s_iNumberOfIceCandidates);
                 });
@@ -157,6 +159,22 @@ namespace Networking
                 m_bSessionDescriptionFinished = true;
 
                 OnNegotiationMessageCreated?.Invoke(strOffer);
+                
+                //handle all the queued ice messages
+                m_iIceCandidatesRecieved = m_iQueuedIceMessages;
+
+                int iTempIceRecieved = m_iIceCandidatesRecieved;
+                if (m_iQueuedIceMessages > 0)
+                {
+                    //make reply ice
+                    InternetConnectionSimulator.Instance.QueueAction(1.0f, () =>
+                    {
+                        MakeIce(iTempIceRecieved);
+                    });
+                }
+
+                m_iQueuedIceMessages = 0;
+                
             });
         }
 
@@ -168,10 +186,10 @@ namespace Networking
             }
             
             //wait for session description to finish
-            if (m_bSessionDescriptionFinished)
+            if (!m_bSessionDescriptionFinished)
             {
                 //wait for the session description creation to finish
-                InternetConnectionSimulator.Instance.QueueAction(0.01f, () => { MakeIce(iCount -1); });
+                InternetConnectionSimulator.Instance.QueueAction(0.2f, () => { MakeIce(iCount); });
                 return;
             }
 
@@ -197,7 +215,7 @@ namespace Networking
                 OnNegotiationMessageCreated?.Invoke(strOffer);
                 
                 //queue up follow up messages
-                InternetConnectionSimulator.Instance.QueueAction(0.01f, () => { MakeIce(iCount -1); });
+                InternetConnectionSimulator.Instance.QueueAction(0.2f, () => { MakeIce(iCount -1); });
            
             });
 
@@ -279,14 +297,23 @@ namespace Networking
             }
             else
             {
-                //update the number of ice candidates received for the
-                m_iIceCandidatesRecieved++;
-
-                //make reply ice
-                InternetConnectionSimulator.Instance.QueueAction(0.0f, ()=>
+                //queue up ice messages 
+                if (!m_bSessionDescriptionFinished)
                 {
-                    MakeIce(1);
-                });
+                    m_iQueuedIceMessages++;
+                }
+                else
+                {
+                    //update the number of ice candidates received for the
+                    m_iIceCandidatesRecieved++;
+
+                    //make reply ice
+                    //make sure to delay so there is no conflict with date time
+                    InternetConnectionSimulator.Instance.QueueAction(1.0f, ()=>
+                    {
+                        MakeIce(1);
+                    });
+                }
             }
 
             return true;

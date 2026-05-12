@@ -78,12 +78,17 @@ namespace GameManagers
         public NetworkingDataBridge m_ndbNetworkingDataBridge;
 
         public NetworkGlobalMessengerProcessor m_ngpGlobalMessageProcessor;
+        
+        public ITimeSource m_tscTimeSource;
 
-        public LocalPeerInputManager(NetworkingDataBridge ndbNetworkingDataBridge, NetworkGlobalMessengerProcessor ngpGlobalMessageProcessor)
+        public LocalPeerInputManager(
+            NetworkingDataBridge ndbNetworkingDataBridge,
+            NetworkGlobalMessengerProcessor ngpGlobalMessageProcessor,
+            ITimeSource tscTimeSource)
         {
             m_ndbNetworkingDataBridge = ndbNetworkingDataBridge;
             m_ngpGlobalMessageProcessor = ngpGlobalMessageProcessor;
-
+            m_tscTimeSource = tscTimeSource;
             //register user input message type
             UserInputGlobalMessage.TypeID = m_ngpGlobalMessageProcessor.RegisterCustomMessageType<UserInputGlobalMessage>(UserInputGlobalMessage.TypeID);
         }
@@ -93,7 +98,7 @@ namespace GameManagers
             if (m_bDirtyInputState)
             {
                 //limit the rate of message creation for perfomance reasons?
-                if (DateTime.UtcNow - m_dtmTimeOfLastInputMessageCreation > s_tspMinTimeBetweenMessages)
+                if (m_tscTimeSource.UTCNow - m_dtmTimeOfLastInputMessageCreation > s_tspMinTimeBetweenMessages)
                 {
                     CreateUserInputMessage();
                 }
@@ -114,7 +119,7 @@ namespace GameManagers
 
             //release lock on out message stack
 
-            m_dtmTimeOfLastInputMessageCreation = DateTime.UtcNow;
+            m_dtmTimeOfLastInputMessageCreation = m_tscTimeSource.UTCNow;
 
             m_bDirtyInputState = false;
         }

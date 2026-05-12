@@ -1,6 +1,7 @@
 ﻿using Sim;
 using System;
 using UnityEngine;
+using Utility;
 
 namespace GameManagers
 {
@@ -13,24 +14,33 @@ namespace GameManagers
         public float m_fCanceSpecialIsMissile = 0.5f;
 
         public float m_fMaxMissileHoldTime = 3f;
+        
+        public TimeSourceComponentBase m_tscTimeSource;
 
-        protected DateTime m_dtmTimeOfLastUpdate = DateTime.MinValue;
+        protected DateTime m_dtmTimeOfLastUpdate;
+        
+        protected DeterministicRandomNumberGenerator m_drgRandomNumberGenerator = new DeterministicRandomNumberGenerator(12345678);
+
+        public void Start()
+        {
+            m_dtmTimeOfLastUpdate = m_tscTimeSource.UTCNow;
+        }
 
         public void ApplyInputs(LocalPeerInputManager lpiTargetLocalPeerInputManager)
         {
             if (m_dtmTimeOfLastUpdate == DateTime.MinValue)
             {
-                m_dtmTimeOfLastUpdate = DateTime.UtcNow;
+                m_dtmTimeOfLastUpdate = m_tscTimeSource.UTCNow;
             }
 
-            float fDeltaTime = (float)(DateTime.UtcNow - m_dtmTimeOfLastUpdate).TotalSeconds;
+            float fDeltaTime = (float)(m_tscTimeSource.UTCNow - m_dtmTimeOfLastUpdate).TotalSeconds;
 
-            m_dtmTimeOfLastUpdate = DateTime.UtcNow;
+            m_dtmTimeOfLastUpdate = m_tscTimeSource.UTCNow;
 
             //check for direction change 
-            if (UnityEngine.Random.Range(0.0f, 1.0f) < m_fChanceOfDirectionChange * fDeltaTime)
+            if (m_drgRandomNumberGenerator.GetRandomRangeFloat(0.0f, 1.0f) < m_fChanceOfDirectionChange * fDeltaTime)
             {
-                int iMoveType = UnityEngine.Random.Range(0, 4);
+                int iMoveType = m_drgRandomNumberGenerator.GetRandomRangeInt(0, 4);
 
                 switch (iMoveType)
                 {

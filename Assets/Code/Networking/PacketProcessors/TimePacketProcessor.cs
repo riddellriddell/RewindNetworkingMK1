@@ -97,6 +97,7 @@ namespace Networking
 
         //the oldest network time calculated 
         private DateTime m_dtmOldestTime = DateTime.MinValue;
+        private DateTime m_dtmTimeOfLastUpdate = DateTime.MinValue;
         private TimeSpan m_tspTargetTimeOffset;
         private TimeSpan m_tspCurrentTimeOffset;
         private TimeSpan m_tspOffsetChangeRate;
@@ -134,13 +135,24 @@ namespace Networking
 
         public override void Update()
         {
-            LerpToTargetTime(Time.deltaTime);
+            //dont lerp on first update 
+            if (m_dtmTimeOfLastUpdate == DateTime.MinValue)
+            {
+                m_dtmTimeOfLastUpdate = StaticBaseTime;
+            }
+
+            //calc delta time based on the time source changes 
+            TimeSpan tspTimeChange = StaticBaseTime - m_dtmTimeOfLastUpdate;
+            
+            m_dtmTimeOfLastUpdate = StaticBaseTime;
+            
+            LerpToTargetTime((float)tspTimeChange.TotalSeconds);
 
             UpdateNetworkDataBridge();
         }
 
         //this function calculates the network synced time if the local peers time is excluded from the calculation
-        //this is used when the peer is initally connecting and times before the peer has connected need to be compared 
+        //this is used when the peer is initially connecting and times before the peer has connected need to be compared 
         public TimeSpan CalculateTimeOffsetExcludingLocalPeer()
         {
             List<TimeSpan> tspPeerTimeList = new List<TimeSpan>(ChildConnectionProcessors.Count);

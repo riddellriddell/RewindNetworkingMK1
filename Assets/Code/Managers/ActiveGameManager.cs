@@ -111,6 +111,11 @@ namespace GameManagers
         //dictionary of all games this client has attempted to join but failed
         protected Dictionary<long, int> m_dicConnectionAttempts;
 
+        protected DebugLoggingLevel s_dllLogLevel
+        {
+            get { return DebugLoggingLevel.Verbose; }
+        }
+
         public ActiveGameManager(
             SimProcessorSettings sdaSimSettingsData, 
             InterpolationErrorCorrectionSettingsGen ecsInterpolationErrorCorrectionSettings, 
@@ -322,7 +327,7 @@ namespace GameManagers
             m_usmUIStateManager?.LogStartupEvent("Game found connecting to lead peer");
 
             State = ActiveGameState.ConnectingThroughGateway;
-            m_dtmConnectThroughGateStart = DateTime.UtcNow;
+            m_dtmConnectThroughGateStart = m_tscTimeSource.UTCNow;
 
             //tell p2p network to start a new connection through gateway
 
@@ -332,6 +337,10 @@ namespace GameManagers
             //setup the peer to peer network to match the settings of the taget network
             m_ngpGlobalMessagingProcessor.Initalize(m_sdaSimSettingsData.MaxPlayers);
 
+            if(LogHelp.LogVerbose(s_dllLogLevel))
+                Debug.Log($"ActiveGameManager.EnterConnectingThroughGateway: Peer: {m_ncnNetworkConnection.m_lPeerID} is starting connection request to peer: {lConnectionID} at time: {m_tscTimeSource.UTCNow}");
+
+            
             //tell the connection propegator who to try to connect to
             m_ncpConnectionPropegator.StartRequest(lConnectionID);
 
@@ -357,7 +366,7 @@ namespace GameManagers
             }
 
             //check for timeout 
-            TimeSpan tspTimeSinceConnectionStart = DateTime.UtcNow - m_dtmConnectThroughGateStart;
+            TimeSpan tspTimeSinceConnectionStart = m_tscTimeSource.UTCNow - m_dtmConnectThroughGateStart;
 
             //check if connection failed 
 
@@ -388,7 +397,7 @@ namespace GameManagers
             m_usmUIStateManager?.LogStartupEvent("Getting game state from peers");
 
             State = ActiveGameState.GettingSimStateFromCluster;
-            m_dtmGettingSimStateStart = DateTime.UtcNow;
+            m_dtmGettingSimStateStart = m_tscTimeSource.UTCNow;
 
             m_tsmSimManager.InitalizeAsConnectingPeer();
         }
@@ -454,7 +463,7 @@ namespace GameManagers
             }
 
             //check if getting sim state has timed out 
-            TimeSpan tspTimeSinceGetSimStateStarted = DateTime.UtcNow - m_dtmGettingSimStateStart;
+            TimeSpan tspTimeSinceGetSimStateStarted = m_tscTimeSource.UTCNow - m_dtmGettingSimStateStart;
 
             if (tspTimeSinceGetSimStateStarted.TotalSeconds > m_ncsNetworkConnectionSettings.m_fGettingSimStateTimeOut)
             {
@@ -537,7 +546,7 @@ namespace GameManagers
 
             if(m_ndbDataBridge.m_sssSimStartStateSyncStatus == SimStateSyncNetworkProcessor.State.SyncFailed)
             {
-                if((DateTime.UtcNow - m_dtmGettingSimStateStart).TotalSeconds > m_ncsNetworkConnectionSettings.m_fGettingSimStateTimeOut)
+                if((m_tscTimeSource.UTCNow - m_dtmGettingSimStateStart).TotalSeconds > m_ncsNetworkConnectionSettings.m_fGettingSimStateTimeOut)
                 {
                     Debug.Log("Error getting sim state, get sim state timed out, forced to reset get game process");
 
@@ -873,7 +882,7 @@ namespace GameManagers
             m_sssStateSyncProcessor = new SimStateSyncNetworkProcessor(m_ndbDataBridge);
             m_ncnNetworkConnection.AddPacketProcessor(m_sssStateSyncProcessor);
 
-            m_lpiLocalPeerInputManager = new LocalPeerInputManager(m_ndbDataBridge, m_ngpGlobalMessagingProcessor);
+            m_lpiLocalPeerInputManager = new LocalPeerInputManager(m_ndbDataBridge, m_ngpGlobalMessagingProcessor, m_tscTimeSource);
 
             m_fimFrameDataInterpolationManager = new FrameDataInterpolatorManager<
                 FrameData,

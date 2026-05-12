@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using UnityEngine.Networking;
 using System.Collections;
+using Utility;
 
 /// <summary>
 /// This class pull and pushes data exposed by the external web api or the local FakeWebAPI
@@ -37,14 +38,16 @@ namespace Networking
             public DateTime m_dtmTimeOfLastCommunication;
             public int m_iCommunicationAttemptNumber;
             public int m_iCommunicationMaxAttemptNumber;
+            public ITimeSource m_tscTimeSource;
 
             //sets up the default inital web tracker
-            public static WebAPICommunicationTracker StartState(int iRetryAttempts)
+            public static WebAPICommunicationTracker StartState(int iRetryAttempts, ITimeSource tsctimeSource)
             {
 
                 WebAPICommunicationTracker wctCommunicationTracker = new WebAPICommunicationTracker()
                 {
-                    m_dtmTimeOfLastCommunication = DateTime.UtcNow,
+                    m_tscTimeSource = tsctimeSource,
+                    m_dtmTimeOfLastCommunication = tsctimeSource.UTCNow,
                     m_cmsStatus = CommunctionStatus.NotStarted,
                     m_iCommunicationAttemptNumber = 0,
                     m_iCommunicationMaxAttemptNumber = iRetryAttempts
@@ -62,7 +65,7 @@ namespace Networking
                     return 0;
                 }
 
-                TimeSpan tspTimeSinceLastComs = DateTime.UtcNow - m_dtmTimeOfLastCommunication;
+                TimeSpan tspTimeSinceLastComs = m_tscTimeSource.UTCNow - m_dtmTimeOfLastCommunication;
 
                 return (float)tspTimeSinceLastComs.TotalSeconds;
             }
@@ -71,7 +74,8 @@ namespace Networking
             {
                 WebAPICommunicationTracker wctNewState = new WebAPICommunicationTracker()
                 {
-                    m_dtmTimeOfLastCommunication = DateTime.UtcNow,
+                    m_tscTimeSource = this.m_tscTimeSource,
+                    m_dtmTimeOfLastCommunication = m_tscTimeSource.UTCNow,
                     m_iCommunicationAttemptNumber = this.m_iCommunicationAttemptNumber + 1,
                     m_cmsStatus = CommunctionStatus.InProgress,
                     m_iCommunicationMaxAttemptNumber = this.m_iCommunicationMaxAttemptNumber
@@ -84,7 +88,8 @@ namespace Networking
             {
                 WebAPICommunicationTracker wctNewState = new WebAPICommunicationTracker()
                 {
-                    m_dtmTimeOfLastCommunication = DateTime.UtcNow,
+                    m_tscTimeSource = this.m_tscTimeSource,
+                    m_dtmTimeOfLastCommunication = this.m_tscTimeSource.UTCNow,
                     m_iCommunicationAttemptNumber = this.m_iCommunicationAttemptNumber,
                     m_cmsStatus = CommunctionStatus.Failed,
                     m_iCommunicationMaxAttemptNumber = this.m_iCommunicationMaxAttemptNumber
@@ -97,7 +102,8 @@ namespace Networking
             {
                 WebAPICommunicationTracker wctNewState = new WebAPICommunicationTracker()
                 {
-                    m_dtmTimeOfLastCommunication = DateTime.UtcNow,
+                    m_tscTimeSource = this.m_tscTimeSource,
+                    m_dtmTimeOfLastCommunication = m_tscTimeSource.UTCNow,
                     m_iCommunicationAttemptNumber = this.m_iCommunicationAttemptNumber,
                     m_cmsStatus = CommunctionStatus.Succedded,
                     m_iCommunicationMaxAttemptNumber = this.m_iCommunicationMaxAttemptNumber
@@ -110,7 +116,8 @@ namespace Networking
             {
                 WebAPICommunicationTracker wctNewState = new WebAPICommunicationTracker()
                 {
-                    m_dtmTimeOfLastCommunication = DateTime.UtcNow,
+                    m_tscTimeSource = this.m_tscTimeSource,
+                    m_dtmTimeOfLastCommunication = m_tscTimeSource.UTCNow,
                     m_iCommunicationAttemptNumber = 0,
                     m_cmsStatus = CommunctionStatus.NotStarted,
                     m_iCommunicationMaxAttemptNumber = this.m_iCommunicationMaxAttemptNumber
@@ -123,7 +130,8 @@ namespace Networking
             {
                 WebAPICommunicationTracker wctNewState = new WebAPICommunicationTracker()
                 {
-                    m_dtmTimeOfLastCommunication = DateTime.UtcNow,
+                    m_tscTimeSource = this.m_tscTimeSource,
+                    m_dtmTimeOfLastCommunication = m_tscTimeSource.UTCNow,
                     m_iCommunicationAttemptNumber = 0,
                     m_cmsStatus = CommunctionStatus.Cancled,
                     m_iCommunicationMaxAttemptNumber = this.m_iCommunicationMaxAttemptNumber
@@ -157,14 +165,16 @@ namespace Networking
         //the secret access key used to verify user with the server
         public long UserKey { get; private set; }
 
+        public ITimeSource m_tscTimeSource;
+
         //when running coroutunes this is the object the routines will be run off
         public MonoBehaviour CoroutineExecutionObject { get; private set; }
 
-        public WebAPICommunicationTracker PlayerIDCommunicationStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
+        public WebAPICommunicationTracker PlayerIDCommunicationStatus { get; private set; }
 
         //all the messages fetched from the server
         public Queue<UserMessage> MessagesFromServer { get; } = new Queue<UserMessage>();
-        public WebAPICommunicationTracker MessageFetchStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
+        public WebAPICommunicationTracker MessageFetchStatus { get; private set; }
         public float MaxTimeBetweenMessageUpdates { get; } = 3;
         public float MinTimeBetweenMessageUpdates { get; } = 0.1f;
         public float TimeBetweenMessageUpdatesCooldownTime { get; } = 6.0f;
@@ -179,28 +189,37 @@ namespace Networking
                 return MessagesToSend.Count;
             }
         }
-        public WebAPICommunicationTracker MessageSendStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
+        public WebAPICommunicationTracker MessageSendStatus { get; private set; }
         public float TimeBetweenMessageSendAttempts { get; } = 5;
 
         public SetGatewayCommand LocalGatewaySimStatus { get; private set; }
-        public WebAPICommunicationTracker SetGatewayStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
+        public WebAPICommunicationTracker SetGatewayStatus { get; private set; }
         public float TimeBetweenGatewayUpdates { get; } = 5;
 
 
         public GetGatewayRequest GetGatewayRequestData {  get; private set;}
         public GatewayReturnDetails? ExternalGateway { get; private set; }
-        public WebAPICommunicationTracker SearchForGatewayStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
+        public WebAPICommunicationTracker SearchForGatewayStatus { get; private set; }
 
         public GatewayReturnDetails[] ExternalGatewayList { get; private set; }
-        public WebAPICommunicationTracker SearchForGatewayListStatus { get; private set; } = WebAPICommunicationTracker.StartState(3);
+        public WebAPICommunicationTracker SearchForGatewayListStatus { get; private set; }
         
         public bool NoGatewayExistsOnServer { get; private set; } = false;
 
         protected string m_strUniqueDeviceIdentifier = string.Empty;
 
-        public WebInterface(MonoBehaviour mbhCoroutineRunner)
+        public WebInterface(MonoBehaviour mbhCoroutineRunner, ITimeSource tscTimeSource)
         {
+            m_tscTimeSource = tscTimeSource;
+            
             CoroutineExecutionObject = mbhCoroutineRunner;
+
+            PlayerIDCommunicationStatus =  WebAPICommunicationTracker.StartState(3, m_tscTimeSource);
+            MessageFetchStatus = WebAPICommunicationTracker.StartState(3, m_tscTimeSource);
+            MessageSendStatus = WebAPICommunicationTracker.StartState(3, m_tscTimeSource);
+            SetGatewayStatus = WebAPICommunicationTracker.StartState(3, m_tscTimeSource);
+            SearchForGatewayStatus = WebAPICommunicationTracker.StartState(3, m_tscTimeSource);
+            SearchForGatewayListStatus = WebAPICommunicationTracker.StartState(3, m_tscTimeSource);
         }
 
         public void UpdateCommunication()
@@ -219,7 +238,7 @@ namespace Networking
                 MessageFetchStatus.m_cmsStatus != WebAPICommunicationTracker.CommunctionStatus.Cancled)
             {
                 //work out what the cooldown time should be 
-                float fTimeSinceLastMessage = (float)(DateTime.Now - TimeOfLastMessage).TotalSeconds;
+                float fTimeSinceLastMessage = (float)(m_tscTimeSource.UTCNow - TimeOfLastMessage).TotalSeconds;
                 float fMessageGetCooldown = Math.Min(1.0f, fTimeSinceLastMessage / TimeBetweenMessageUpdatesCooldownTime);
                 float fScaledMaxTimeBetweenUpdates = Mathf.Lerp(MinTimeBetweenMessageUpdates, MaxTimeBetweenMessageUpdates, fMessageGetCooldown);
 
@@ -652,7 +671,7 @@ namespace Networking
                 //update the time since last message recieved 
                 if(mesMessages.Count > 0)
                 {
-                    TimeOfLastMessage = DateTime.Now;
+                    TimeOfLastMessage = m_tscTimeSource.UTCNow;
                 }
 
             }
@@ -676,7 +695,7 @@ namespace Networking
             {
                 FakeWebAPI.Instance.AddNewMessage(strRequest, InternalOnFinishSendingMessage);
 
-              }
+            }
             else
             {
                 CoroutineExecutionObject.StartCoroutine(WebRequest(s_strSendMessageAddress, strRequest, InternalOnFinishSendingMessage));

@@ -33,6 +33,11 @@ namespace Networking
             }
         }
 
+        public static DebugLoggingLevel LogLevel
+        {
+            get { return DebugLoggingLevel.Verbose; }
+        }
+
         //is this peer the first peer in the swarm
         public bool m_bIsFirstPeer = false;
 
@@ -128,7 +133,7 @@ namespace Networking
 
         public Connection CreateNewConnection(DateTime dtmNegotiationStart, long lPeerID)
         {
-            Debug.Log($"Creating connection: {lPeerID}");
+            if(LogHelp.LogVerbose(LogLevel)) Debug.Log($"NetworkConnection.CreateNewConnection: Creating connection on peer: {m_lPeerID}: for connecting peer: {lPeerID} at time: {dtmNegotiationStart}");
 
             //destroy any existing connection for this user 
             DestroyConnection(lPeerID, $"Stomping old connection for new peer {lPeerID.ToString()}");

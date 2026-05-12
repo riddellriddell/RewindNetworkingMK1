@@ -28,6 +28,13 @@ namespace Networking
             public Dictionary<long, Gateway> m_gtwGateways = new Dictionary<long, Gateway>();
             
             public DeterministicRandomNumberGenerator m_rngRandomNumberGenerator = new DeterministicRandomNumberGenerator(1231456789ul);
+
+            public ITimeSource m_tscTimeSource;
+
+            public FakeDatabase(ITimeSource timeSource)
+            {
+                m_tscTimeSource = timeSource;
+            }
             
             //gets the id for the passed in identifier or returns long min value if not found
             public UserIDDetails GetUserIDWithCredentials(string strLoginCredentials)
@@ -65,7 +72,7 @@ namespace Networking
                 foreach (UserMessage mesMessage in umsUserMessages.m_umUserMessages)
                 {
                     //get time dif
-                    TimeSpan tspTimeSpan = DateTime.UtcNow - new DateTime(mesMessage.m_dtmTimeOfMessage);
+                    TimeSpan tspTimeSpan = m_tscTimeSource.UTCNow - new DateTime(mesMessage.m_dtmTimeOfMessage);
 
                     //add message to list of messages to return
                     if (tspTimeSpan.TotalSeconds < s_fUserMessageTimeOut)
@@ -95,7 +102,7 @@ namespace Networking
                 {
                     m_iMessageType = iMessageType,
                     m_lFromUser = lFromUserID,
-                    m_dtmTimeOfMessage = DateTime.UtcNow.Ticks,
+                    m_dtmTimeOfMessage = m_tscTimeSource.UTCNow.Ticks,
                     m_strMessage = strMessage
 
                 };
@@ -121,7 +128,7 @@ namespace Networking
                 {
                     m_lUserID = lUserID,
                     m_lUserKey = lAccessKey,
-                    m_dtmLastActiveTime = DateTime.UtcNow.Ticks,
+                    m_dtmLastActiveTime = m_tscTimeSource.UTCNow.Ticks,
                     m_gwsGateState = new GatewayState()
                     {
                         m_iRemainingSlots = iRemainingSlots,
@@ -233,7 +240,7 @@ namespace Networking
 
                 foreach (Gateway gtwGate in m_gtwGateways.Values)
                 {
-                    TimeSpan tspTimeSinceLastUpdate = DateTime.UtcNow - new DateTime(gtwGate.m_dtmLastActiveTime);
+                    TimeSpan tspTimeSinceLastUpdate = m_tscTimeSource.UTCNow - new DateTime(gtwGate.m_dtmLastActiveTime);
 
                     if (tspTimeSinceLastUpdate.Seconds > s_fGatewayTimeOut)
                     {
@@ -257,7 +264,7 @@ namespace Networking
 
 
         [SerializeField]
-        public DebugLoggingLevel dllLogLevel = DebugLoggingLevel.None;
+        public DebugLoggingLevel dllLogLevel = DebugLoggingLevel.Verbose;
 
         //variables
 
@@ -287,8 +294,8 @@ namespace Networking
         protected string m_strItemDoesNoteExistResponse = "404 Item Does Not Exist";
 
         protected string m_strDoNotHavePermissionResponse = "403 Action Denied Error";
-        
-        protected FakeDatabase m_fdbFakeDatabase = new FakeDatabase();
+
+        protected FakeDatabase m_fdbFakeDatabase;
 
         protected SortedList<DateTime, Action> m_actDelayedActions = new SortedList<DateTime, Action>();
 
@@ -301,6 +308,9 @@ namespace Networking
             if (Instance == null)
             {
                 Instance = this;
+                
+                //setup fake database
+                m_fdbFakeDatabase = new FakeDatabase(m_tscTimeSource);
             }
             else if (Instance != this)
             {
@@ -392,7 +402,7 @@ namespace Networking
                 UserIDDetails strUserDetails = m_fdbFakeDatabase.GetUserIDWithCredentials(strLoginCredentials);
 
                 if (LogHelp.LogVerbose(dllLogLevel))
-                    Debug.Log($"get user account with credentials: {strLoginCredentials} returned : {strUserDetails} ");
+                    Debug.Log($"FakeWebAPI.InternalGetUserWithLogCredentials: get user account with credentials: {strLoginCredentials} returned : {strUserDetails} ");
 
                 //return success
                 actGetUserCallback?.Invoke(true, JsonUtility.ToJson(strUserDetails));
@@ -427,7 +437,7 @@ namespace Networking
                 if (gmdGetMessageRequest.m_lUserKey == 0 || gmdGetMessageRequest.m_lUserID == 0)
                 {
                     if (LogHelp.LogError(dllLogLevel))
-                        Debug.LogError($"Failed to parse user details : {strUserDetails}");
+                        Debug.LogError($"FakeWebAPI.InternalGetDeleteUserMessages: Failed to parse user details : {strUserDetails}");
 
                     //return error result
                     actGetMessagesCallback?.Invoke(false, m_strServerErrorResponse);
@@ -442,7 +452,7 @@ namespace Networking
                 {
                     if (LogHelp.LogError(dllLogLevel))
                         Debug.LogError(
-                            $"User access key incorrect  Request:{strUserDetails} User Key: {gmdGetMessageRequest.m_lUserKey}");
+                            $"FakeWebAPI.InternalGetDeleteUserMessages: User access key incorrect  Request:{strUserDetails} User Key: {gmdGetMessageRequest.m_lUserKey}");
 
                     //return error result
                     actGetMessagesCallback?.Invoke(false, m_strServerErrorResponse);
@@ -461,7 +471,7 @@ namespace Networking
                 string strResult = JsonUtility.ToJson(gmrReturn);
 
                 if (LogHelp.LogVerbose(dllLogLevel))
-                    Debug.Log($"Get Delete Messages with ID: {strUserDetails} returned: {strResult}");
+                    Debug.Log($"FakeWebAPI.InternalGetDeleteUserMessages: Get Delete Messages with ID: {strUserDetails} returned: {strResult}");
 
                 actGetMessagesCallback?.Invoke(true, strResult);
             });
@@ -496,7 +506,7 @@ namespace Networking
                 //try to add the message to the users database entry
                 bool bWasMessageAdded = m_fdbFakeDatabase.AddNewMessage(smcSendMessageCommand.m_lToID,
                     smcSendMessageCommand.m_lFromID, smcSendMessageCommand.m_iType, smcSendMessageCommand.m_strMessage);
-
+                
                 if (bWasMessageAdded == false)
                 {
                     //return error if accound does not exist
@@ -505,7 +515,8 @@ namespace Networking
                     return;
                 }
 
-                //Debug.Log($"message {strNewMessageDetails} sent successfully");
+                if (LogHelp.LogVerbose(dllLogLevel))
+                    Debug.Log($"FakeWebAPI.InternalAddNewMessage: added message from: {smcSendMessageCommand.m_lFromID} To: {smcSendMessageCommand.m_lToID} Of Type: {smcSendMessageCommand.m_iType} with payload: {smcSendMessageCommand.m_strMessage}" );
 
                 //message sent successfully
                 actSendMessageCallback?.Invoke(true, string.Empty);
