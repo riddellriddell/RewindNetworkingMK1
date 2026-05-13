@@ -186,6 +186,7 @@ MonoBehaviour:
     m_objTarget: {fileID: 1656940733}
   - m_fDelay: 16
     m_objTarget: {fileID: 1355680418}
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!1 &96034786
 GameObject:
   m_ObjectHideFlags: 0
@@ -219,6 +220,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 0
+  m_bOnlyStepOnTimeSourceChange: 1
   m_strUniqueDeviceID: 
   m_tscTimeSource: {fileID: 1329957912}
   m_bAlive: 0
@@ -288,6 +290,7 @@ MonoBehaviour:
   m_fChanceOfSpecial: 4
   m_fCanceSpecialIsMissile: 0.5
   m_fMaxMissileHoldTime: 3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!114 &96034790
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -301,6 +304,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_fDrawScaleOffset: 0
 --- !u!1 &112184870
 GameObject:
   m_ObjectHideFlags: 0
@@ -334,6 +338,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 0
+  m_bOnlyStepOnTimeSourceChange: 1
   m_strUniqueDeviceID: 
   m_tscTimeSource: {fileID: 1329957912}
   m_bAlive: 0
@@ -403,6 +408,7 @@ MonoBehaviour:
   m_fChanceOfSpecial: 4
   m_fCanceSpecialIsMissile: 0.5
   m_fMaxMissileHoldTime: 3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!114 &112184874
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -416,6 +422,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_fDrawScaleOffset: 0
 --- !u!1 &468745024
 GameObject:
   m_ObjectHideFlags: 0
@@ -449,6 +456,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 0
+  m_bOnlyStepOnTimeSourceChange: 1
   m_strUniqueDeviceID: 
   m_tscTimeSource: {fileID: 1329957912}
   m_bAlive: 0
@@ -518,6 +526,7 @@ MonoBehaviour:
   m_fChanceOfSpecial: 4
   m_fCanceSpecialIsMissile: 0.5
   m_fMaxMissileHoldTime: 3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!114 &468745028
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -531,6 +540,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_fDrawScaleOffset: 0
 --- !u!1 &805625185
 GameObject:
   m_ObjectHideFlags: 0
@@ -564,6 +574,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 0
+  m_bOnlyStepOnTimeSourceChange: 1
   m_strUniqueDeviceID: 
   m_tscTimeSource: {fileID: 1329957912}
   m_bAlive: 0
@@ -633,6 +644,7 @@ MonoBehaviour:
   m_fChanceOfSpecial: 4
   m_fCanceSpecialIsMissile: 0.5
   m_fMaxMissileHoldTime: 3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!114 &805625189
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -646,6 +658,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_fDrawScaleOffset: 0
 --- !u!1 &832455449
 GameObject:
   m_ObjectHideFlags: 0
@@ -685,6 +698,7 @@ MonoBehaviour:
   m_fMaxTimeBetweenOutages: 9
   m_bEnablePacketLoss: 1
   m_fPacketLoss: 0.3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!4 &832455451
 Transform:
   m_ObjectHideFlags: 0
@@ -733,6 +747,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 0
+  m_bOnlyStepOnTimeSourceChange: 1
   m_strUniqueDeviceID: 
   m_tscTimeSource: {fileID: 1329957912}
   m_bAlive: 0
@@ -802,6 +817,7 @@ MonoBehaviour:
   m_fChanceOfSpecial: 4
   m_fCanceSpecialIsMissile: 0.5
   m_fMaxMissileHoldTime: 3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!114 &987774162
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -815,6 +831,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_fDrawScaleOffset: 0
 --- !u!1 &1098006610
 GameObject:
   m_ObjectHideFlags: 0
@@ -848,6 +865,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 0
+  m_bOnlyStepOnTimeSourceChange: 1
   m_strUniqueDeviceID: 
   m_tscTimeSource: {fileID: 1329957912}
   m_bAlive: 0
@@ -917,6 +935,7 @@ MonoBehaviour:
   m_fChanceOfSpecial: 4
   m_fCanceSpecialIsMissile: 0.5
   m_fMaxMissileHoldTime: 3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!114 &1098006614
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -930,6 +949,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_fDrawScaleOffset: 0
 --- !u!1 &1295798390
 GameObject:
   m_ObjectHideFlags: 0
@@ -963,6 +983,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 0
+  m_bOnlyStepOnTimeSourceChange: 1
   m_strUniqueDeviceID: 
   m_tscTimeSource: {fileID: 1329957912}
   m_bAlive: 0
@@ -1032,6 +1053,7 @@ MonoBehaviour:
   m_fChanceOfSpecial: 4
   m_fCanceSpecialIsMissile: 0.5
   m_fMaxMissileHoldTime: 3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!114 &1295798394
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1045,6 +1067,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_fDrawScaleOffset: 0
 --- !u!1 &1329957911
 GameObject:
   m_ObjectHideFlags: 0
@@ -1074,6 +1097,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ffb4461ffd4459e92d2be89b80650cb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  m_stoStepOptions: 2
+  m_bStepCommand: 0
+  m_bPause: 0
+  m_fStepsPerSecond: 10
+  m_fTimeBetweenSteps: 0
+  m_bPauseAfterTime: 1
+  m_fTimeToPauseAt: 80
+  m_strStartTime: 11/01/2026 12:00:00
+  m_fRunTime: 0
+  m_bLog: 0
 --- !u!4 &1329957913
 Transform:
   m_ObjectHideFlags: 0
@@ -1122,6 +1155,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 0
+  m_bOnlyStepOnTimeSourceChange: 1
   m_strUniqueDeviceID: 
   m_tscTimeSource: {fileID: 1329957912}
   m_bAlive: 0
@@ -1191,6 +1225,7 @@ MonoBehaviour:
   m_fChanceOfSpecial: 4
   m_fCanceSpecialIsMissile: 0.5
   m_fMaxMissileHoldTime: 3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!114 &1355680422
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1204,6 +1239,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clrDrawColour: {r: 0, g: 0, b: 1, a: 1}
+  m_fDrawScaleOffset: 0.2
 --- !u!1 &1483128916
 GameObject:
   m_ObjectHideFlags: 0
@@ -1237,6 +1273,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 0
+  m_bOnlyStepOnTimeSourceChange: 1
   m_strUniqueDeviceID: 
   m_tscTimeSource: {fileID: 1329957912}
   m_bAlive: 0
@@ -1306,6 +1343,7 @@ MonoBehaviour:
   m_fChanceOfSpecial: 4
   m_fCanceSpecialIsMissile: 0.5
   m_fMaxMissileHoldTime: 3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!114 &1483128920
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1319,6 +1357,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clrDrawColour: {r: 1, g: 0.9648272, b: 0, a: 1}
+  m_fDrawScaleOffset: 0
 --- !u!1 &1505663426
 GameObject:
   m_ObjectHideFlags: 0
@@ -1352,6 +1391,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 0
+  m_bOnlyStepOnTimeSourceChange: 1
   m_strUniqueDeviceID: 
   m_tscTimeSource: {fileID: 1329957912}
   m_bAlive: 0
@@ -1421,6 +1461,7 @@ MonoBehaviour:
   m_fChanceOfSpecial: 4
   m_fCanceSpecialIsMissile: 0.5
   m_fMaxMissileHoldTime: 3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!114 &1505663430
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1434,6 +1475,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_fDrawScaleOffset: 0
 --- !u!1 &1596307946
 GameObject:
   m_ObjectHideFlags: 0
@@ -1463,7 +1505,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd042984fdc5efe4f816380a203dea68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  dllLogLevel: 0
+  dllLogLevel: 1
   m_fLatncy: 0.6
   m_fTimeOutChance: 0.01
   m_fTimeOutTime: 5
@@ -1586,6 +1628,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 0
+  m_bOnlyStepOnTimeSourceChange: 1
   m_strUniqueDeviceID: 
   m_tscTimeSource: {fileID: 1329957912}
   m_bAlive: 0
@@ -1655,6 +1698,7 @@ MonoBehaviour:
   m_fChanceOfSpecial: 4
   m_fCanceSpecialIsMissile: 0.5
   m_fMaxMissileHoldTime: 3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!114 &1656940737
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1668,6 +1712,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clrDrawColour: {r: 1, g: 0, b: 0, a: 1}
+  m_fDrawScaleOffset: 0.1
 --- !u!1 &1738577102
 GameObject:
   m_ObjectHideFlags: 0
@@ -1701,6 +1746,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 0
+  m_bOnlyStepOnTimeSourceChange: 1
   m_strUniqueDeviceID: 
   m_tscTimeSource: {fileID: 1329957912}
   m_bAlive: 0
@@ -1770,6 +1816,7 @@ MonoBehaviour:
   m_fChanceOfSpecial: 4
   m_fCanceSpecialIsMissile: 0.5
   m_fMaxMissileHoldTime: 3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!114 &1738577106
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1783,6 +1830,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_fDrawScaleOffset: 0
 --- !u!1 &1961553834
 GameObject:
   m_ObjectHideFlags: 0
@@ -1816,6 +1864,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 0
+  m_bOnlyStepOnTimeSourceChange: 1
   m_strUniqueDeviceID: 
   m_tscTimeSource: {fileID: 1329957912}
   m_bAlive: 0
@@ -1885,6 +1934,7 @@ MonoBehaviour:
   m_fChanceOfSpecial: 4
   m_fCanceSpecialIsMissile: 0.5
   m_fMaxMissileHoldTime: 3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!114 &1961553838
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1898,6 +1948,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_fDrawScaleOffset: 0
 --- !u!1 &2111602860
 GameObject:
   m_ObjectHideFlags: 0
@@ -1931,6 +1982,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bTestLocally: 1
   m_bUseWebRTCTransmitter: 0
+  m_bOnlyStepOnTimeSourceChange: 1
   m_strUniqueDeviceID: 
   m_tscTimeSource: {fileID: 1329957912}
   m_bAlive: 0
@@ -2000,6 +2052,7 @@ MonoBehaviour:
   m_fChanceOfSpecial: 4
   m_fCanceSpecialIsMissile: 0.5
   m_fMaxMissileHoldTime: 3
+  m_tscTimeSource: {fileID: 1329957912}
 --- !u!114 &2111602864
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2013,6 +2066,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_fDrawScaleOffset: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

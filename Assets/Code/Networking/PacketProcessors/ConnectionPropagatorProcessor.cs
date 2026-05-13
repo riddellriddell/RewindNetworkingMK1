@@ -331,7 +331,7 @@ namespace Networking
                     //replace connection with new one
                     ParentNetworkConnection.CreateOrResetConnection(cnpPacket.m_dtmNegotiationStart, cnpPacket.m_lFrom);
 
-                    //get new connection propegator 
+                    //get new connection propagator 
                     ChildConnectionProcessors.TryGetValue(cnpPacket.m_lFrom, out cppFromConnection);
                 }
             }
@@ -458,7 +458,7 @@ namespace Networking
             {
                 string strMessage = ParentConnection.TransmittionNegotiationMessages.Dequeue();
 
-                Debug.Log($"Connection:{ParentConnection.m_lUserUniqueID} Processing Negotiation messages:{strMessage} to send to user:{ParentConnection.m_lUserUniqueID} from User {m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID}");
+                Debug.Log($"ConnectionPropagatorProcessor.UpdateNegotiationMessageToSend: Connection:{ParentConnection.m_lUserUniqueID} Processing Negotiation messages:{strMessage} to send to user:{ParentConnection.m_lUserUniqueID} from User {m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID} at time: {ParentConnection.m_dtmConnectionSetupStart}");
 
                 ConnectionNegotiationMessagePacket cnmPacket = ParentConnection.m_cifPacketFactory.CreateType<ConnectionNegotiationMessagePacket>(ConnectionNegotiationMessagePacket.TypeID);
 

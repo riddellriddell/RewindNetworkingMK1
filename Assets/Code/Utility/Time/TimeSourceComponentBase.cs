@@ -28,6 +28,8 @@ namespace Utility
 
         [ReadOnly, SerializeField]
         public float m_fRunTime = 0.0f;
+
+        public bool m_bLog = false;
         
         private DateTime m_dtmTime;
         private DateTime m_dtmStartTime;
@@ -138,7 +140,14 @@ namespace Utility
 
         private DateTime GetTimeFromStartValues()
         {
-            return DateTime.Parse(m_strStartTime);
+            DateTime dtmStartTime = DateTime.Parse(m_strStartTime, null, System.Globalization.DateTimeStyles.AdjustToUniversal).ToUniversalTime();
+            
+            if (m_bLog)
+            {
+                Debug.Log($"Time Source Start Time {dtmStartTime} in time zone {dtmStartTime.Kind} from time string: {m_strStartTime}"); 
+            }
+            
+            return dtmStartTime;
         }
     }
 }

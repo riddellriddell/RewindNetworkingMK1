@@ -13,6 +13,8 @@ namespace GameStateView
     {
         public Color m_clrDrawColour = new Color(0,0,0,0);
 
+        public float m_fDrawScaleOffset = 0;
+        
         private ConstData m_cdaConstData;
 
         private InterpolatedFrameDataGen m_ifdInterpoatedFrameData;
@@ -62,7 +64,7 @@ namespace GameStateView
             for (int i = 0; i < m_cdaConstData.m_fixAsteroidSize.Length; i++)
             {
                 Vector3 center = new Vector3((float)m_cdaConstData.m_fixAsteroidPositionX[i], 0, (float)m_cdaConstData.m_fixAsteroidPositionY[i]);
-                DrawCircle(center, (float)m_cdaConstData.m_fixAsteroidSize[i], m_clrDrawColour);
+                DrawCircle(center, (float)m_cdaConstData.m_fixAsteroidSize[i] + m_fDrawScaleOffset, m_clrDrawColour);
             }
         }
 
@@ -71,7 +73,7 @@ namespace GameStateView
             for (int i = 0; i < ifdInterpolatedFrameData.m_fixShipPosX.Length; i++)
             {
                 Vector3 center = new Vector3((float)ifdInterpolatedFrameData.m_fixShipPosX[i], 0, (float)ifdInterpolatedFrameData.m_fixShipPosY[i]);
-                DrawCircle(center, (float)sdaSettingsData.ShipSize,m_clrDrawColour);
+                DrawCircle(center, (float)sdaSettingsData.ShipSize + m_fDrawScaleOffset,m_clrDrawColour);
             }
         }
 
@@ -80,7 +82,7 @@ namespace GameStateView
             for (int i = 0; i < ifdInterpolatedFrameData.m_fixLazerPositionX.Length; i++)
             {
                 Vector3 center = new Vector3((float)ifdInterpolatedFrameData.m_fixLazerPositionX[i], 0, (float)ifdInterpolatedFrameData.m_fixLazerPositionY[i]);
-                DrawCircle(center, (float)sdaSettingsData.LazerSize, m_clrDrawColour);
+                DrawCircle(center, (float)sdaSettingsData.LazerSize + m_fDrawScaleOffset, m_clrDrawColour);
             }
         }
 

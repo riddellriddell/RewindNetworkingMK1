@@ -127,9 +127,19 @@ namespace Networking
 
         //the peer network this connection is being managed by
         protected NetworkConnection m_ncnParentNetworkConneciton;
+        
+        private static DebugLoggingLevel s_dllLoggingLevel
+        {
+            get { return DebugLoggingLevel.Verbose; }
+        } 
 
         public Connection(DateTime dtmNegotiationStart, NetworkConnection ncnParetnNetwork, long lUserUniqueID, ClassWithIDFactory cifPacketFactory, IPeerTransmitterFactory ptfPeerFactory )
         {
+            if (LogHelp.LogVerbose(s_dllLoggingLevel))
+            {
+                Debug.Log($"Connection.Connection: creating connection with start time {dtmNegotiationStart}, on peer: {ncnParetnNetwork.m_lPeerID} for unique peer id {lUserUniqueID}");
+            }
+            
             m_ncnParentNetworkConneciton = ncnParetnNetwork;
             
             m_dtmConnectionSetupStart = dtmNegotiationStart;
@@ -170,6 +180,11 @@ namespace Networking
 
         public void Reset(DateTime dtmResetTime)
         {
+            if (LogHelp.LogVerbose(s_dllLoggingLevel))
+            {
+                Debug.Log($"Connection.Reset: Resetting connection with start time {dtmResetTime}, on peer: {m_ncnParentNetworkConneciton.m_lPeerID} for unique peer id {m_lUserUniqueID}");
+            }
+            
             //reset conneciton start time
             m_dtmConnectionSetupStart = dtmResetTime;
 
