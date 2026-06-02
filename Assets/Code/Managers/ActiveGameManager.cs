@@ -229,7 +229,7 @@ namespace GameManagers
 
         protected void EnterGettingGateway()
         {
-            Debug.Log($"Enter {ActiveGameState.GettingGateway.ToString()} state");
+            Debug.Log($"ActiveGameManager.EnterGettingGateway: Peer { m_winWebInterface.UserID} Enter {ActiveGameState.GettingGateway.ToString()} state");
             m_usmUIStateManager?.SetStateSetup();
             m_usmUIStateManager?.LogStartupEvent("Searching For Game");
 
@@ -322,7 +322,7 @@ namespace GameManagers
 
         protected void EnterConnectingThroughGateway(long lConnectionID)
         {
-            Debug.Log($"Enter {ActiveGameState.ConnectingThroughGateway.ToString()} state");
+            Debug.Log($"ActiveGameManager.EnterConnectingThroughGateway: Peer {m_winWebInterface.UserID} Enter {ActiveGameState.ConnectingThroughGateway.ToString()} state");
 
             m_usmUIStateManager?.LogStartupEvent("Game found connecting to lead peer");
 
@@ -338,7 +338,7 @@ namespace GameManagers
             m_ngpGlobalMessagingProcessor.Initalize(m_sdaSimSettingsData.MaxPlayers);
 
             if(LogHelp.LogVerbose(s_dllLogLevel))
-                Debug.Log($"ActiveGameManager.EnterConnectingThroughGateway: Peer: {m_ncnNetworkConnection.m_lPeerID} is starting connection request to peer: {lConnectionID} at time: {m_tscTimeSource.UTCNow}");
+                Debug.Log($"ActiveGameManager.EnterConnectingThroughGateway: Peer: {m_winWebInterface.UserID} is starting connection request to peer: {lConnectionID} at time: {m_tscTimeSource.UTCNow}");
 
             
             //tell the connection propegator who to try to connect to
@@ -392,7 +392,7 @@ namespace GameManagers
 
         protected void EnterGettingSimStateFromCluster()
         {
-            Debug.Log($"Enter {ActiveGameState.GettingSimStateFromCluster.ToString()} state");
+            Debug.Log($"ActiveGameManager.EnterGettingSimStateFromCluster: Peer {m_winWebInterface.UserID} Enter {ActiveGameState.GettingSimStateFromCluster.ToString()} state");
 
             m_usmUIStateManager?.LogStartupEvent("Getting game state from peers");
 
@@ -479,7 +479,7 @@ namespace GameManagers
 
         protected void EnterSetUpNewSim()
         {
-            Debug.Log($"Enter {ActiveGameState.SetUpNewSim.ToString()} state");
+            Debug.Log($"ActiveGameManager.EnterSetUpNewSim: Peer: {m_winWebInterface.UserID} Enter {ActiveGameState.SetUpNewSim.ToString()} state");
 
             State = ActiveGameState.SetUpNewSim;
 
@@ -489,7 +489,7 @@ namespace GameManagers
             //use passed in target sim settings to setup inital sim
 
             // sim manager setup sim
-            m_tsmSimManager.InitalizeAsFirstPeer(m_ncnNetworkConnection.m_lPeerID);
+            m_tsmSimManager.InitalizeAsFirstPeer(m_winWebInterface.UserID);
 
             //start setting up the visuals if visual system is attached
             m_gsvGameStateView?.SetupConstDataViewEntities(m_cdaConstData);
@@ -523,7 +523,7 @@ namespace GameManagers
 
         protected void EnterRunningGame()
         {
-            Debug.Log($"Enter {ActiveGameState.RunningStandardGame.ToString()} state");
+            Debug.Log($"ActiveGameManager.EnterRunningGame: Peer: {m_winWebInterface.UserID} Enter {ActiveGameState.RunningStandardGame.ToString()} state");
 
             m_usmUIStateManager?.LogStartupEvent("Starting Game");
 
@@ -612,7 +612,7 @@ namespace GameManagers
 
         protected void EnterEndGameState()
         {
-            Debug.Log($"Enter {ActiveGameState.GameEnded.ToString()} state");
+            Debug.Log($"ActiveGameManager.EnterEndGameState: Peer { m_winWebInterface.UserID} Enter {ActiveGameState.GameEnded.ToString()} state");
 
             State = ActiveGameState.GameEnded;
 
@@ -663,7 +663,7 @@ namespace GameManagers
 
                 uint iHeadIndex = m_ngpGlobalMessagingProcessor.m_chmChainManager.m_chlBestChainHead.m_iLinkIndex;
                 
-                uint iDistanceToPossibleHead =  iCurrentChainLink - iHeadIndex;
+                uint iDistanceToPossibleHead = iHeadIndex < iCurrentChainLink ? iCurrentChainLink - iHeadIndex : 0u;
                 
                 uint iPossibleCurrentChainLenght = iCurrentChainLenght + iDistanceToPossibleHead;
                 

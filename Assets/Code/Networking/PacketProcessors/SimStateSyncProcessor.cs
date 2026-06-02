@@ -136,7 +136,7 @@ namespace Networking
             //this happens when state data exists for a request at a time
             if (m_ndbNetworkDataBridge.m_tupDataAtTimeForPeers.Count > 0)
             {
-                Debug.Log("SimStateSync:: Fetching Data For Peers From Network Data Bridge");
+                Debug.Log($"SimStateSyncProcessor.Update: Peer: {ParentNetworkConnection.m_lPeerID} SimStateSync:: Fetching Data For Peers From Network Data Bridge");
 
                 //check if there are any active requests 
                 foreach (Tuple<DateTime, long, byte[]> tupDataAtTime in m_ndbNetworkDataBridge.m_tupDataAtTimeForPeers.Values)
@@ -243,7 +243,7 @@ namespace Networking
                 //DO SOME BASIC VALIDATION
                 if(m_dtmTimeOfAgreedState.Ticks != ssdSegmentData.m_lTickOfGameState)
                 {
-                    Debug.LogError($"The state sent by peer{lFromUserID} is for tick {ssdSegmentData.m_lTickOfGameState} but the request is for time {m_dtmTimeOfAgreedState.Ticks}");
+                    Debug.LogError($"SimStateSyncProcessor.ProcessReceivedPacket: Peer: {ParentNetworkConnection.m_lPeerID} The state sent by peer{lFromUserID} is for tick {ssdSegmentData.m_lTickOfGameState} but the request is for time {m_dtmTimeOfAgreedState.Ticks}");
                 }
 
                 OnRecieveSegment(ref ssdSegmentData.m_bSegmentData, ssdSegmentData.m_lSegmentHash, lFromUserID);
@@ -271,7 +271,7 @@ namespace Networking
                     m_staState = State.SyncFailed;
                     m_ndbNetworkDataBridge.m_sssSimStartStateSyncStatus = m_staState;
 
-                    Debug.LogError($"Sync failed, did not download all segments before time ran out, " +
+                    Debug.LogError($"SimStateSyncProcessor.UpdateTimeOutState: Peer: {ParentNetworkConnection.m_lPeerID} Sync failed, did not download all segments before time ran out, " +
                                    $"Time since request:{m_tnpNetworkTime.BaseTime - (m_dtmRequestTimeOut - StateRequestTimeOut)} " +
                                    $"Segments remaining: {m_sPendingSegments.Count}");
 
@@ -286,7 +286,7 @@ namespace Networking
                     m_staState = State.SyncFailed;
                     m_ndbNetworkDataBridge.m_sssSimStartStateSyncStatus = m_staState;
 
-                    Debug.LogError($"Sync failed, final synchronizations was not stable, not enough peers agreed with final state " +
+                    Debug.LogError($"SimStateSyncProcessor.UpdateTimeOutState: Peer: {ParentNetworkConnection.m_lPeerID} Sync failed, final synchronizations was not stable, not enough peers agreed with final state " +
                                    $"Peers with hash: {m_iPeersWithSimHash} " +
                                    $"Total Peer Count: {m_lAuthorativePeers.Count}" +
                                    $"Number of peers in agreement needed: { m_lAuthorativePeers.Count - iMaxNumberOfFailedRequests}");
@@ -324,7 +324,7 @@ namespace Networking
                         sscSyncConnection.CleanUpReceivingState();
                     }
 
-                    Debug.Log("State synced early");
+                    Debug.Log($"SimStateSyncProcessor.CheckForEarlyStateSync: Peer: {ParentNetworkConnection.m_lPeerID} State synced early");
 
                     //show that state is synced 
                     m_staState = State.StateSynced;
@@ -481,7 +481,7 @@ namespace Networking
             if (m_lAgreedSimHash == lCommonStateHash)
             {
                 //active hash has not changed
-                Debug.Log("Common hash has not changed");
+                Debug.Log($"SimStateSyncProcessor.CheckForMostLikelyHashChange: On Peer {ParentNetworkConnection.m_lPeerID} Common hash has not changed");
                 return false;
             }
 
@@ -567,7 +567,7 @@ namespace Networking
             if (bData.Length > MaxSegmentSize)
             {
                 //bad segment size 
-                Debug.LogError($"Sim state segement too big? corrupted or hack attempt from peer{lPeer}?");
+                Debug.LogError($"SimStateSyncProcessor.OnRecieveSegment: On Peer {ParentNetworkConnection.m_lPeerID} Sim state segement too big? corrupted or hack attempt from peer{lPeer}?");
 
                 //TODO: Throw an error of some kind and mayb trigger a kick action
                 return;
@@ -613,7 +613,7 @@ namespace Networking
                 }
 
                 //data does not belong to current sim state 
-                Debug.LogError($"Sim state segement from peer{lPeer} with hash {lSegmentHash} does not belong to target sim state but the message hash of {lHashOfData} can be found in the hash map at index {iHashIndex}");
+                Debug.LogError($"SimStateSyncProcessor.OnRecieveSegment: On Peer {ParentNetworkConnection.m_lPeerID} Sim state segement from peer{lPeer} with hash {lSegmentHash} does not belong to target sim state but the message hash of {lHashOfData} can be found in the hash map at index {iHashIndex}");
 
                 return;
             }
@@ -622,7 +622,7 @@ namespace Networking
             if (m_sPendingSegments.Contains(sDataSegment) == false)
             {
                 // data segment already recieved
-                Debug.LogError($"Sim state segement from peer{lPeer} already recieved");
+                Debug.LogError($"SimStateSyncProcessor.OnRecieveSegment: On Peer {ParentNetworkConnection.m_lPeerID} Sim state segement from peer{lPeer} already recieved");
 
                 return;
             }
@@ -647,7 +647,7 @@ namespace Networking
             if (m_sPendingSegments.Count == 0)
             {
                 //log all states recieved
-                Debug.Log($"All stim state segements recieved for state at time:{m_dtmTimeOfAgreedState}");
+                Debug.Log($"SimStateSyncProcessor.OnRecieveSegment: On Peer {ParentNetworkConnection.m_lPeerID} All sim state segements recieved for state at time:{m_dtmTimeOfAgreedState}");
 
                 m_bIsFullStateSynced = true;
 
@@ -802,7 +802,7 @@ namespace Networking
 
              m_bIsRequestedOutDataDirty = true;
 
-            Debug.Log("SimStateSync:: adding new request for sim data to network data bridge");
+            Debug.Log($"SimStateSyncProcessor.OnNewRequestForSimDataAtTime: On Peer {ParentNetworkConnection.m_lPeerID} SimStateSync:: adding new request for sim data at time {dtmTimeOfRequest} with time out time of {dtmTimeOutTime} for peer {lNewRequestFromPeerID} to network data bridge");
 
             //add the time of the data request to the data bridge so the sim manager knows when to copy out sim state 
             m_ndbNetworkDataBridge.m_tupNewRequestedDataAtTimeForPeers.Add(new Tuple<DateTime, long>(dtmTimeOfRequest, lNewRequestFromPeerID));
@@ -1004,7 +1004,7 @@ namespace Networking
         #region SendingState
         public void OnRequestStateForTime(DateTime dtmTime)
         {
-            Debug.Log("SimStateSyncProcessor:: Data Request recieved for time");
+            Debug.Log($"SimStateSyncProcessor.OnRequestStateForTime:: on peer:{m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID} Data Request recieved for time {dtmTime} on connection {ParentConnection.m_lUserUniqueID}");
 
             m_ostOutState = OutState.Pending;
             m_dtmTimeOfOutSimState = dtmTime;
@@ -1016,7 +1016,7 @@ namespace Networking
 
         public void OnSimDataChange(byte[] bSimDataAtPeerRequest)
         {
-            Debug.Log("SimStateSyncProcessor:: Data for request found sending hash map");
+            Debug.Log($"SimStateSyncProcessor.OnSimDataChange:: on peer:{m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID} SimStateSyncProcessor:: Data for request found sending hash map");
 
             //check if connection active
             if (ParentConnection.Status != Connection.ConnectionStatus.Connected)
@@ -1048,7 +1048,7 @@ namespace Networking
             if (m_ostOutState == OutState.NotRequested)
             {
                 //send not available reply? 
-                Debug.LogError("Sim sync mode not requested no sim state has been stored and no hashmap calculated");
+                Debug.LogError($"SimStateSyncProcessor.OnRequestDataSegment:: on peer:{m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID} Sim sync mode not requested no sim state has been stored and no hashmap calculated");
 
                 return;
             }
@@ -1094,7 +1094,7 @@ namespace Networking
 
                         if(lHashOfDataToSend != lDataHash)
                         {
-                            Debug.LogError($"The Hash map for peer is incorrect and the data has a hash of {lHashOfDataToSend} at time {m_dtmTimeOfOutSimState} which does not match the target hash of {lDataHash} that the peer {ParentConnection.m_lUserUniqueID} requested");
+                            Debug.LogError($"SimStateSyncProcessor.OnRequestDataSegment:: on peer:{m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID} The Hash map for peer is incorrect and the data has a hash of {lHashOfDataToSend} at time {m_dtmTimeOfOutSimState} which does not match the target hash of {lDataHash} that the peer {ParentConnection.m_lUserUniqueID} requested");
                         }
           
                     }

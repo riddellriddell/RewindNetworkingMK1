@@ -325,8 +325,19 @@ namespace Networking
             m_svaChainSortingValue = new SortingValue(lPartA, lPartB);
 
         }
+        
+        public static DateTime ConvertChainLinkSortingValueToDateTime(SortingValue svaValue,DateTime dtmCurrentNetworkTime)
+        {
+            long lLinkIndex = (long) svaValue.m_lSortValueA >> (sizeof(UInt32) * 8);
+        
+            DateTime dtmStart = ChainManager.GetChainBaseTime(dtmCurrentNetworkTime);
+            TimeSpan tspTimeSpanOfIndex = TimeSpan.FromTicks(ChainManager.TimeBetweenLinks.Ticks * lLinkIndex);
 
+            return dtmStart + tspTimeSpanOfIndex;
+        }
     }
+    
+
 
     //public class ChainLink : IEncriptedMessageInterface
     //{

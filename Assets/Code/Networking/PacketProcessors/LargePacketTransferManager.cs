@@ -44,7 +44,7 @@ namespace Networking
             //check is packet  larger than the mtu and will need splitting 
             if ((pktOutputPacket is LargePacket) == false && pktOutputPacket.PacketTotalSize >= conConnection.MaxPacketBytesToSend)
             {
-                Debug.Log($"splitting large Packet: {pktOutputPacket.ToString()} of size:{pktOutputPacket.PacketTotalSize} ");
+                Debug.Log($"LargePacketTransferManager.ProcessReceivedPacket: Peer {m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID} splitting large Packet: {pktOutputPacket.ToString()} of size:{pktOutputPacket.PacketTotalSize} to send to peer:{conConnection.m_lUserUniqueID} ");
 
                 //split packet and reassemble at other end
                 List<LargePacket> lpkSplitPackets = SplitPacket(pktOutputPacket, conConnection.MaxPacketBytesToSend);
@@ -66,7 +66,7 @@ namespace Networking
         {
             if(pktInputPacket is LargePacket)
             {
-                Debug.Log($"Processing LargePacket From {ParentConnection.m_lUserUniqueID} of size: {(pktInputPacket as LargePacket).PacketPayloadSize}");
+                Debug.Log($"LargePacketTransferManager.ProcessReceivedPacket: Peer {m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID} Processing LargePacket From {ParentConnection.m_lUserUniqueID} of size: {(pktInputPacket as LargePacket).PacketPayloadSize}");
 
                 LargePacketSections.Add(pktInputPacket as LargePacket);
 
@@ -74,7 +74,7 @@ namespace Networking
                 if (IsLargePacketListComplete(LargePacketSections))
                 {
                     //
-                    Debug.Log($"LargePacket From {ParentConnection.m_lUserUniqueID} merging {LargePacketSections.Count} large packet segments into source datapacket");
+                    Debug.Log($"LargePacketTransferManager.ProcessReceivedPacket: Peer {m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID}. LargePacket From {ParentConnection.m_lUserUniqueID} merging {LargePacketSections.Count} large packet segments into source datapacket");
 
                     //decode the large packet from array of sub packets 
                     DataPacket dpkReconstructedPacket = CombineSplitPackets(LargePacketSections);

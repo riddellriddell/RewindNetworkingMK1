@@ -422,6 +422,8 @@ namespace Networking
             //changes are only stored in the sim message buffer if updating the main branch or unconfirmed message head 
             if (ndbNetworkingDataBridge != null)
             {
+                //Debug.Log($"GlobalMessagingState.ApplyAnyConnectionVotes Peer: {ndbNetworkingDataBridge.m_lLocalPeerID} is adding a message to join peers {iJoinPeers.ToArray()} and kicking peers {iKickPeers.ToArray()} to the buffer");
+                
                 //create a sim message for peers joining or leaving game
                 AddPeerChangeMessageToSimBuffer(svaMessageSortVal, iKickPeers, iJoinPeers, ndbNetworkingDataBridge);
             }
@@ -688,18 +690,25 @@ namespace Networking
             {
                 return;
             }
-
+    
+            //for debugging convert from sort value to date time
+            DateTime dtmTimeOfVote = new DateTime((long)svaChangeTime.m_lSortValueA, DateTimeKind.Utc);
+            
             //build kick and join message
             UserConnecionChange uccConnectionChange = new UserConnecionChange(iPeersToKick.Count, iPeersToAdd.Count);
 
             for(int i = 0; i < iPeersToKick.Count; i++)
             {
+                Debug.Log(
+                    $"GlobalMessagingState.AddPeerChangeMessageToSimBuffer Peer {ndbNetworkingDataBridge.m_lLocalPeerID} creating Kick peer {m_gmcMessageChannels[iPeersToKick[i]].m_lChannelPeer} message time {dtmTimeOfVote.ToString()}");
                 uccConnectionChange.m_lKickPeerID[i] = m_gmcMessageChannels[iPeersToKick[i]].m_lChannelPeer;
                 uccConnectionChange.m_iKickPeerChannelIndex[i] = iPeersToKick[i];
             }
 
             for (int i = 0; i < iPeersToAdd.Count; i++)
             {
+                Debug.Log(
+                    $"GlobalMessagingState.AddPeerChangeMessageToSimBuffer Peer {ndbNetworkingDataBridge.m_lLocalPeerID} creating Join peer {m_gmcMessageChannels[iPeersToAdd[i]].m_lChannelPeer} message at time {dtmTimeOfVote.ToString() }");
                 uccConnectionChange.m_lJoinPeerID[i] = m_gmcMessageChannels[iPeersToAdd[i]].m_lChannelPeer;
                 uccConnectionChange.m_iJoinPeerChannelIndex[i] = iPeersToAdd[i];
             }

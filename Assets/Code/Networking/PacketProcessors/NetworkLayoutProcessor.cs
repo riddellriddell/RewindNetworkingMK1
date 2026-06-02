@@ -206,7 +206,7 @@ namespace Networking
         {
             if (m_bShouldUpdatePeers)
             {
-                Debug.Log("sending layout to connected peers");
+                Debug.Log($"NetworkLayoutProcessor.Update: Peer:{ParentNetworkConnection.m_lPeerID} sending layout to connected peers");
 
                 SendNetworkLayoutToPeers();
                 m_bShouldUpdatePeers = false;
@@ -362,13 +362,13 @@ namespace Networking
         {
             //generate network layout packet and send it to all connections
             NetworkLayoutPacket nlpNetworkLayoutPacket = ParentNetworkConnection.PacketFactory.CreateType<NetworkLayoutPacket>(NetworkLayoutPacket.TypeID);
-            nlpNetworkLayoutPacket.m_nlaNetworkLayout = GenterateNetworkLayout();
+            nlpNetworkLayoutPacket.m_nlaNetworkLayout = GenerateNetworkLayout();
 
             //send packet out to all connections updating them on what users this computer is conencted to 
             ParentNetworkConnection.TransmitPacketToAll(nlpNetworkLayoutPacket);
         }
 
-        protected NetworkLayout GenterateNetworkLayout()
+        protected NetworkLayout GenerateNetworkLayout()
         {
             NetworkLayout networkLayout = new NetworkLayout(ChildConnectionProcessors.Count);
 
@@ -377,7 +377,7 @@ namespace Networking
                 //check if fully connected
                 if (clpLayout.ParentConnection.Status == Connection.ConnectionStatus.Connected)
                 {
-                    Debug.Log($"adding connection: {clpLayout.ParentConnection.m_lUserUniqueID} to network layout");
+                    Debug.Log($"NetworkLayoutProcessor.GenerateNetworkLayout: Peer:{ParentNetworkConnection.m_lPeerID} adding connection: {clpLayout.ParentConnection.m_lUserUniqueID} to network layout");
                     DateTime dtmTimeOfConnection = clpLayout.NetworkTimeOfConnection;
 
                     networkLayout.Add(clpLayout.ParentConnection.m_lUserUniqueID, dtmTimeOfConnection, GetOldestConnectionOfID(ParentNetworkConnection.m_lPeerID));
@@ -490,7 +490,7 @@ namespace Networking
         {
             if (pktInputPacket is NetworkLayoutPacket)
             {
-                Debug.Log("Recieved network layout packet");
+                Debug.Log($"NetworkLayoutProcessor.ProcessReceivedPacket: Peer:{m_tParentPacketProcessor.ParentNetworkConnection.m_lPeerID} Received network layout packet");
 
                 m_nlaNetworkLayout = (pktInputPacket as NetworkLayoutPacket).m_nlaNetworkLayout;
 

@@ -289,7 +289,7 @@ namespace Networking
 
         protected void OnConnectionEstablished()
         {      
-            //check that we are transittioning from correct state
+            //check that we are transitioning from correct state
             if (Status == ConnectionStatus.Initializing)
             {
                 SetStatus(ConnectionStatus.Connected);

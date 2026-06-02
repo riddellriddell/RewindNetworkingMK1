@@ -1,6 +1,7 @@
 ﻿using SharedTypes;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Networking
@@ -425,7 +426,6 @@ namespace Networking
         {
             //set up the initial state of the chain
             m_chmChainManager.SetStartState(ParentNetworkConnection.m_lPeerID, MaxChannelCount, m_tnpNetworkTime.NetworkTime);
-
             DateTime dtmNetworkTime = m_tnpNetworkTime.NetworkTime;
 
             //get current chain link
@@ -463,6 +463,11 @@ namespace Networking
 
         public void StartAsConnectorToSystem()
         {
+            //TODO::This is currently not used, it was put in for the
+            //force connect feature to accept a game state if connection takes 
+            //too long but that feature is currently disabled
+            //if we never re enable it then this should be removed
+            
             //reset the start time for connection
             m_dtmTimeOfStateCollectionStart = m_tnpNetworkTime.BaseTime;
         }
@@ -913,6 +918,13 @@ namespace Networking
                 //check if message is being created behind head
                 if (m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue.CompareTo(pmnMessage.m_svaMessageSortingValue) > 0)
                 {
+                    if (LogHelp.LogVerbose(NetworkConnection.LogLevel))
+                    {
+                        DateTime dtmMessageTime = new DateTime((long)pmnMessage.m_svaMessageSortingValue.m_lSortValueA , DateTimeKind.Utc);
+                        DateTime dtmLastChainMessage  = new DateTime((long)m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue.m_lSortValueA , DateTimeKind.Utc);
+                        Debug.Log($"NetworkGlobalMessengerProcessor.ProcessMessage: on peer {ParentNetworkConnection.m_lPeerID} Message from {pmnMessage.m_lPeerID} at time {dtmMessageTime} received behind head at with last message time of {dtmLastChainMessage.ToString()} ");
+                    }
+                    
                     //update the best chain
                     ChainLink chlBestLink = m_chmChainManager.GetBestHeadChainLink(m_gmbMessageBuffer);
 
@@ -1095,6 +1107,15 @@ namespace Networking
                     chlLinksToSend.Add(chlLink);
                     chlLink = chlLink.m_chlParentChainLink;
                 }
+                
+                //sanity check that the last chain link is also the chain base
+                if (chlLinksToSend.Last().m_lLinkPayloadHash !=
+                    m_tParentPacketProcessor.m_chmChainManager.m_chlChainBase.m_lLinkPayloadHash)
+                {
+                    Debug.LogError($"NetworkGlobalMessengerProcessor.StartStateSync: when sending chain to client " +
+                                   $"the base had a hash of: {m_tParentPacketProcessor.m_chmChainManager.m_chlChainBase.m_lLinkPayloadHash} " +
+                                   $"but the last chain link found has a hash of: {chlLinksToSend.Last().m_lLinkPayloadHash}");
+                }
 
                 //set state
                 cspStatePacket.m_sscStartStateCandidate = new GlobalMessageStartStateCandidate();
@@ -1116,16 +1137,25 @@ namespace Networking
                     m_tParentPacketProcessor.ParentNetworkConnection.SendPacket(ParentConnection, clpChainLinkPacket);
                 }
                 
-                //send all the messages in the unconfirmed message buffer
-                foreach (PeerMessageNode pmnPeerMessage in m_tParentPacketProcessor.m_gmbMessageBuffer
-                             .UnConfirmedMessageBuffer.Values)
-                {
-                    GlobalMessagePacket gmpMessagePacket =  m_tParentPacketProcessor.ParentNetworkConnection.PacketFactory.CreateType<GlobalMessagePacket>(GlobalMessagePacket.TypeID);
+                //TODO:: For now I am turning this off, the chain links send all the messages they contian 
+                //anyway, these messages should either get sent with the chain or they don't exist on the chain
+                //and will eventually get culled
 
-                    gmpMessagePacket.m_pmnMessage = pmnPeerMessage;
-                    
-                    //send to client
-                    ParentConnection.QueuePacketToSend(gmpMessagePacket);
+                if (true)
+                {
+                    //send all the messages in the unconfirmed message buffer
+                    foreach (PeerMessageNode pmnPeerMessage in m_tParentPacketProcessor.m_gmbMessageBuffer
+                                 .UnConfirmedMessageBuffer.Values)
+                    {
+                        GlobalMessagePacket gmpMessagePacket =
+                            m_tParentPacketProcessor.ParentNetworkConnection.PacketFactory
+                                .CreateType<GlobalMessagePacket>(GlobalMessagePacket.TypeID);
+
+                        gmpMessagePacket.m_pmnMessage = pmnPeerMessage;
+
+                        //send to client
+                        ParentConnection.QueuePacketToSend(gmpMessagePacket);
+                    }
                 }
             }
         }

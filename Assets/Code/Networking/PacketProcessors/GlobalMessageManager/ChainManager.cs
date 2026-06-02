@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Networking
@@ -22,6 +23,12 @@ namespace Networking
 
         public int MaxChannelCount { get; private set; }
 
+        protected DebugLoggingLevel LogLevel
+        {
+            get { return DebugLoggingLevel.Verbose; }
+        }
+        
+        
         #endregion
         #region Voting
 
@@ -100,6 +107,16 @@ namespace Networking
 
         public void AddChainLink(long lLocalPeerID, ChainLink chlLink, GlobalMessageKeyManager gkmKeyManager, GlobalMessageBuffer gmbGlobalMessageBuffer, NetworkingDataBridge ndbNetworkingDataBridge, out bool bDirtyUnconfirmedMessageBufferState)
         {
+            if (LogHelp.LogVerbose(LogLevel))
+            {
+                //for debugging calc the time for the chain link
+                DateTime dtmChainLinkTime =
+                    ChainLink.ConvertChainLinkSortingValueToDateTime(chlLink.m_svaChainSortingValue,
+                        ndbNetworkingDataBridge.GetCurrentSimTime());
+                
+                Debug.Log($"ChainManager.AddChainlink: Peer: {lLocalPeerID} is adding link {chlLink.m_iLinkIndex} made by {chlLink.m_lPeerID} with a chain time of {dtmChainLinkTime.ToString()} and a sorting value {chlLink.m_svaChainSortingValue.ToString()} at networkx     time {ndbNetworkingDataBridge.GetCurrentSimTime()}");
+            }
+            
             //validate chain link to make sure all peers are seeing the same thing 
             ChainLinkVerifier.RegisterLink(chlLink, lLocalPeerID);
 
@@ -349,10 +366,8 @@ namespace Networking
                     bool bIsIndexed = m_gmsChainStartState.TryGetIndexForPeer(chlLink.m_lPeerID, out int iIndex);
 
                     int iLinkAuthorChannelIndex = bIsIndexed ? iIndex : -1;
-                    
-                    
-                    
-                    Debug.LogError($"Not able to find parent for chain link, previous chain hash was:{chlLink.m_lPreviousLinkHash} and has an index of :{chlLink.m_iLinkIndex} and was made by peer {chlLink.m_lPeerID} with a channel index of { iLinkAuthorChannelIndex}");
+
+                    Debug.LogError($"ChainManager.ProcessChainLink: On Peer: {lLocalPeerID} was not able to find parent for chain link, previous chain hash was:{chlLink.m_lPreviousLinkHash} and has an index of :{chlLink.m_iLinkIndex} and was made by peer {chlLink.m_lPeerID} with a channel index of { iLinkAuthorChannelIndex}");
                     
                     //cant do chain link analysis 
                     return;
@@ -808,6 +823,16 @@ namespace Networking
 
         public void OnBestHeadChange(ChainLink chlNewLink, long lLocalPeerID, NetworkingDataBridge ndbNetworkingDataBridge, GlobalMessageBuffer gmbGlobalMessageBuffer)
         {
+            if (LogHelp.LogVerbose(LogLevel))
+            {
+                //for debugging calc the time for the chain link
+                DateTime dtmChainLinkTime =
+                    ChainLink.ConvertChainLinkSortingValueToDateTime(chlNewLink.m_svaChainSortingValue,
+                        ndbNetworkingDataBridge.GetCurrentSimTime());
+                
+                Debug.Log($"ChainManager.OnBestHeadChange: Peer {lLocalPeerID} has changed its best head to chain link with index {chlNewLink.m_iLinkIndex} made by peer {chlNewLink.m_lPeerID} with link time of {dtmChainLinkTime.ToString()} and a sort value {chlNewLink.m_svaChainSortingValue.ToString()}");
+            }
+
             List<ChainLink> chlNewBranchLinks = new List<ChainLink>();
 
             //reset the processed up to time in the message buffer
@@ -816,6 +841,19 @@ namespace Networking
             //get list of all the new chain links in the new branch to the new chain link head
             GetChainLinksFromSharedBase(chlNewLink, m_chlBestChainHead, ref chlNewBranchLinks);
 
+            //log the time of the first chain 
+            if (LogHelp.LogVerbose(LogLevel))
+            {
+                SortingValue svaBranchSplit = chlNewBranchLinks.Last().m_svaChainSortingValue;
+                
+                //for debugging calc the time for the chain link
+                DateTime dtmChainLinkTime =
+                    ChainLink.ConvertChainLinkSortingValueToDateTime(chlNewLink.m_svaChainSortingValue,
+                        ndbNetworkingDataBridge.GetCurrentSimTime());
+                
+                Debug.Log($"ChainManager.OnBestHeadChange: Peer {lLocalPeerID} has changed its best head to chain link with index {chlNewLink.m_iLinkIndex} made by peer {chlNewLink.m_lPeerID} with link time of {dtmChainLinkTime.ToString()} and a sort value {chlNewLink.m_svaChainSortingValue.ToString()}");
+            }
+            
             //apply messages from new branch to sim messages 
             ApplyChangesToSimMessageBuffer(chlNewBranchLinks, ndbNetworkingDataBridge);
 
