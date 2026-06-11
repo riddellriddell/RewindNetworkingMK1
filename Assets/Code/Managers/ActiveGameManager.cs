@@ -368,21 +368,39 @@ namespace GameManagers
             //check for timeout 
             TimeSpan tspTimeSinceConnectionStart = m_tscTimeSource.UTCNow - m_dtmConnectThroughGateStart;
 
+            TimeSpan tspTimeSinceLastActivity = m_tscTimeSource.UTCNow  - m_ncnNetworkConnection.TimeOfLastConnectionActivity();
+
+            bool bInTimeOutWindow = tspTimeSinceConnectionStart.TotalSeconds <
+                                    m_ncsNetworkConnectionSettings.m_fGatewayConnectionTimeout;
+            
+            bool bInInitialStartWindow = tspTimeSinceConnectionStart.TotalSeconds <
+                                        m_ncsNetworkConnectionSettings.m_fGatewayNoInitalActivityTimeout;
+
+            bool bHasHadRecentActivity =
+                tspTimeSinceLastActivity.TotalSeconds < m_ncsNetworkConnectionSettings.m_fGatewayNoActivityTimeout;
+            
             //check if connection failed 
 
-            if (tspTimeSinceConnectionStart.TotalSeconds > m_ncsNetworkConnectionSettings.m_fGatewayConnectionTimeout || m_ncnNetworkConnection.HaveAllConnectionsFailed())
+            if (!bInTimeOutWindow || (!bInInitialStartWindow && !bHasHadRecentActivity) ||  m_ncnNetworkConnection.HaveAllConnectionsFailed())
             {
-                if (tspTimeSinceConnectionStart.TotalSeconds > m_ncsNetworkConnectionSettings.m_fGatewayConnectionTimeout)
+                if (!bInTimeOutWindow )
                 {
-                    Debug.Log("Connection through gateway attempt timed out");
+                    Debug.Log($"ActiveGameManager.UpdateConnectingThroughGateway: Peer {m_winWebInterface.UserID} Connection through gateway attempt timed out after {tspTimeSinceConnectionStart.TotalSeconds} seconds due to taking too long");
+                }
+                else if ((!bInInitialStartWindow && !bHasHadRecentActivity))
+                {
+                    Debug.Log($"ActiveGameManager.UpdateConnectingThroughGateway: Peer {m_winWebInterface.UserID} Connection through gateway attempt timed out due to no activity on a connection after {tspTimeSinceLastActivity.TotalSeconds} seconds");
+                }
+                else if (m_ncnNetworkConnection.HaveAllConnectionsFailed())
+                {
+                    Debug.Log($"ActiveGameManager.UpdateConnectingThroughGateway: Peer {m_winWebInterface.UserID} Connection through gateway failed");
+                }
+                else
+                {
+                    Debug.Log($"ActiveGameManager.UpdateConnectingThroughGateway: Peer {m_winWebInterface.UserID} Should not be failing here");
                 }
 
-                if (m_ncnNetworkConnection.HaveAllConnectionsFailed())
-                {
-                    Debug.Log("Connection through gateway failed");
-                }
-
-                m_usmUIStateManager?.LogStartupEvent("Failed to connect to lead peer restarting connection process");
+                m_usmUIStateManager?.LogStartupEvent($"ActiveGameManager.UpdateConnectingThroughGateway: Peer {m_winWebInterface.UserID}  Failed to connect to lead peer restarting connection process");
 
                 //connection attempt timed out restarting active game connection process
                 Reset();
@@ -394,7 +412,7 @@ namespace GameManagers
         {
             Debug.Log($"ActiveGameManager.EnterGettingSimStateFromCluster: Peer {m_winWebInterface.UserID} Enter {ActiveGameState.GettingSimStateFromCluster.ToString()} state");
 
-            m_usmUIStateManager?.LogStartupEvent("Getting game state from peers");
+            m_usmUIStateManager?.LogStartupEvent($"ActiveGameManager.EnterGettingSimStateFromCluster: Peer {m_winWebInterface.UserID} Getting game state from peers");
 
             State = ActiveGameState.GettingSimStateFromCluster;
             m_dtmGettingSimStateStart = m_tscTimeSource.UTCNow;
@@ -432,7 +450,7 @@ namespace GameManagers
                 //check if connected to global messaging system
                 if (m_ngpGlobalMessagingProcessor.m_staState == NetworkGlobalMessengerProcessor.State.Connected || m_ngpGlobalMessagingProcessor.m_staState == NetworkGlobalMessengerProcessor.State.Active)
                 {
-                    Debug.Log("Fetching Sim State From peers");
+                    Debug.Log($"ActiveGameManager.UpdateGettingSimStateFromCluster: Peer {m_winWebInterface.UserID} Fetching Sim State From peers");
                     m_usmUIStateManager?.LogStartupEvent("Getting world state from peers");
 
                     GetSimDataFromPeers();
@@ -442,7 +460,7 @@ namespace GameManagers
             //check that state was synced successfully 
             if (m_sssStateSyncProcessor.m_bIsFullStateSynced == true && m_sssStateSyncProcessor.m_staState == SimStateSyncNetworkProcessor.State.SyncFailed)
             {
-                Debug.LogError("something went wrong, some how we have a full sate but ther was an error with the sync");
+                Debug.LogError($"ActiveGameManager.UpdateGettingSimStateFromCluster: Peer {m_winWebInterface.UserID} something went wrong, some how we have a full state but there was an error with the sync");
                 bHasFetchedSimState = false;
             }
 
@@ -467,9 +485,9 @@ namespace GameManagers
 
             if (tspTimeSinceGetSimStateStarted.TotalSeconds > m_ncsNetworkConnectionSettings.m_fGettingSimStateTimeOut)
             {
-                Debug.Log($"Getting sim state timed out before game state was fetched, Global Messaging status:{m_ngpGlobalMessagingProcessor.m_staState}, Sim Data Fetch Status:{m_ngpGlobalMessagingProcessor.m_staState}, has a full state bben synced:{m_sssStateSyncProcessor.m_bIsFullStateSynced}");
+                Debug.Log($"ActiveGameManager.UpdateGettingSimStateFromCluster: Peer {m_winWebInterface.UserID} Getting sim state timed out before game state was fetched, Global Messaging status:{m_ngpGlobalMessagingProcessor.m_staState}, Sim Data Fetch Status:{m_ngpGlobalMessagingProcessor.m_staState}, has a full state bben synced:{m_sssStateSyncProcessor.m_bIsFullStateSynced}");
 
-                m_usmUIStateManager?.LogStartupEvent("Unable to get game state from peers, restarting connection process");
+                m_usmUIStateManager?.LogStartupEvent($"ActiveGameManager.UpdateGettingSimStateFromCluster: Peer {m_winWebInterface.UserID} Unable to get game state from peers, restarting connection process");
 
                 //restart the connection process
                 Reset();
@@ -498,7 +516,7 @@ namespace GameManagers
 
         protected void UpdateSetUpNewSim()
         {
-            Debug.Log("Update Setup State");
+            Debug.Log($"ActiveGameManager.UpdateSetUpNewSim: Peer {m_winWebInterface.UserID} Update Setup State");
 
             //wait for sim setup to finish
 
@@ -506,12 +524,12 @@ namespace GameManagers
 
             if (bIsSimSetup)
             {
-                Debug.Log("Indicate First in swarm");
+                Debug.Log($"ActiveGameManager.UpdateSetUpNewSim: Peer {m_winWebInterface.UserID} Indicate First in swarm");
 
                 //tell network layer global messaging system that it is the first peer in the 
                 m_ncnNetworkConnection.OnFirstPeerInSwarm();
 
-                Debug.Log("Run on connect to swarm");
+                Debug.Log($"ActiveGameManager.UpdateSetUpNewSim: Peer {m_winWebInterface.UserID} Run on connect to swarm");
                 //activate network layer to start looking for new connections
                 m_ncnNetworkConnection.OnConnectToSwarm();
 
@@ -525,7 +543,7 @@ namespace GameManagers
         {
             Debug.Log($"ActiveGameManager.EnterRunningGame: Peer: {m_winWebInterface.UserID} Enter {ActiveGameState.RunningStandardGame.ToString()} state");
 
-            m_usmUIStateManager?.LogStartupEvent("Starting Game");
+            m_usmUIStateManager?.LogStartupEvent($"ActiveGameManager.EnterRunningGame: Peer {m_winWebInterface.UserID} Starting Game");
 
             State = ActiveGameState.RunningStandardGame;
 
@@ -548,9 +566,9 @@ namespace GameManagers
             {
                 if((m_tscTimeSource.UTCNow - m_dtmGettingSimStateStart).TotalSeconds > m_ncsNetworkConnectionSettings.m_fGettingSimStateTimeOut)
                 {
-                    Debug.Log("Error getting sim state, get sim state timed out, forced to reset get game process");
+                    Debug.Log($"ActiveGameManager.UpdateRunningGame: Peer {m_winWebInterface.UserID} Error getting sim state, get sim state timed out, forced to reset get game process");
 
-                    m_usmUIStateManager?.LogStartupEvent("World state recieved from peers was not valid and not able to get a replacement valid world state from peers, restarting connection process");
+                    m_usmUIStateManager?.LogStartupEvent($"ActiveGameManager.UpdateRunningGame: Peer {m_winWebInterface.UserID} World state received from peers was not valid and not able to get a replacement valid world state from peers, restarting connection process");
 
                     //getting sim state ultamatly failed, need to reset get process
                     Reset();
@@ -767,7 +785,7 @@ namespace GameManagers
                 {
                     SendMessageCommand smcMessage = m_ngmGatewayManager.MessagesToSend.Dequeue();
 
-                    Debug.Log($"sending message {smcMessage.m_strMessage} from: {smcMessage.m_lFromID} to:{smcMessage.m_lToID}");
+                    Debug.Log($"ActiveGameManager.HandleGateway: Peer {m_winWebInterface.UserID} sending message {smcMessage.m_strMessage} from: {smcMessage.m_lFromID} to:{smcMessage.m_lToID}");
 
                     m_winWebInterface.SendMessage(smcMessage);
                 }

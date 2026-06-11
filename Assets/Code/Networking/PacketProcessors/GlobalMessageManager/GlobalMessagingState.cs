@@ -700,7 +700,7 @@ namespace Networking
             for(int i = 0; i < iPeersToKick.Count; i++)
             {
                 Debug.Log(
-                    $"GlobalMessagingState.AddPeerChangeMessageToSimBuffer Peer {ndbNetworkingDataBridge.m_lLocalPeerID} creating Kick peer {m_gmcMessageChannels[iPeersToKick[i]].m_lChannelPeer} message time {dtmTimeOfVote.ToString()}");
+                    $"GlobalMessagingState.AddPeerChangeMessageToSimBuffer Peer {ndbNetworkingDataBridge.m_lLocalPeerID} creating Kick peer {m_gmcMessageChannels[iPeersToKick[i]].m_lChannelPeer} message time {dtmTimeOfVote.ToString("mm:ss.fff")}");
                 uccConnectionChange.m_lKickPeerID[i] = m_gmcMessageChannels[iPeersToKick[i]].m_lChannelPeer;
                 uccConnectionChange.m_iKickPeerChannelIndex[i] = iPeersToKick[i];
             }
@@ -708,7 +708,7 @@ namespace Networking
             for (int i = 0; i < iPeersToAdd.Count; i++)
             {
                 Debug.Log(
-                    $"GlobalMessagingState.AddPeerChangeMessageToSimBuffer Peer {ndbNetworkingDataBridge.m_lLocalPeerID} creating Join peer {m_gmcMessageChannels[iPeersToAdd[i]].m_lChannelPeer} message at time {dtmTimeOfVote.ToString() }");
+                    $"GlobalMessagingState.AddPeerChangeMessageToSimBuffer Peer {ndbNetworkingDataBridge.m_lLocalPeerID} creating Join peer {m_gmcMessageChannels[iPeersToAdd[i]].m_lChannelPeer} message at time {dtmTimeOfVote.ToString("mm:ss.fff") }");
                 uccConnectionChange.m_lJoinPeerID[i] = m_gmcMessageChannels[iPeersToAdd[i]].m_lChannelPeer;
                 uccConnectionChange.m_iJoinPeerChannelIndex[i] = iPeersToAdd[i];
             }

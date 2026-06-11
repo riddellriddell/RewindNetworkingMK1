@@ -922,7 +922,7 @@ namespace Networking
                     {
                         DateTime dtmMessageTime = new DateTime((long)pmnMessage.m_svaMessageSortingValue.m_lSortValueA , DateTimeKind.Utc);
                         DateTime dtmLastChainMessage  = new DateTime((long)m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue.m_lSortValueA , DateTimeKind.Utc);
-                        Debug.Log($"NetworkGlobalMessengerProcessor.ProcessMessage: on peer {ParentNetworkConnection.m_lPeerID} Message from {pmnMessage.m_lPeerID} at time {dtmMessageTime} received behind head at with last message time of {dtmLastChainMessage.ToString()} ");
+                        Debug.Log($"NetworkGlobalMessengerProcessor.ProcessMessage: on peer {ParentNetworkConnection.m_lPeerID} Message from {pmnMessage.m_lPeerID} at time {dtmMessageTime} received behind head at with last message time of {dtmLastChainMessage.ToString("mm:ss.fff")} ");
                     }
                     
                     //update the best chain

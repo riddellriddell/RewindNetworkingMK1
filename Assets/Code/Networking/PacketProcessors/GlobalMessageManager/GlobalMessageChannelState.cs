@@ -42,7 +42,7 @@ namespace Networking
                 if (dtmCurrentTime < m_dtmVoteTime)
                 {
                     //should not get into this state 
-                    Debug.LogError($"The time of vote { m_dtmVoteTime.ToString()} is later than the current time { dtmCurrentTime.ToString()}. this should never happen.");
+                    Debug.LogError($"The time of vote { m_dtmVoteTime.ToString("mm:ss.fff")} is later than the current time { dtmCurrentTime.ToString("mm:ss.fff")}. this should never happen.");
                     return false;
                 }
 

@@ -219,5 +219,19 @@ namespace Networking
 
             return true;
         }
+        
+        public static bool DoAnyPeersHaveChainLinkInHistory(SortingValue svaLinkSortValue)
+        {
+            //loop through all peers
+            foreach (var kvpPeerHistory in s_dicPeerActiveChainHistory)
+            {
+                if (kvpPeerHistory.Value.m_lstChainLinkHistory.Contains(svaLinkSortValue))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 }

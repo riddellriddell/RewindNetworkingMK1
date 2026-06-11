@@ -166,30 +166,33 @@ namespace Networking
         }
 
 
-        // public void QueueSimMessageDeprecated(SortingValue svaTime, in IInput inpInput)
-        // {
-        //     //check if a player is changing before the start of the message queue
-        //     if (svaTime < m_svaOldestMessageToStoreInBuffer)
-        //     {
-        //         m_squInMessageQueue.Clear();
-        //         m_svaSimProcessedMessagesUpToAndIncluding = m_svaOldestMessageToStoreInBuffer;
-        //     }
-        //     else
-        //     {
-        //         UpdateProcessedTimeOnNewMessageAdded(svaTime);
-        //         m_squInMessageQueue.EnterPurgeInsert(svaTime, inpInput);
-        //     }
-        //     
-        //     //check if queuing up messages before start state
-        //     if ((svaTime <= m_svaOldestActiveSimTime))
-        //     {
-        //         //throw error as we are adding messages without a base state to process from
-        //         Debug.LogError( $"Queuing up message before the oldest simulation state, " +
-        //                         $"we will not be able to process this message");
-        //     }
-        // }
-
         public void QueueSimMessage(SortingValue svaTime, in IInput inpInput)
+        {
+            //check if a player is changing before the start of the message queue
+            if (svaTime < m_svaOldestMessageToStoreInBuffer)
+            {
+                m_squInMessageQueue.Clear();
+                m_svaSimProcessedMessagesUpToAndIncluding = m_svaOldestMessageToStoreInBuffer;
+            }
+            else
+            {
+                UpdateProcessedTimeOnNewMessageAdded(svaTime);
+                m_squInMessageQueue.EnterPurgeInsert(svaTime, inpInput);
+                
+                //update the validated up to time
+                m_svaValidatedUpTo = svaTime;
+            }
+            
+            //check if queuing up messages before start state
+            if ((svaTime <= m_svaOldestActiveSimTime))
+            {
+                //throw error as we are adding messages without a base state to process from
+                Debug.LogError( $"Queuing up message before the oldest simulation state, " +
+                                $"we will not be able to process this message");
+            }
+        }
+
+        public void QueueSimMessageDepricated(SortingValue svaTime, in IInput inpInput)
         {
             
             //check if queuing up messages before start state

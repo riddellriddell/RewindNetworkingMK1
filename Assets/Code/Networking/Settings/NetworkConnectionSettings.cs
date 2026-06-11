@@ -79,6 +79,12 @@ namespace Networking
 
         [SerializeField]
         public float m_fGatewayConnectionTimeout = 240.0f;
+        
+        [SerializeField]
+        public float m_fGatewayNoInitalActivityTimeout = 60.0f;       
+        
+        [SerializeField]
+        public float m_fGatewayNoActivityTimeout = 100.0f;
 
         [SerializeField]
         public long m_lGameType = 0;

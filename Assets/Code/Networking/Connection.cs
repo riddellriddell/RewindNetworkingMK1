@@ -51,13 +51,13 @@ namespace Networking
         //how many un acknowledged packets should be sent before waiting for an acknowledgement
         public int m_iMaxPackestInFlight;
 
-        // the time this connection was initalised
+        // the time this connection was initialized
         public DateTime m_dtmConnectionSetupStart;
 
         //the time this connection was established
         public DateTime m_dtmConnectionEstablishTime;
 
-        //the last time a message was recieved
+        //the last time a message was received
         public DateTime m_dtmTimeOfLastActivity;
 
         //the last time a message was sent 

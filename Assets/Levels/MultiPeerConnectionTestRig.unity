@@ -1103,7 +1103,7 @@ MonoBehaviour:
   m_fStepsPerSecond: 10
   m_fTimeBetweenSteps: 0
   m_bPauseAfterTime: 1
-  m_fTimeToPauseAt: 80
+  m_fTimeToPauseAt: 36
   m_strStartTime: 11/01/2026 12:00:00
   m_fRunTime: 0
   m_bLog: 0

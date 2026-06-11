@@ -287,6 +287,24 @@ namespace Networking
             return true;
         }
 
+        public DateTime TimeOfLastConnectionActivity()
+        {
+            DateTime dtmLastConnectionActivity = DateTime.MinValue;
+            
+            foreach(var kvpKeyValue in ConnectionList)
+            {
+                if(kvpKeyValue.Value.Status != Connection.ConnectionStatus.Disconnected || kvpKeyValue.Value.Status != Connection.ConnectionStatus.Disconnecting)
+                {
+                    if (dtmLastConnectionActivity < kvpKeyValue.Value.m_dtmTimeOfLastActivity)
+                    {
+                        dtmLastConnectionActivity = kvpKeyValue.Value.m_dtmTimeOfLastActivity;
+                    }
+                }
+            }
+
+            return dtmLastConnectionActivity;
+        }
+
         public void SendPacket(long lPlayerID, DataPacket pktPacket)
         {
             //get connection for ID
