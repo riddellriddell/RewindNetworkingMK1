@@ -286,11 +286,11 @@ namespace Networking
         //}
 
         //function to remove messages upto point in buffer 
-        public void RemoveItemsUpTo(SortingValue msvRemoveToo)
+        public void RemoveItemsUpToAndIncluding(SortingValue msvRemoveToo)
         {
             while(UnConfirmedMessageBuffer.Count > 0)
             {
-                if(UnConfirmedMessageBuffer.Keys[0].CompareTo(msvRemoveToo) < 0)
+                if(UnConfirmedMessageBuffer.Keys[0].CompareTo(msvRemoveToo) < 1)
                 {
                     UnConfirmedMessageBuffer.RemoveAt(0);
                 }

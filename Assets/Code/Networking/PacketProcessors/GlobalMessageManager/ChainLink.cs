@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
+using NUnit.Framework;
 using UnityEngine;
 using Utility;
 
@@ -334,6 +336,31 @@ namespace Networking
             TimeSpan tspTimeSpanOfIndex = TimeSpan.FromTicks(ChainManager.TimeBetweenLinks.Ticks * lLinkIndex);
 
             return dtmStart + tspTimeSpanOfIndex;
+        }
+
+        public List<PeerMessageNode> GetAllMessagesInChainToBase()
+        {
+            List<PeerMessageNode> lstMessages = new List<PeerMessageNode>();
+            
+            //recursivly pull messages from the chain
+            IntGetAllMessagesInChainToBase(ref lstMessages, this);
+
+            return lstMessages;
+        }
+
+        private void IntGetAllMessagesInChainToBase(ref List<PeerMessageNode> lstMessages,
+            ChainLink chlTargetLink)
+        {
+            if (chlTargetLink == null)
+            {
+                return;
+            }
+            else
+            {
+                IntGetAllMessagesInChainToBase(ref lstMessages, chlTargetLink.m_chlParentChainLink);
+            }
+            
+            lstMessages.AddRange(chlTargetLink.m_pmnMessages);
         }
     }
     

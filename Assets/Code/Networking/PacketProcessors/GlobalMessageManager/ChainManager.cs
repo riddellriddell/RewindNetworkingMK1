@@ -1066,7 +1066,19 @@ namespace Networking
             //for debugging register the chain link with the chain link tracker
             ChainLinkVerifier.RegisterLinkAsPeerHistory(chlNewBase,m_chlBestChainHead,lLocalPeerID);
 
-            //set base state
+            //before we remove messages validate that all the messages about to be removed have been captured in the 
+            //message chain
+            if (!ChainBaseStateVerifier.CheckAllMessagesInUnconfirmedBufferAreInChain(
+                    m_chlBestChainHead.GetAllMessagesInChainToBase(), chlNewBase.m_chlParentChainLink.m_gmsState.m_svaLastMessageSortValue,
+                    gmbMessageBuffer.UnConfirmedMessageBuffer))
+            {
+                DateTime dtmLastChainMessage  = new DateTime((long)m_gmsChainStartState.m_svaLastMessageSortValue.m_lSortValueA , DateTimeKind.Utc);
+                
+                Debug.LogError($" ChainManager.DoRebase Peer{lLocalPeerID} Base Chain link {m_chlChainBase.m_iLinkIndex} with a last message time of time {dtmLastChainMessage.ToString("mm:ss.fff" )} and a state sort value {m_chlChainBase.m_gmsState.m_svaLastMessageSortValue}  did not capture all messages in unconfirmed message chain this may be causing dropped inputs and peers sending messages with incorrect indexes");
+
+            }
+            
+            //set base state to the state before the new base chain link
             m_gmsChainStartState.ResetToState(chlNewBase.m_chlParentChainLink.m_gmsState);
 
             //set new base
@@ -1078,16 +1090,22 @@ namespace Networking
             {
                 ChainLinks.RemoveAt(0);
             }
-
+            
             //remove reference to old links
             m_chlChainBase.m_chlParentChainLink = null;
-
+            
             //remove old messages
-            gmbMessageBuffer.RemoveItemsUpTo(m_gmsChainStartState.m_svaLastMessageSortValue);
+            gmbMessageBuffer.RemoveItemsUpToAndIncluding(m_gmsChainStartState.m_svaLastMessageSortValue);
 
             if(m_chlChainBase.m_pmnMessages.Count != 0 && m_chlChainBase.m_gmsState.m_svaLastMessageSortValue.CompareTo(m_chlChainBase.m_pmnMessages[m_chlChainBase.m_pmnMessages.Count -1].m_svaMessageSortingValue) != 0 )
             {
-                Debug.LogError("Chain state sort value and newest chain message dont have the same sort value");
+                DateTime dtmBaseChainLinkTime =
+                    ChainLink.ConvertChainLinkSortingValueToDateTime(m_chlBestChainHead.m_svaChainSortingValue,
+                        ndbNetworkDataBridge.GetCurrentSimTime());
+                
+                DateTime dtmMessageTime = new DateTime((long)m_chlChainBase.m_pmnMessages[m_chlChainBase.m_pmnMessages.Count -1].m_svaMessageSortingValue.m_lSortValueA , DateTimeKind.Utc);
+                
+                Debug.LogError($" ChainManager.DoRebase Peer{lLocalPeerID} Chain link with index {m_chlChainBase.m_iLinkIndex} and time {dtmBaseChainLinkTime.ToString("mm:ss.fff" )} state sort value {m_chlChainBase.m_gmsState.m_svaLastMessageSortValue} and newest chain message from peer {m_chlChainBase.m_pmnMessages[m_chlChainBase.m_pmnMessages.Count -1].m_lPeerID} with sort value{m_chlChainBase.m_pmnMessages[m_chlChainBase.m_pmnMessages.Count -1].m_svaMessageSortingValue} at time {dtmMessageTime.ToString("mm:ss.fff" )}dont have the same sort value");
             }
 
             //update the comfirmed message time 

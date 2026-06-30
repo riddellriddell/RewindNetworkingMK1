@@ -147,6 +147,48 @@ namespace Networking
             }
         }
 
+        public static bool CheckAllMessagesInUnconfirmedBufferAreInChain(List<PeerMessageNode> lstMessagesInChain,
+            SortingValue svaTimeToCheckUpTo, SortedList<SortingValue, PeerMessageNode> lstUnconfirmedMessages)
+        {
+            
+            foreach (var kvpMessage in lstUnconfirmedMessages)
+            {
+                SortingValue svaMessageTimeToCheck = kvpMessage.Key;
+                
+                //check if older than check up to time
+                if (kvpMessage.Key > svaTimeToCheckUpTo)
+                {
+                    return true;
+                }
+
+                bool msgFoundInChain = false;
+
+                //loop through all messages to see if we can find the message
+                foreach (PeerMessageNode msgChainMessage in lstMessagesInChain)
+                {
+                    if (msgChainMessage.m_svaMessageSortingValue.Equals(svaMessageTimeToCheck))
+                    {
+                        msgFoundInChain = true;
+
+                        break;
+                    }
+
+                    if (msgChainMessage.m_svaMessageSortingValue > svaMessageTimeToCheck)
+                    {
+                        return false;
+                    }
+                }
+
+                if (msgFoundInChain == false)
+                {
+                    return false;
+
+                }
+            }
+            
+            return true;
+        }
+
         public static void RegisterState(GlobalMessagingState gmdState,uint iIndex, long lPeerRegistering)
         {
 
