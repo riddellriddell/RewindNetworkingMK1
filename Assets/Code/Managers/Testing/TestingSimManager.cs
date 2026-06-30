@@ -116,7 +116,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
 
         m_fdaSimStateBuffer = new ConstIndexRandomAccessQueue<TFrameData>(m_iSimHeadTick);
 
-        //queue first state
+        //queue first state3
         m_fdaSimStateBuffer.Enqueue(fdaStartState);
 
         // setup sorted random access queue to sort threads processing the most recent data to the front of the queue ready to be dequeued
@@ -239,11 +239,14 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
 
             //release lock on sim state buffer
             //release lock on thread buffer
+            
+            //get the id for the local peer
+            long lID = m_ndbNetworkingDataBridge.GetLocalPeerID();
 
             //do hash check on the data
             //this only works when all sims are running on the same machine
             //it compares sim states for this tick across all users
-            if(m_bVerifyFrameData) TestingSimDataSyncVerifier<TFrameData>.VerifyData(m_iTickOfStateSync, ref fdaState, 1, (int)m_sdaSettingsData.TicksPerSecond * 4);
+            if(m_bVerifyFrameData) TestingSimDataSyncVerifier<TFrameData>.VerifyData(m_iTickOfStateSync, ref fdaState, lID, TestingSimDataSyncVerifier<TFrameData>.RegistrationType.FirstStateOnDataBridge, (int)m_sdaSettingsData.TicksPerSecond * 4);
         }
 
         //unlock network in sim data values 
@@ -866,6 +869,9 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
         //for debugging finalize usage of this ticks inputs 
         if (m_bLogInputUsage) TestInputUsage.OnStateFinalized(iOldestConfirmedState, m_ndbNetworkingDataBridge.GetLocalPeerID(), this);
 
+        //get peer id 
+        long lPeerID = m_ndbNetworkingDataBridge.GetLocalPeerID();
+        
         // remove all states that are not going to change and are not going to be used again in a state update 
         while (m_fdaSimStateBuffer.Count > 1 && m_fdaSimStateBuffer.BaseIndex < iOldestConfirmedState)
         {
@@ -873,7 +879,7 @@ public class TestingSimManager<TFrameData, TConstData, TSettingsData>:
                       
             TFrameData fdaOldState = m_fdaSimStateBuffer.Dequeue();
 
-            if (m_bVerifyFrameData)  TestingSimDataSyncVerifier<TFrameData>.VerifyData(iDequeueTick,ref fdaOldState, 0, (int)m_sdaSettingsData.TicksPerSecond * 4);
+            if (m_bVerifyFrameData)  TestingSimDataSyncVerifier<TFrameData>.VerifyData(iDequeueTick,ref fdaOldState, lPeerID, TestingSimDataSyncVerifier<TFrameData>.RegistrationType.SimFinalState,  (int)m_sdaSettingsData.TicksPerSecond * 4);
 
             if(m_spmSimProcessManager.m_bCheckForDeSync)  DataHashValidation.ClearDataBefore(iDequeueTick);
         }
