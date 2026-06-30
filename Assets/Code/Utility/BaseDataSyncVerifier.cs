@@ -5,23 +5,31 @@ using UnityEngine;
 
 public class BaseDataSyncVerifier<TTimeStamp, TID, TDataType> where TTimeStamp : IComparable
 {
-    protected static Dictionary<TTimeStamp, Tuple<long, List<TID>, TDataType>> HashForDataAtTimme { get; } = new Dictionary<TTimeStamp, Tuple<long, List<TID>, TDataType>>();
+    public Dictionary<TTimeStamp, Tuple<long, List<TID>, TDataType>> HashForDataAtTimme { get; } = new Dictionary<TTimeStamp, Tuple<long, List<TID>, TDataType>>();
 
-    protected static void RegisterData(long lDataHash, TDataType tdtData, TTimeStamp ttsTimeStamp, TID tidID)
+    public struct Result
+    {
+        public Result(bool bDidSucceed, List<TID> lstConflicts)
+        {
+            m_bSuccess = bDidSucceed;
+            m_lstConflictingEntries = lstConflicts;
+        }
+
+        public bool m_bSuccess;
+        public List<TID> m_lstConflictingEntries;
+    }
+    
+    public Result RegisterData(long lDataHash, TDataType tdtData, TTimeStamp ttsTimeStamp, TID tidID)
     {
 
         if (HashForDataAtTimme.TryGetValue(ttsTimeStamp, out Tuple<long, List<TID>, TDataType> tupDataEnrey))
         {
             if (tupDataEnrey.Item1 != lDataHash)
             {
-                string strExistingIDs = "";
+                Result rstConflictResult = new Result(false, tupDataEnrey.Item2);
+                
+                return rstConflictResult;
 
-                for(int i = 0; i < tupDataEnrey.Item2.Count; i++)
-                {
-                    strExistingIDs += tupDataEnrey.Item2[i] + ", ";
-                }
-
-                Debug.LogError($"New data entry hash: {lDataHash} does not match existing entry for datapoint at timestamp {ttsTimeStamp} the new data has id {tidID} and there are {tupDataEnrey.Item2.Count} existing hashes with the following ID's: {strExistingIDs}");
             }
             else
             {
@@ -38,9 +46,11 @@ public class BaseDataSyncVerifier<TTimeStamp, TID, TDataType> where TTimeStamp :
 
             HashForDataAtTimme.Add(ttsTimeStamp, tupEntry);
         }
+        
+        return new Result(true,null);
     }
 
-    protected static void CleanUpOldEntries(TTimeStamp ttsTimeOutTime)
+    public void CleanUpOldEntries(TTimeStamp ttsTimeOutTime)
     {
         List<TTimeStamp> ttsTimesToRemove = new List<TTimeStamp>();
 
