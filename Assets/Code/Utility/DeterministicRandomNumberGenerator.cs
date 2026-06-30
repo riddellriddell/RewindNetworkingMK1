@@ -130,7 +130,7 @@ namespace Utility
 
             float fRange = fMax - fMin;
             
-            float fPercent = (float)uint.MaxValue / (float)iRngBase; 
+            float fPercent = (float)iRngBase / (float)uint.MaxValue ; 
             
             return fMin + (fPercent * (fRange));
         }
