@@ -186,8 +186,15 @@ namespace Networking
             //check if queuing up messages before start state
             if ((svaTime <= m_svaOldestActiveSimTime))
             {
+                //convert from sort value to time
+                DateTime dtmMessageTime = new DateTime((long)svaTime.m_lSortValueA , DateTimeKind.Utc);
+                DateTime dtmOldestStateTime = new DateTime((long)m_svaOldestActiveSimTime.m_lSortValueA , DateTimeKind.Utc);
+                
+                TimeSpan tspDifference = dtmMessageTime - dtmOldestStateTime;
+                
                 //throw error as we are adding messages without a base state to process from
-                Debug.LogError( $"Queuing up message before the oldest simulation state, " +
+                Debug.LogError( $"NetworkdDataBridge.QueueSimMessage : Queuing up message on peer {m_lLocalPeerID} at time {dtmMessageTime.ToString("mm:ss.fff")} " +
+                                $"before the oldest simulation state at time {dtmOldestStateTime.ToString("mm:ss.fff" )}, the message is before the state by {tspDifference.ToString()}" +
                                 $"we will not be able to process this message");
             }
         }

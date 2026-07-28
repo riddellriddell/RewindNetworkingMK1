@@ -25,9 +25,9 @@ namespace Networking
             public List<SortingValue> m_lstChainLinkHistory = new List<SortingValue>();
         }
         
-        public static int s_iIndexRangeToKeep = 100;
+        public static int s_iIndexRangeToKeep = 10000;
 
-        public static int s_iLinkHistoryToKeep = 100;
+        public static int s_iLinkHistoryToKeep = 10000;
         
         public static Dictionary<ulong, ChainLinkRegistry> s_lsrLinkRegistry = new Dictionary<ulong, ChainLinkRegistry>();
 

@@ -156,6 +156,10 @@ namespace Networking
                 OnBestHeadChange(chlBestLink, lLocalPeerID, ndbNetworkingDataBridge, gmbGlobalMessageBuffer);
 
                 bDirtyUnconfirmedMessageBufferState = true;
+                
+                //update the chain history for peer
+                //this keeps a list of chain links this peer has as its active list going past its base link
+                ChainLinkVerifier.RegisterLinkAsPeerHistory(m_chlChainBase, m_chlBestChainHead, lLocalPeerID);
             }
         }
 
@@ -625,9 +629,9 @@ namespace Networking
         public void SetChainStartState(string conConnectionState, long lLocalPeerID, int iMaxPlayerCount, GlobalMessagingState gmsStartState, ChainLink chlFirstLink, NetworkingDataBridge ndbNetworkingDataBridge)
         {
             //validate that this chain link exists in other chain links
-            if (!ChainLinkVerifier.DoAllPeersHaveChainLinkInHistory(chlFirstLink.m_svaChainSortingValue))
+            if (!ChainLinkVerifier.DoAnyPeersHaveChainLinkInHistory(chlFirstLink.m_svaChainSortingValue))
             {
-                Debug.LogError($"new chain base is not in the history of all other peera. the local peer is: {lLocalPeerID} and is currently in state: {conConnectionState}" +
+                Debug.LogError($"new chain base is not in the history of any other peer. the local peer is: {lLocalPeerID} and is currently in state: {conConnectionState}" +
                                $"The Chain link index is: {chlFirstLink.m_iLinkIndex} with a hash of: {chlFirstLink.m_lLinkPayloadHash} and a previous hash of: { chlFirstLink.m_lPreviousLinkHash}");
             }
             

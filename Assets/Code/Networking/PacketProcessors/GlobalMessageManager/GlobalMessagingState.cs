@@ -1,6 +1,7 @@
 ﻿using SharedTypes;
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using UnityEngine;
 using Utility;
 
@@ -51,6 +52,8 @@ namespace Networking
             {
                 gmsCloneState.m_gmcMessageChannels[i] = (GlobalMessageChannelState)this.m_gmcMessageChannels[i].Clone();
             }
+            
+            gmsCloneState.m_svaLastMessageSortValue = m_svaLastMessageSortValue;
 
             return gmsCloneState;
         }
@@ -245,7 +248,30 @@ namespace Networking
             //get the sorting value
             return new DateTime((long)m_svaLastMessageSortValue.m_lSortValueA);
         }
-        
+
+        public long GetHashOfState()
+        {
+            //create byte stream big enough for state to write to
+            WriteByteStream wbsStream = new WriteByteStream(NetworkingByteStream.DataSize(this));
+
+            GlobalMessagingState gmsStateToHash = this;
+            
+            //serialize state
+            NetworkingByteStream.Serialize(wbsStream, ref gmsStateToHash);
+
+            //compute hash
+            using (MD5 md5Hash = MD5.Create())
+            {
+                //compute hash and store it
+                Byte[] bHash = md5Hash.ComputeHash(wbsStream.GetData());
+
+                //get the first 8 of the 16 bytes of the hash
+                return BitConverter.ToInt64(bHash, 0);
+            }
+
+            return 0;
+        }
+
         //setup channel for a global messenging system with a maximum number of peers
         protected void Init(int iMaxChannelCount)
         {
@@ -279,7 +305,7 @@ namespace Networking
         }
 
         //validate a message and apply any relevent changes to channel state
-        protected bool ValidateAndApplyMessageChangeToChannel(int iMessageChannel, PeerMessageNode pmnMessageNode, long lLocalPeer)
+        protected bool ValidateAndApplyMessageChangeToChannel(int iMessageChannel, PeerMessageNode pmnMessageNode, long lLocalPeerForLogging)
         {
             //check if message is next in queue for peer
             UInt32 iMessageChannelIndex = pmnMessageNode.m_iPeerMessageIndex;
@@ -288,7 +314,7 @@ namespace Networking
             //check if message is next in peer message chain
             if (iCurrentChannelIndex + 1 != iMessageChannelIndex)
             {
-                Debug.LogError($"peer: {lLocalPeer} tried to process message that was not correctly ordered for channel:{iMessageChannel}," +
+                Debug.LogError($"peer: {lLocalPeerForLogging} tried to process message that was not correctly ordered for channel:{iMessageChannel}," +
                                $" current index:{iCurrentChannelIndex}, message index:{iMessageChannelIndex}" +
                                $" New message is a: {pmnMessageNode.m_bMessageType.ToString()} " +
                                $" with a sort value of : {pmnMessageNode.m_svaMessageSortingValue.ToString()} " +
@@ -307,7 +333,7 @@ namespace Networking
             //check if message parent hash matches last processed message
             if (lMessageParentHash != lHashOfLastValidMessage)
             {
-                Debug.LogError("previous message hash for message did not match actual hash");
+                Debug.LogError($"peer: {lLocalPeerForLogging} tried to process message by {pmnMessageNode.m_lPeerID} but previous message hash {lMessageParentHash} for message did not match actual hash of last parent {lHashOfLastValidMessage}");
                 return false;
             }
 
@@ -474,8 +500,10 @@ namespace Networking
                     //evaluate if the vote was successful despite timing out
                     if (m_gmcMessageChannels[i].IsMajorityForVote())
                     {
+                        //TODO::I am not sure what this if was trying to do , tested with both on and off
+                        //and it seems to make no difference in basic connection tests 
                         //get the channel index
-                        if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.VoteKick)
+                        //if (m_gmcMessageChannels[i].m_staState == GlobalMessageChannelState.State.VoteKick)
                         
                         //add to list of all kick targets
                         targetOut.Add(i);

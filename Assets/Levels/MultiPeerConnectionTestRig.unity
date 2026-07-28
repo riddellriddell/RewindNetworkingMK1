@@ -186,6 +186,16 @@ MonoBehaviour:
     m_objTarget: {fileID: 1656940733}
   - m_fDelay: 16
     m_objTarget: {fileID: 1355680418}
+  - m_fDelay: 16
+    m_objTarget: {fileID: 96034786}
+  - m_fDelay: 16
+    m_objTarget: {fileID: 2111602860}
+  - m_fDelay: 16
+    m_objTarget: {fileID: 1738577102}
+  - m_fDelay: 16
+    m_objTarget: {fileID: 112184870}
+  - m_fDelay: 16
+    m_objTarget: {fileID: 1505663426}
   m_tscTimeSource: {fileID: 1329957912}
 --- !u!1 &96034786
 GameObject:
@@ -243,6 +253,7 @@ MonoBehaviour:
   m_iHeadChainLinkIndex: 0
   m_iGlobalMessagingChannelIndex: 0
   m_gmsGlobalMessagingState: []
+  m_gmsGlobalMessagingStateAtBestChainHead: []
   m_stcNetworkDebugData: []
   m_sstSimState:
     m_bDrawDebugData: 0
@@ -303,7 +314,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 461dc44b5a89cc04a8ee2ed33e3cfbff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_clrDrawColour: {r: 0, g: 0.9803922, b: 0.6039216, a: 1}
   m_fDrawScaleOffset: 0
 --- !u!1 &112184870
 GameObject:
@@ -361,6 +372,7 @@ MonoBehaviour:
   m_iHeadChainLinkIndex: 0
   m_iGlobalMessagingChannelIndex: 0
   m_gmsGlobalMessagingState: []
+  m_gmsGlobalMessagingStateAtBestChainHead: []
   m_stcNetworkDebugData: []
   m_sstSimState:
     m_bDrawDebugData: 0
@@ -421,7 +433,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 461dc44b5a89cc04a8ee2ed33e3cfbff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_clrDrawColour: {r: 1, g: 0.627451, b: 0.4784314, a: 1}
   m_fDrawScaleOffset: 0
 --- !u!1 &468745024
 GameObject:
@@ -479,6 +491,7 @@ MonoBehaviour:
   m_iHeadChainLinkIndex: 0
   m_iGlobalMessagingChannelIndex: 0
   m_gmsGlobalMessagingState: []
+  m_gmsGlobalMessagingStateAtBestChainHead: []
   m_stcNetworkDebugData: []
   m_sstSimState:
     m_bDrawDebugData: 0
@@ -597,6 +610,7 @@ MonoBehaviour:
   m_iHeadChainLinkIndex: 0
   m_iGlobalMessagingChannelIndex: 0
   m_gmsGlobalMessagingState: []
+  m_gmsGlobalMessagingStateAtBestChainHead: []
   m_stcNetworkDebugData: []
   m_sstSimState:
     m_bDrawDebugData: 0
@@ -688,7 +702,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ccc095eb5b2172f429f42eee2b2d8d4e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_bEnableLag: 1
+  m_bEnableLag: 0
   m_fMinLag: 0.3
   m_fMaxLag: 0.3
   m_bEnableOutages: 0
@@ -696,7 +710,7 @@ MonoBehaviour:
   m_fMaxOutage: 8
   m_fMinTimeBetweenOutages: 3
   m_fMaxTimeBetweenOutages: 9
-  m_bEnablePacketLoss: 1
+  m_bEnablePacketLoss: 0
   m_fPacketLoss: 0.3
   m_tscTimeSource: {fileID: 1329957912}
 --- !u!4 &832455451
@@ -770,6 +784,7 @@ MonoBehaviour:
   m_iHeadChainLinkIndex: 0
   m_iGlobalMessagingChannelIndex: 0
   m_gmsGlobalMessagingState: []
+  m_gmsGlobalMessagingStateAtBestChainHead: []
   m_stcNetworkDebugData: []
   m_sstSimState:
     m_bDrawDebugData: 0
@@ -888,6 +903,7 @@ MonoBehaviour:
   m_iHeadChainLinkIndex: 0
   m_iGlobalMessagingChannelIndex: 0
   m_gmsGlobalMessagingState: []
+  m_gmsGlobalMessagingStateAtBestChainHead: []
   m_stcNetworkDebugData: []
   m_sstSimState:
     m_bDrawDebugData: 0
@@ -1006,6 +1022,7 @@ MonoBehaviour:
   m_iHeadChainLinkIndex: 0
   m_iGlobalMessagingChannelIndex: 0
   m_gmsGlobalMessagingState: []
+  m_gmsGlobalMessagingStateAtBestChainHead: []
   m_stcNetworkDebugData: []
   m_sstSimState:
     m_bDrawDebugData: 0
@@ -1103,7 +1120,7 @@ MonoBehaviour:
   m_fStepsPerSecond: 10
   m_fTimeBetweenSteps: 0
   m_bPauseAfterTime: 1
-  m_fTimeToPauseAt: 36
+  m_fTimeToPauseAt: 50
   m_strStartTime: 11/01/2026 12:00:00
   m_fRunTime: 0
   m_bLog: 0
@@ -1178,6 +1195,7 @@ MonoBehaviour:
   m_iHeadChainLinkIndex: 0
   m_iGlobalMessagingChannelIndex: 0
   m_gmsGlobalMessagingState: []
+  m_gmsGlobalMessagingStateAtBestChainHead: []
   m_stcNetworkDebugData: []
   m_sstSimState:
     m_bDrawDebugData: 0
@@ -1296,6 +1314,7 @@ MonoBehaviour:
   m_iHeadChainLinkIndex: 0
   m_iGlobalMessagingChannelIndex: 0
   m_gmsGlobalMessagingState: []
+  m_gmsGlobalMessagingStateAtBestChainHead: []
   m_stcNetworkDebugData: []
   m_sstSimState:
     m_bDrawDebugData: 0
@@ -1414,6 +1433,7 @@ MonoBehaviour:
   m_iHeadChainLinkIndex: 0
   m_iGlobalMessagingChannelIndex: 0
   m_gmsGlobalMessagingState: []
+  m_gmsGlobalMessagingStateAtBestChainHead: []
   m_stcNetworkDebugData: []
   m_sstSimState:
     m_bDrawDebugData: 0
@@ -1474,7 +1494,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 461dc44b5a89cc04a8ee2ed33e3cfbff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_clrDrawColour: {r: 0.8156863, g: 0.1254902, b: 0.5647059, a: 1}
   m_fDrawScaleOffset: 0
 --- !u!1 &1596307946
 GameObject:
@@ -1651,6 +1671,7 @@ MonoBehaviour:
   m_iHeadChainLinkIndex: 0
   m_iGlobalMessagingChannelIndex: 0
   m_gmsGlobalMessagingState: []
+  m_gmsGlobalMessagingStateAtBestChainHead: []
   m_stcNetworkDebugData: []
   m_sstSimState:
     m_bDrawDebugData: 0
@@ -1769,6 +1790,7 @@ MonoBehaviour:
   m_iHeadChainLinkIndex: 0
   m_iGlobalMessagingChannelIndex: 0
   m_gmsGlobalMessagingState: []
+  m_gmsGlobalMessagingStateAtBestChainHead: []
   m_stcNetworkDebugData: []
   m_sstSimState:
     m_bDrawDebugData: 0
@@ -1829,7 +1851,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 461dc44b5a89cc04a8ee2ed33e3cfbff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_clrDrawColour: {r: 0.7215686, g: 0.5254902, b: 0.04313726, a: 1}
   m_fDrawScaleOffset: 0
 --- !u!1 &1961553834
 GameObject:
@@ -1887,6 +1909,7 @@ MonoBehaviour:
   m_iHeadChainLinkIndex: 0
   m_iGlobalMessagingChannelIndex: 0
   m_gmsGlobalMessagingState: []
+  m_gmsGlobalMessagingStateAtBestChainHead: []
   m_stcNetworkDebugData: []
   m_sstSimState:
     m_bDrawDebugData: 0
@@ -2005,6 +2028,7 @@ MonoBehaviour:
   m_iHeadChainLinkIndex: 0
   m_iGlobalMessagingChannelIndex: 0
   m_gmsGlobalMessagingState: []
+  m_gmsGlobalMessagingStateAtBestChainHead: []
   m_stcNetworkDebugData: []
   m_sstSimState:
     m_bDrawDebugData: 0
@@ -2065,7 +2089,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 461dc44b5a89cc04a8ee2ed33e3cfbff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_clrDrawColour: {r: 0, g: 0, b: 0, a: 0}
+  m_clrDrawColour: {r: 0.6039216, g: 0.8039216, b: 0.1960784, a: 1}
   m_fDrawScaleOffset: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

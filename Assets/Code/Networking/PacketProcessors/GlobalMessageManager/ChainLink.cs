@@ -235,7 +235,7 @@ namespace Networking
             }
 
             //check that end state matches expected state
-            ChainLinkEndStateVerrifier.RegisterLink(this, lLocalPeerID);
+            ChainLinkEndStateVerrifier.RegisterLink(this, lLocalPeerID,gmsStateAtLinkStart, tspVoteTimeout, iMaxPlayerCount, ndbNetworkingDataBridge);
         }
 
         protected void BuildPayloadHash()

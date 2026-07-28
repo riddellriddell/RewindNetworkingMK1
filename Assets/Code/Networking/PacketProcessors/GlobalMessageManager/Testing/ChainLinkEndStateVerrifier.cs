@@ -15,47 +15,42 @@ namespace Networking
 
             public ChainLink m_chlLink;
 
+            public GlobalMessagingState m_gmsStateAtLinkStart;
+
             public List<long> m_lAckedPeers;
         }
 
-        public static int s_iIndexRangeToKeep = 100;
+        public static int s_iIndexRangeToKeep = 1000000000;
 
         public static Dictionary<ulong, ChainLinkEndStateRegistry> s_lsrLinkStateRegistry = new Dictionary<ulong, ChainLinkEndStateRegistry>();
 
-        public static void RegisterLink(ChainLink chlLink, long lPeerRegistering)
+        public static void RegisterLink(
+            ChainLink chlLink, 
+            long lPeerRegistering, 
+            GlobalMessagingState gmsStateAtLinkStart,
+            TimeSpan tspVoteTimeout,
+            int iMaxPlayerCount,
+            NetworkingDataBridge ndbNetworkingDataBridge = null )
         {
-         
-            //remove old link data
-            CleanUpRegistry(chlLink.m_iLinkIndex);
+
+            //disable clean up for testing
+            if (false)
+            {
+                //remove old link data
+                CleanUpRegistry(chlLink.m_iLinkIndex);
+            }
 
             //generate key
             ulong lKey = 0;
             lKey += chlLink.m_iLinkIndex;
             lKey = lKey << sizeof(uint);
 
-            ulong peerIdAsLong = (ulong)Math.Max(0, chlLink.m_lPeerID) + (ulong)long.MaxValue - (ulong)Math.Max(0, -chlLink.m_lPeerID);
+            ulong peerIdAsLong = ((ulong)Math.Max(0, chlLink.m_lPeerID) + (ulong)long.MaxValue) + (ulong)Math.Min(0, chlLink.m_lPeerID);
 
             lKey += peerIdAsLong % UInt32.MaxValue;
 
             //calculate link end state hash 
-            long lChainLinkHash = 0;
-
-            //create byte stream big enough for state to write to
-            WriteByteStream wbsStream = new WriteByteStream(NetworkingByteStream.DataSize(chlLink.m_gmsState));
-
-            //serialize state
-            NetworkingByteStream.Serialize(wbsStream, ref chlLink.m_gmsState);
-
-            //generate hash
-            //compute hash
-            using (MD5 md5Hash = MD5.Create())
-            {
-                //compute hash and store it
-                Byte[] bHash = md5Hash.ComputeHash(wbsStream.GetData());
-
-                //get the first 8 of the 16 bytes of the hash
-                lChainLinkHash = BitConverter.ToInt64(bHash, 0);
-            }
+            long lChainLinkHash = chlLink.m_gmsState.GetHashOfState();
 
             //check if key exists in dictionary
             if(s_lsrLinkStateRegistry.TryGetValue(lKey,out ChainLinkEndStateRegistry lsrLinkState))
@@ -63,8 +58,56 @@ namespace Networking
                 //check if state matches 
                 if(lsrLinkState.m_lChainLinkStateHash != lChainLinkHash)
                 {
+                    String strExistingPeers = "";
+                    for (int i = 0; i < lsrLinkState.m_lAckedPeers.Count; i++)
+                    {
+                        strExistingPeers += $"{lsrLinkState.m_lAckedPeers[i]},";
+                    }
+                    
                     //chain link state does not match up
-                    Debug.LogError($"Peer {lPeerRegistering} does not have the same state for link {chlLink.m_iLinkIndex} as existing peers");
+                    Debug.LogError($"Peer {lPeerRegistering} does not have the same state for link {chlLink.m_iLinkIndex} as existing peers {strExistingPeers}");
+                    
+                    //check if the link has a different number of inputs 
+                    int iExistingMessageCount = lsrLinkState.m_chlLink.m_pmnMessages.Count;
+                    int iThisPeersMessageCount = chlLink.m_pmnMessages.Count;
+                    
+                    if (iExistingMessageCount != iThisPeersMessageCount)
+                    {
+                        Debug.LogError($"Peer {lPeerRegistering} for link {chlLink.m_iLinkIndex} has {iThisPeersMessageCount} messages while existing link has {iExistingMessageCount} messages");
+                    }
+                    
+                    long lHashOfExistingPreviousState = lsrLinkState.m_gmsStateAtLinkStart.GetHashOfState();
+                    long lHasOfThisPeersPrevousLinkState = gmsStateAtLinkStart.GetHashOfState();
+
+                    if (lHashOfExistingPreviousState != lHasOfThisPeersPrevousLinkState)
+                    {
+                        Debug.LogError($"Peer {lPeerRegistering} for link {chlLink.m_iLinkIndex} has a link start hash of {lHasOfThisPeersPrevousLinkState} while existing link had a start has of {lHashOfExistingPreviousState}");
+                    }
+                    
+                    
+                    //recompute the state to see what the difference is 
+                    GlobalMessagingState gmsThisPeerState = (GlobalMessagingState)gmsStateAtLinkStart.Clone();
+                    GlobalMessagingState gmsOtherPeerState = (GlobalMessagingState)lsrLinkState.m_gmsStateAtLinkStart.Clone();
+                    
+                    //add the effects of all the messages, queueing them into the network data bridge allong with
+                    //and connection change messges
+                    for(int i = 0; i < chlLink.m_pmnMessages.Count; i++)
+                    {
+                        PeerMessageNode pmnNode = chlLink.m_pmnMessages[i];
+                        
+                        gmsThisPeerState.ProcessMessage( pmnNode, tspVoteTimeout, iMaxPlayerCount, ndbNetworkingDataBridge);
+                        gmsOtherPeerState.ProcessMessage(pmnNode, tspVoteTimeout, iMaxPlayerCount, ndbNetworkingDataBridge);
+
+                        long lThisPeerStateAfterMessage = gmsThisPeerState.GetHashOfState();
+                        long lOtherPeerStateAfterMessage = gmsOtherPeerState.GetHashOfState();
+
+                        if (lThisPeerStateAfterMessage != lOtherPeerStateAfterMessage)
+                        {
+                            Debug.LogError($"Peer {lPeerRegistering} desynced with other peers on message {i} for link {chlLink.m_iLinkIndex}");
+                            
+                            break;
+                        }
+                    }
                 }
                 else
                 {
@@ -80,9 +123,13 @@ namespace Networking
                 ChainLinkEndStateRegistry lsrNewLink = new ChainLinkEndStateRegistry()
                 {
                     m_chlLink = chlLink,
+                    m_gmsStateAtLinkStart = gmsStateAtLinkStart,
                     m_lAckedPeers = new List<long>(),
                     m_lChainLinkStateHash = lChainLinkHash
                 };
+                
+                //indicate new link state is being registered
+                Debug.Log($"Peer {lPeerRegistering} is registering new chain link {chlLink.m_iLinkIndex} with hash {lChainLinkHash}");
 
                 lsrNewLink.m_lAckedPeers.Add(lPeerRegistering);
 

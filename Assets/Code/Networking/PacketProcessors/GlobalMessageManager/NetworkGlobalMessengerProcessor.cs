@@ -124,7 +124,11 @@ namespace Networking
         //register a new message type to the global message payload factory
         public int RegisterCustomMessageType<T>(int iCurrentTypeID)
         {
-            return m_cifGlobalMessageFactory.AddType<T>(iCurrentTypeID);
+            int iNewTypeID = m_cifGlobalMessageFactory.AddType<T>(iCurrentTypeID);
+            
+            Debug.Log($"NetworkGlobalMessengerProcessor.RegisterCustomMessageType registering class {typeof(T).Name} with ID {iNewTypeID}");
+            
+            return iNewTypeID;
         }
 
         public override void OnAddToNetwork(NetworkConnection ncnNetwork)
@@ -875,13 +879,67 @@ namespace Networking
 
             pmnMessageNode.CalculateSortingValue();
             
+            //check if message with same time already exists
+            if (PeerMessageNumberVerifier.ValidateMessageWithSameSortValueDoesntExist(pmnMessageNode,
+                    m_gmbMessageBuffer) == false)
+            {
+                //get the message with the same index 
+                //get all messages in unconfirmed array
+                List<PeerMessageNode> lstMessagesInBuffer = new List<PeerMessageNode>(m_gmbMessageBuffer.UnConfirmedMessageBuffer.Values);
+                
+                //filter messages in chain by peer
+                List<PeerMessageNode> lstPeerMessagesInBuffer = new List<PeerMessageNode>();
+
+                foreach (PeerMessageNode pmnMessage in lstMessagesInBuffer)
+                {
+                    if (pmnMessage.m_lPeerID == lPeerID)
+                    {
+                        lstPeerMessagesInBuffer.Add(pmnMessage); 
+                    }
+                }
+                Debug.LogError($"peer: {pmnMessageNode.m_lPeerID} tried to create a message with sort value: " +
+                               $"{ pmnMessageNode.m_svaMessageSortingValue} when a message already existed in the buffer with the same sort value:" +
+                               $" Messages by peer in buffer {lstPeerMessagesInBuffer} ");
+            }
+            
+            
             //TODO::JackR remove this once message index creation out of order error is resolved
             if (PeerMessageNumberVerifier.ValidateNewMessageIndex(pmnMessageNode.m_lPeerID,
                     pmnMessageNode.m_iPeerMessageIndex) == false)
             {
+                //get list of all messages in the current chain 
+                List<PeerMessageNode> lstMessagesInChain = m_chmChainManager.m_chlBestChainHead.GetAllMessagesInChainToBase();
+                
+                //get all messages in unconfirmed array
+                List<PeerMessageNode> lstMessagesInBuffer = new List<PeerMessageNode>(m_gmbMessageBuffer.UnConfirmedMessageBuffer.Values);
+                
+                //filter messages in chain by peer
+                List<PeerMessageNode> lstPeerMessagesInChain = new List<PeerMessageNode>();
+
+                foreach (PeerMessageNode pmnMessage in lstMessagesInChain)
+                {
+                    if (pmnMessage.m_lPeerID == lPeerID)
+                    {
+                        lstPeerMessagesInChain.Add(pmnMessage); 
+                    }
+                }
+                
+                //filter messages in buffer for peer
+                List<PeerMessageNode> lstPeerMessagesInBuffer = new List<PeerMessageNode>();
+                
+                foreach (PeerMessageNode pmnMessage in lstMessagesInBuffer)
+                {
+                    if (pmnMessage.m_lPeerID == lPeerID)
+                    {
+                        lstPeerMessagesInBuffer.Add(pmnMessage); 
+                    }
+                }
+                
                 Debug.LogError($"peer: {pmnMessageNode.m_lPeerID} tried to create a message with index: " +
                                $"{ pmnMessageNode.m_iPeerMessageIndex} when the previous message index was:" +
-                               $" {PeerMessageNumberVerifier.GetPeerMessageIndex(pmnMessageNode.m_lPeerID)}");
+                               $" {PeerMessageNumberVerifier.GetPeerMessageIndex(pmnMessageNode.m_lPeerID)}" + 
+                               $" Messages by peer in chain {lstPeerMessagesInChain} " +
+                               $" Messages by peer in buffer {lstPeerMessagesInBuffer} ");
             }
 
             //process new message and add it to the local unconfirmed message buffer 
@@ -1137,16 +1195,19 @@ namespace Networking
                     m_tParentPacketProcessor.ParentNetworkConnection.SendPacket(ParentConnection, clpChainLinkPacket);
                 }
                 
-                //TODO:: For now I am turning this off, the chain links send all the messages they contian 
+                //TODO:: For now I am turning this off, the chain links send all the messages they contain 
                 //anyway, these messages should either get sent with the chain or they don't exist on the chain
                 //and will eventually get culled
 
-                if (true)
+                if (false)
                 {
                     //send all the messages in the unconfirmed message buffer
                     foreach (PeerMessageNode pmnPeerMessage in m_tParentPacketProcessor.m_gmbMessageBuffer
                                  .UnConfirmedMessageBuffer.Values)
                     {
+                        
+                        
+                        
                         GlobalMessagePacket gmpMessagePacket =
                             m_tParentPacketProcessor.ParentNetworkConnection.PacketFactory
                                 .CreateType<GlobalMessagePacket>(GlobalMessagePacket.TypeID);

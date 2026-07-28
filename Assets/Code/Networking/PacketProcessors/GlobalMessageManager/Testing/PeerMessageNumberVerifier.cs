@@ -6,6 +6,29 @@ namespace Networking
     {
         private static Dictionary<long, uint> s_dicLastPeerNum = new Dictionary<long, uint>();
 
+        public static bool ValidateMessageWithSameSortValueDoesntExist(PeerMessageNode pmnNodeToAdd, GlobalMessageBuffer gmbMessageBuffer)
+        {
+            foreach (PeerMessageNode pmnMessage in gmbMessageBuffer.UnConfirmedMessageBuffer.Values)
+            {
+                if (pmnMessage.m_svaMessageSortingValue.CompareTo(pmnNodeToAdd.m_svaMessageSortingValue) == 0)
+                {
+                    return false;
+                }
+                    
+            }
+            
+            foreach (SortingValue svaKey in gmbMessageBuffer.UnConfirmedMessageBuffer.Keys)
+            {
+                if (svaKey.CompareTo(pmnNodeToAdd.m_svaMessageSortingValue) == 0)
+                {
+                    return false;
+                }
+                    
+            }
+
+            return true;
+        }
+        
         public static bool ValidateNewMessageIndex(long lPeerID, uint lMessageNumber)
         {
             //check if peer exists
