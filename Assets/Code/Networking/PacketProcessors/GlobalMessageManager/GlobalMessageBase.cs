@@ -67,8 +67,8 @@ namespace Networking
             }
             
             //add the size of the new vote system changes
-            iSize += ByteStream.DataSize(Input.m_lPeerID);
             iSize += ByteStream.DataSize((Byte)Input.m_vtaVoteAction);
+            iSize += ByteStream.DataSize(Input.m_lPeerID);
 
             return iSize;
         }
@@ -151,6 +151,7 @@ namespace Networking
 
             ByteStream.Serialize(rbsStream, ref bItem1);
             ByteStream.Serialize(rbsStream, ref lItem2);
+            ByteStream.Serialize(rbsStream, ref strItem3);
 
             Input = new Tuple<byte, long, string>(bItem1, lItem2, strItem3);
         }

@@ -78,6 +78,24 @@ namespace Networking
             }
         }
 
+        public long HashEntireMessage()
+        {
+            int size = MessageSize();
+            WriteByteStream wbsStream = new WriteByteStream(size);
+            EncodePacket(wbsStream);
+            
+            //compute hash
+            using (MD5 md5Hash = MD5.Create())
+            {
+                //compute hash and store it
+                Byte[] bHash = md5Hash.ComputeHash(wbsStream.GetData());
+
+                //get the first 8 of the 16 bytes of the hash
+                return BitConverter.ToInt64(bHash, 0);
+            }
+
+            return 0;
+        }
         public void BuildPayloadArray()
         {
             //get size
