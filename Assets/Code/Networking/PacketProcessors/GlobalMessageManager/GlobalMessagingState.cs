@@ -314,6 +314,7 @@ namespace Networking
             //check if message is next in peer message chain
             if (iCurrentChannelIndex + 1 != iMessageChannelIndex)
             {
+                
                 Debug.LogError($"peer: {lLocalPeerForLogging} tried to process message that was not correctly ordered for channel:{iMessageChannel}," +
                                $" current index:{iCurrentChannelIndex}, message index:{iMessageChannelIndex}" +
                                $" New message is a: {pmnMessageNode.m_bMessageType.ToString()} " +
@@ -321,6 +322,8 @@ namespace Networking
                                $" and a hash of: {pmnMessageNode.m_lMessagePayloadHash.ToString()} " +
                                $" The last message for the channel had a sort value of: { m_gmcMessageChannels[iMessageChannel].m_msvLastSortValue.ToString()} " +
                                $" and a hash of :  { m_gmcMessageChannels[iMessageChannel].m_lHashOfLastNodeProcessed.ToString()} ");
+                
+                //some extra validation to see if the missing messages exist but in a different chain link
                 
                 
                 return false;

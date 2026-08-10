@@ -73,7 +73,7 @@ namespace GameManagers
         public int m_iNumberOfInputsCreated = 0;
         
         //has the inputs changes since the last message to peers
-        public bool m_bDirtyInputState;
+        public bool m_bDirtyInputState = false;
 
         public NetworkingDataBridge m_ndbNetworkingDataBridge;
 

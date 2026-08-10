@@ -107,7 +107,7 @@ namespace Networking
             LatestState.ResetToState(gmsStartMessageState);
             
             //for testing seeing what happens if i don't include non chain messages
-            return;
+           // return;
 
             //get the index of the last message processed
             int iStartIndex = UnConfirmedMessageBuffer.IndexOfKey(LatestState.m_svaLastMessageSortValue);
@@ -148,7 +148,7 @@ namespace Networking
         }
 
         //returns a subset of the message buffer that is older than the get message sort value but
-        //still contains messages recieved from all active channels excluding channels that have 
+        //still contains messages received from all active channels excluding channels that have 
         //timed out and are being treated as disconnected or disabled
         public List<PeerMessageNode> GetChainLinkMessages(SortingValue msvGetMessagesFrom, TimeSpan tspConnectionTimeOutTime, DateTime dtmLinkEndTime)
         {
@@ -171,6 +171,10 @@ namespace Networking
             //from it before including it in the node list 
             DateTime dtmConnectionTimeOutTime = dtmLinkEndTime;
 
+            //get the time back from the head that is less than the time out time
+            //any channel that has not sent messages in this time is treated as disconnected
+            //we get latest state which should include the latest messages in the un confirmed message buffer
+            //and check if the activity on a channel is newer than this time out value
             if(dtmLinkEndTime.Ticks > tspConnectionTimeOutTime.Ticks)
             {
                 dtmConnectionTimeOutTime = dtmConnectionTimeOutTime - tspConnectionTimeOutTime;
@@ -186,7 +190,7 @@ namespace Networking
                 msvOldestActiveChannel = SortingValue.Max(msvOldestActiveChannel,UnConfirmedMessageBuffer.Last().Key);
             }
             
-            //get the last time messages were recieved for all channels 
+            //get the last time messages were received for all channels 
             //excluding the channels being treated as disconnected;
             for (int i = 0; i < LatestState.m_gmcMessageChannels.Count; i++)
             {

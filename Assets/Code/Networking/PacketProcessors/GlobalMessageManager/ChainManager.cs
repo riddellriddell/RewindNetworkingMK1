@@ -371,7 +371,11 @@ namespace Networking
 
                     int iLinkAuthorChannelIndex = bIsIndexed ? iIndex : -1;
 
-                    Debug.LogError($"ChainManager.ProcessChainLink: On Peer: {lLocalPeerID} was not able to find parent for chain link, previous chain hash was:{chlLink.m_lPreviousLinkHash} and has an index of :{chlLink.m_iLinkIndex} and was made by peer {chlLink.m_lPeerID} with a channel index of { iLinkAuthorChannelIndex}");
+                    //this happens if there is a branch and the local peer does not choose that branch,
+                    //either the branch happened before the peer connected and was always disconnected from their 
+                    //perspective or the branch root gets dropped disconnecting the branch
+                    //either way its not the end of the world 
+                    //Debug.LogError($"ChainManager.ProcessChainLink: On Peer: {lLocalPeerID} was not able to find parent for chain link, previous chain hash was:{chlLink.m_lPreviousLinkHash} and has an index of :{chlLink.m_iLinkIndex} and was made by peer {chlLink.m_lPeerID} with a channel index of { iLinkAuthorChannelIndex}");
                     
                     //cant do chain link analysis 
                     return;
@@ -385,7 +389,7 @@ namespace Networking
             }
             else
             {
-                Debug.LogError("chain link is an orphan");
+                //Debug.LogError("chain link is an orphan");
                 
                 chlLink.m_bIsConnectedToBase = false;
             }
@@ -869,9 +873,32 @@ namespace Networking
         //function to evaluate the best chain link
         protected int ScoreChainLink(ChainLink chlLink, GlobalMessageBuffer gmbMessageBuffer)
         {
+            //check if connected to base
+            if (chlLink.m_bIsConnectedToBase == false)
+            {
+                return int.MinValue;
+            }
+            
             int iValue = 0;
 
-            iValue += ScoreChainLinkLenght(chlLink);
+            const int iMaxChainLinks = 1000;
+            const int iMaxMissedMessages = 1000000;
+            const int iFloorForChainWithNoMissedMessages = iMaxChainLinks + iMaxMissedMessages;
+
+            //score system is intended to pick chain with all messages first, then chain with most nodes
+            int iMissedMessagesWeight = Math.Clamp( iMaxMissedMessages - ScoreChainLinkMessages(chlLink, gmbMessageBuffer),0, iMaxMissedMessages);
+            int iChainLength = Math.Clamp( ScoreChainLinkLenght(chlLink), 0,iMaxChainLinks) ;
+            bool bHasAllMessages = iMissedMessagesWeight == iMaxMissedMessages;
+
+            if (bHasAllMessages)
+            {
+                iValue = iFloorForChainWithNoMissedMessages + iChainLength;
+            }
+            else
+            {
+                iValue = Math.Min(iMissedMessagesWeight  + iChainLength, iFloorForChainWithNoMissedMessages -1);
+            }
+             
             //iValue += ScoreChainAchnowledgement(chlLink);
             //iValue = Math.Max(0, iValue + ScoreChainLinkMessages(chlLink, gmbMessageBuffer));
 
@@ -903,7 +930,7 @@ namespace Networking
                 return int.MinValue;
             }
 
-            //check if there was any messages in the same time period that were missed 
+            //check if there are any messages in the same time period that were missed 
             int iMissedMessages = 0;
 
             gmbMessageBuffer.GetMessageStartAndEndIndexesBetweenStates(m_chlChainBase.m_gmsState, chlLink.m_gmsState, out int iStartIndex, out int iEndIndex);

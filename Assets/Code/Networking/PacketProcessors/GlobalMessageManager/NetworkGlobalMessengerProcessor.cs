@@ -621,9 +621,11 @@ namespace Networking
 
         public ChainLink CreateChainLink(UInt32 iChainLinkIndex)
         {
+            ChainLink chlCurrentBestChainLink = m_chmChainManager.GetBestHeadChainLink(m_gmbMessageBuffer);
+            
             //get all inputs from head to latest
             List<PeerMessageNode> pmnLinkMessages = m_gmbMessageBuffer.GetChainLinkMessages(
-                m_chmChainManager.m_chlBestChainHead.m_gmsState.m_svaLastMessageSortValue,
+                chlCurrentBestChainLink.m_gmsState.m_svaLastMessageSortValue,
                 ChannelTimeOutTime,
                 m_dtmNextLinkBuildTime);
 
@@ -631,7 +633,7 @@ namespace Networking
             ChainLink chlNewLink = new ChainLink();
 
             //setup new link to best chain head and to have all messages that have happened since chain head 
-            chlNewLink.Init(pmnLinkMessages, ParentNetworkConnection.m_lPeerID, iChainLinkIndex, m_chmChainManager.m_chlBestChainHead.m_lLinkPayloadHash);
+            chlNewLink.Init(pmnLinkMessages, ParentNetworkConnection.m_lPeerID, iChainLinkIndex, chlCurrentBestChainLink.m_lLinkPayloadHash);
 
             return chlNewLink;
         }
@@ -941,6 +943,8 @@ namespace Networking
                                $" Messages by peer in chain {lstPeerMessagesInChain} " +
                                $" Messages by peer in buffer {lstPeerMessagesInBuffer} ");
             }
+            
+            peerMess GivenAMessageTrackIndexBackAndCheckForIndexGap
 
             //process new message and add it to the local unconfirmed message buffer 
             ProcessMessage(pmnMessageNode);

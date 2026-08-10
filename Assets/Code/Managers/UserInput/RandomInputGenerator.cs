@@ -28,6 +28,12 @@ namespace GameManagers
 
         public void ApplyInputs(LocalPeerInputManager lpiTargetLocalPeerInputManager)
         {
+            //check if enabled
+            if (enabled == false)
+            {
+                return;
+            }
+            
             if (m_dtmTimeOfLastUpdate == DateTime.MinValue)
             {
                 m_dtmTimeOfLastUpdate = m_tscTimeSource.UTCNow;

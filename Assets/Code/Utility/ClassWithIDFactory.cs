@@ -58,6 +58,15 @@ public class ClassWithIDFactory
         return (T)Activator.CreateInstance(m_tipTypeIDs[iID]);
     }
 
+    public string GetTypeName(int iID)
+    {
+        if (iID < 0 || iID >= m_tipTypeIDs.Count)
+        {
+            return "is not a valid type";
+        }
+        return m_tipTypeIDs[iID].ToString();
+    }
+
     protected virtual void SetupTypes()
     {
 
