@@ -943,8 +943,9 @@ namespace Networking
                                $" Messages by peer in chain {lstPeerMessagesInChain} " +
                                $" Messages by peer in buffer {lstPeerMessagesInBuffer} ");
             }
-            
-            peerMess GivenAMessageTrackIndexBackAndCheckForIndexGap
+
+            PeerMessageNumberVerifier.GivenAMessageTrackIndexBackAndCheckForIndexGap(m_gmbMessageBuffer,
+                pmnMessageNode);
 
             //process new message and add it to the local unconfirmed message buffer 
             ProcessMessage(pmnMessageNode);
@@ -973,6 +974,9 @@ namespace Networking
 
             //add to message buffer
             m_gmbMessageBuffer.AddMessageToBuffer(pmnMessage, svaChainSortingValue);
+            
+            //validate the message chain 
+            PeerMessageNumberVerifier.GivenAMessageTrackIndexBackAndCheckForIndexGap(m_gmbMessageBuffer,pmnMessage);
 
             //if connected or active
             if (m_staState == State.Connected || m_staState == State.Active)
@@ -1203,7 +1207,7 @@ namespace Networking
                 //anyway, these messages should either get sent with the chain or they don't exist on the chain
                 //and will eventually get culled
 
-                if (false)
+                if (true)
                 {
                     //send all the messages in the unconfirmed message buffer
                     foreach (PeerMessageNode pmnPeerMessage in m_tParentPacketProcessor.m_gmbMessageBuffer

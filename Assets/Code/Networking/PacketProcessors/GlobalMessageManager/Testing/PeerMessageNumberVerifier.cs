@@ -74,19 +74,18 @@ namespace Networking
             //check if failed
             if (index == -1)
             {
-                Debug.LogError($"PeerMessageNumberVerifier: PeerMessageNumberVerifier.GivenAMessageTrackIndexBackAndCheckForIndexGap " +
-                               $"Message from peer {msgMessage.m_lPeerID} with sort value {msgMessage.m_svaMessageSortingValue} not found in unconfirmed msg buffer");
-                return;
+                //this message might not have been added yet
+                index = gmbMessageBuffer.UnConfirmedMessageBuffer.Count;
             }
 
             uint iActiveIndex = msgMessage.m_iPeerMessageIndex -1;
 
             List<uint> lstMissingIndexes = new List<uint>();
-            uint iYoungestIndex = iActiveIndex;
+            uint iYoungestIndex = msgMessage.m_iPeerMessageIndex;
 
             string strMissingMessageIndexes = "";
             
-            for (int i = index -1; i >= 0 && iActiveIndex > 0; i--)
+            for (int i = index -1; i >= 0 && iActiveIndex != uint.MaxValue; i--)
             {
                 PeerMessageNode pmnMessageAtIndex = gmbMessageBuffer.UnConfirmedMessageBuffer.Values[i];
                 
@@ -103,21 +102,27 @@ namespace Networking
                     lstMissingIndexes.Add(iActiveIndex);
                     strMissingMessageIndexes += $"{iActiveIndex}, ";
                 }
-                else if (pmnMessageAtIndex.m_iPeerMessageIndex <= iActiveIndex)
+                else if ( pmnMessageAtIndex.m_iPeerMessageIndex > iActiveIndex)
                 {
-                    Debug.LogError("Indexes out of order");
+                    Debug.LogError($"Indexes for peer {pmnMessageAtIndex.m_lPeerID} out of order, " +
+                                   $"index expected {iActiveIndex}, " +
+                                   $"index found {pmnMessageAtIndex.m_iPeerMessageIndex}");
                 }
                 else
                 {
                     
                 }
-                
-                iYoungestIndex = Math.Min(iYoungestIndex, msgMessage.m_iPeerMessageIndex);
+
+                iYoungestIndex = Math.Min(iYoungestIndex, pmnMessageAtIndex.m_iPeerMessageIndex);
+                iActiveIndex--;
             }
-            
-            Debug.LogError($"PeerMessageNumberVerifier.GivenAMessageTrackIndexBackAndCheckForIndexGap: " +
-                           $"Peer message {msgMessage.m_lPeerID} skipping messages {strMissingMessageIndexes} " +
-                           $"with youngest message for peer {iYoungestIndex}");
+
+            if (lstMissingIndexes.Count > 0)
+            {
+                Debug.LogError($"PeerMessageNumberVerifier.GivenAMessageTrackIndexBackAndCheckForIndexGap: " +
+                               $"Peer message {msgMessage.m_lPeerID} with index {msgMessage.m_iPeerMessageIndex} skipping messages {strMissingMessageIndexes} " +
+                               $"with youngest message for peer {iYoungestIndex}");
+            }
         }
     }
 }

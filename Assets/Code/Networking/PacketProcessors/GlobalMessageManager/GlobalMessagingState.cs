@@ -323,9 +323,6 @@ namespace Networking
                                $" The last message for the channel had a sort value of: { m_gmcMessageChannels[iMessageChannel].m_msvLastSortValue.ToString()} " +
                                $" and a hash of :  { m_gmcMessageChannels[iMessageChannel].m_lHashOfLastNodeProcessed.ToString()} ");
                 
-                //some extra validation to see if the missing messages exist but in a different chain link
-                
-                
                 return false;
             }
 
