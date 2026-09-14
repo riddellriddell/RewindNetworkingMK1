@@ -66,7 +66,8 @@ namespace Networking
         }
 
         public static void GivenAMessageTrackIndexBackAndCheckForIndexGap(GlobalMessageBuffer gmbMessageBuffer,
-            PeerMessageNode msgMessage)
+            PeerMessageNode msgMessage,
+            String peer = "")
         {
             //find the message in the unconfirmed message buffer
             int index = gmbMessageBuffer.UnConfirmedMessageBuffer.IndexOfKey(msgMessage.m_svaMessageSortingValue);
@@ -104,7 +105,8 @@ namespace Networking
                 }
                 else if ( pmnMessageAtIndex.m_iPeerMessageIndex > iActiveIndex)
                 {
-                    Debug.LogError($"Indexes for peer {pmnMessageAtIndex.m_lPeerID} out of order, " +
+                    Debug.LogError($"On peer {peer} " +
+                                   $"Indexes for other peer {pmnMessageAtIndex.m_lPeerID} out of order, " +
                                    $"index expected {iActiveIndex}, " +
                                    $"index found {pmnMessageAtIndex.m_iPeerMessageIndex}");
                 }
@@ -119,7 +121,8 @@ namespace Networking
 
             if (lstMissingIndexes.Count > 0)
             {
-                Debug.LogError($"PeerMessageNumberVerifier.GivenAMessageTrackIndexBackAndCheckForIndexGap: " +
+                Debug.LogError($"On peer {peer} " +
+                               $"PeerMessageNumberVerifier.GivenAMessageTrackIndexBackAndCheckForIndexGap: " +
                                $"Peer message {msgMessage.m_lPeerID} with index {msgMessage.m_iPeerMessageIndex} skipping messages {strMissingMessageIndexes} " +
                                $"with youngest message for peer {iYoungestIndex}");
             }

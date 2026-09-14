@@ -54,7 +54,7 @@ namespace Networking
 
         public int m_iStartStatesRecieved = 0;
 
-        //buffer of all recieved chain links
+        //buffer of all received chain links
         public SortedList<SortingValue, ChainLink> ChainLinks { get; } = new SortedList<SortingValue, ChainLink>();
 
         //the starting connection state for the chain

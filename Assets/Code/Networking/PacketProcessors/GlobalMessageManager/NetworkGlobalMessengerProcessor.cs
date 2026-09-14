@@ -85,8 +85,6 @@ namespace Networking
         //the local time the connection process was started by the game manager 
         protected DateTime m_dtmConnectionStartTime = DateTime.MinValue;
 
-
-
         //should the best start state be reevaluated 
         protected bool m_bStartStateCandidatesDirty = true;
 
@@ -945,7 +943,8 @@ namespace Networking
             }
 
             PeerMessageNumberVerifier.GivenAMessageTrackIndexBackAndCheckForIndexGap(m_gmbMessageBuffer,
-                pmnMessageNode);
+                pmnMessageNode,
+                ParentNetworkConnection.m_lPeerID.ToString());
 
             //process new message and add it to the local unconfirmed message buffer 
             ProcessMessage(pmnMessageNode);
@@ -976,7 +975,10 @@ namespace Networking
             m_gmbMessageBuffer.AddMessageToBuffer(pmnMessage, svaChainSortingValue);
             
             //validate the message chain 
-            PeerMessageNumberVerifier.GivenAMessageTrackIndexBackAndCheckForIndexGap(m_gmbMessageBuffer,pmnMessage);
+            PeerMessageNumberVerifier.GivenAMessageTrackIndexBackAndCheckForIndexGap(
+                m_gmbMessageBuffer,
+                pmnMessage,
+                ParentNetworkConnection.m_lPeerID.ToString());
 
             //if connected or active
             if (m_staState == State.Connected || m_staState == State.Active)
@@ -1163,8 +1165,8 @@ namespace Networking
                 GlobalChainStatePacket cspStatePacket = ParentConnection.m_cifPacketFactory.CreateType<GlobalChainStatePacket>(GlobalChainStatePacket.TypeID);
 
                 //get all chain links to send starting at the chain link this client has
-                //decided is the best chain link and looping back unitl a max of 10 chain links have been found
-                List<ChainLink> chlLinksToSend = new List<ChainLink>(10);
+                //decided is the best chain link and looping back until the base chain link is found
+                List<ChainLink> chlLinksToSend = new List<ChainLink>();
 
                 ChainLink chlLink = m_tParentPacketProcessor.m_chmChainManager.m_chlBestChainHead;
 

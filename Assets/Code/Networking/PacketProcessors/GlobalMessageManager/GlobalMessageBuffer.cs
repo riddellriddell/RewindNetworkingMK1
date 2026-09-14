@@ -221,6 +221,29 @@ namespace Networking
             {
                 PeerMessageNode pmnMessage = UnConfirmedMessageBuffer.Values[i];
 
+                //newly connecting peers can get the first part of a message chain for a peer from the gateway peer they connected to
+                //and the last part of the chain from the peer owning the message chain leaving a gap
+                //if this peer then tries to create a link in that time that link will consider the gap peer as having disconnected
+                //and set the link end time a long way past the last valid message time for the gap peer
+                //but then send all messages including messages for that peer at the other side of that gap
+                //by sending a message gap it infects neighbours with a gappy link that will throw warnings and break
+                //the chain if it gets included by other peers 
+                //ideally this gets fixed by the gap peer making sure it never sends a gap in the first place 
+                
+                //get channel for peer
+                if (LatestState.TryGetIndexForPeer(pmnMessage.m_lPeerID, out int iPeerIndex))
+                {
+                    //get the last valid message sort value
+                    SortingValue svaLastValidSortValueForChanel =
+                        LatestState.m_gmcMessageChannels[iPeerIndex].m_msvLastSortValue;
+                    
+                    //check if this message is past the last valid time for channel
+                    if (svaLastValidSortValueForChanel.CompareTo(pmnMessage.m_svaMessageSortingValue) < 0)
+                    {
+                        continue;
+                    }
+                }
+                
                 //make sure no messages past the end of the link are added 
                 if (pmnMessage.m_dtmMessageCreationTime > dtmLinkEndTime)
                 {
