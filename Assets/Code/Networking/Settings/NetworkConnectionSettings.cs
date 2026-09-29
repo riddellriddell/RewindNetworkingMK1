@@ -148,5 +148,14 @@ namespace Networking
 
         [SerializeField]
         public float m_fOldConnectionFilterPadding = 5f;
+        
+        [SerializeField]
+        public float m_fTimeBeforeRequestingALinkFromPeer = 4f;
+
+        [SerializeField]
+        public float m_fMaxValidLinkRequestAge = 10f;
+
+        [SerializeField]
+        public int m_iMaxNumberOfRequestsForLinkFromPeers = 3;
     }
 }

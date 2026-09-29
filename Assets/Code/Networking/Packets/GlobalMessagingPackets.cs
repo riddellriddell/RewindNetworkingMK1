@@ -53,6 +53,67 @@ namespace Networking
         }
     }
 
+    #region PeerHasLinkNotification  
+    public class PeerHasLinkPacket:DataPacket
+    {
+        public static int TypeID { get; set; } = int.MinValue;
+
+        public override int GetTypeID
+        {
+            get
+            {
+                return TypeID;
+            }
+        }
+
+        public SortingValue m_svaLinkSortValue;
+        public long m_lLinkHash;
+
+        public override int PacketPayloadSize
+        {
+            get
+            {
+                return NetworkingByteStream.DataSize(this);
+            }
+        }
+
+        public override void DecodePacket(ReadByteStream rbsByteStream)
+        {
+            NetworkingByteStream.Serialize(rbsByteStream, this);
+        }
+
+        public override void EncodePacket(WriteByteStream wbsByteStream)
+        {
+            NetworkingByteStream.Serialize(wbsByteStream, this);
+        }
+    }
+    
+    public partial class NetworkingByteStream
+    {
+        public static void Serialize(ReadByteStream rbsByteStream, PeerHasLinkPacket Input)
+        {
+            ByteStream.Serialize(rbsByteStream, ref Input.m_svaLinkSortValue.m_lSortValueA);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_svaLinkSortValue.m_lSortValueB);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_lLinkHash);
+        }
+
+        public static void Serialize(WriteByteStream rbsByteStream, PeerHasLinkPacket Input)
+        {
+            ByteStream.Serialize(rbsByteStream, ref Input.m_svaLinkSortValue.m_lSortValueA);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_svaLinkSortValue.m_lSortValueB);
+            ByteStream.Serialize(rbsByteStream, ref Input.m_lLinkHash);
+        }
+
+        public static int DataSize(PeerHasLinkPacket Input)
+        {
+            int iSize = ByteStream.DataSize(Input.m_svaLinkSortValue.m_lSortValueA);
+            iSize += ByteStream.DataSize(Input.m_svaLinkSortValue.m_lSortValueB);
+            iSize += ByteStream.DataSize(Input.m_lLinkHash);
+            return iSize;
+        }
+    }
+    #endregion
+    
     public class GlobalLinkRequest : DataPacket
     {
         public static int TypeID { get; set; } = int.MinValue;

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Utility;
 
 namespace Networking
 {
@@ -53,7 +54,18 @@ namespace Networking
         //with the same user id that is still in the process of being kicked as a new one voting in reconnecting peer connections are filtered 
         //by connection start time, this is not garanteed to be 100% accurate so this padding is added just in case
         public TimeSpan OldConnectionFilterPadding { get; private set; }
+        
+        //if there is a missing chain link, wait this long before requesting it
+        //this is to give time for the authoring peer to send it and to 
+        //prevent saturating the network with link requests
+        public TimeSpan TimeBeforeRequestingLinkFromPeer { get; private set; }
+        
+        //how long before we consider this link request as failed 
+        public TimeSpan MaxValidLinkRequestAge { get; private set; }
 
+        //max number of in flight requests for a given chain link
+        public int MaxActiveRequestsForLinkFromPeers { get; private set; }
+        
         //fixed max player count but in future will be dynamic? 
         public int MaxChannelCount { get; private set; }
 
@@ -79,6 +91,9 @@ namespace Networking
         //this is used to decide when to wait for peers to send their connection state 
         public DateTime m_dtmGlobalMessageSystemActiveStartTime { get; private set; } = DateTime.MaxValue;
 
+        //tracking what links this peer has vs other peers and what requests are active
+        public KnownPeerChainLinkTracker m_kplLinkTracker;
+        
         //the local time this peer started connecting  / syncronizing with the global message system 
         protected DateTime m_dtmTimeOfStateCollectionStart = DateTime.MinValue;
 
@@ -97,7 +112,10 @@ namespace Networking
         protected TimeNetworkProcessor m_tnpNetworkTime;
 
         protected GlobalMessageKeyManager m_gkmKeyManager;
+        
+        protected DeterministicRandomNumberGenerator m_rngDeterministicRandomNumberGenerator = new DeterministicRandomNumberGenerator(1234);
 
+        
         public NetworkGlobalMessengerProcessor(NetworkingDataBridge ndbDataBridge) : base()
         {
             m_ndbNetworkDataBridge = ndbDataBridge;
@@ -116,6 +134,9 @@ namespace Networking
 
             //setup the chain manager for the max player count 
             m_chmChainManager = new ChainManager(MaxChannelCount, ParentNetworkConnection.m_ncsConnectionSettings);
+            
+            //setup the peer link tracker
+            m_kplLinkTracker = new KnownPeerChainLinkTracker();
 
         }
 
@@ -140,6 +161,8 @@ namespace Networking
             //add all the data packet classes this processor relies on to the main class factory 
             GlobalMessagePacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalMessagePacket>(GlobalMessagePacket.TypeID);
 
+            PeerHasLinkPacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<PeerHasLinkPacket>(PeerHasLinkPacket.TypeID);
+            
             GlobalLinkRequest.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalLinkRequest>(GlobalLinkRequest.TypeID);
 
             GlobalChainLinkPacket.TypeID = ParentNetworkConnection.PacketFactory.AddType<GlobalChainLinkPacket>(GlobalChainLinkPacket.TypeID);
@@ -164,6 +187,12 @@ namespace Networking
             JoinVoteGracePeriod = TimeSpan.FromSeconds(ncsSettings.m_fJoinVoteGracePeriod);
 
             OldConnectionFilterPadding = TimeSpan.FromSeconds(ncsSettings.m_fOldConnectionFilterPadding);
+
+            TimeBeforeRequestingLinkFromPeer = TimeSpan.FromSeconds(ncsSettings.m_fTimeBeforeRequestingALinkFromPeer);
+
+            MaxValidLinkRequestAge = TimeSpan.FromSeconds(ncsSettings.m_fMaxValidLinkRequestAge);
+            
+            MaxActiveRequestsForLinkFromPeers = ncsSettings.m_iMaxNumberOfRequestsForLinkFromPeers;
         }   
         
         public override void Update()
@@ -241,6 +270,13 @@ namespace Networking
 
                     //add new links to chain 
                     MakeNewChainLinkIfTimeTo();
+                    
+                    //clear up any out of date link requests 
+                    CleanUpFailedLinkRequests();
+                    
+                    //request any missing links
+                    RequestMissingLinks();
+                    
                     break;
             }
         }
@@ -305,6 +341,11 @@ namespace Networking
 
         public void ProcessLinkPacket(GlobalChainLinkPacket clpChainLinkPacket)
         {
+            //if we dont store this link we might need to request it from a peer later
+            //to make sure we can do that we need to add it to the link tracker as not 
+            //owned by this peer 
+            bool bAddedToChainManager = false;
+            
             //check if still collecting start states
             if (m_staState == State.ConnectAsAdditionalPeer)
             {
@@ -315,6 +356,8 @@ namespace Networking
 
                 m_chmChainManager.AddChainLinkPreConnection(ParentNetworkConnection.m_lPeerID, clpChainLinkPacket.m_chlLink, m_gmbMessageBuffer, m_ndbNetworkDataBridge);
 
+                bAddedToChainManager = true;
+                
                 m_bStartStateCandidatesDirty = true;
             }
             else if (m_staState == State.Connected || m_staState == State.Active)
@@ -332,6 +375,8 @@ namespace Networking
                     m_ndbNetworkDataBridge, 
                     out bool bIsMessageBufferDirty);
 
+                bAddedToChainManager = true;
+
                 if (bIsMessageBufferDirty)
                 {
                     //update the final unconfirmed message state 
@@ -340,6 +385,37 @@ namespace Networking
                         m_ndbNetworkDataBridge, 
                         m_chmChainManager.VoteTimeout, 
                         m_chmChainManager.MaxChannelCount);
+                }
+                
+                //adding messages can change the base link.
+                //there is no point tracking links older than the base
+                //this function updates the out of date time for tracked links 
+                //and removes the corresponding tracking on peer connections
+                RemoveOldTrackedLinks();
+            }
+            
+
+            
+            //check if we should track the link
+            if (m_kplLinkTracker.m_svaOldestValidTime <= clpChainLinkPacket.m_chlLink.m_svaChainSortingValue)
+            {
+                //check if we have stored it or not
+                if (bAddedToChainManager)
+                {
+                    m_kplLinkTracker.SetLinkAsReceived(clpChainLinkPacket.m_chlLink.m_svaChainSortingValue, clpChainLinkPacket.m_chlLink.m_lLinkPayloadHash);
+                }
+                
+                //tell peers the local peer is storing the chain link
+                if (m_staState == State.Connected || m_staState == State.Active)
+                {
+                    PeerHasLinkPacket phlPeerHasLinkPacket =
+                        ParentNetworkConnection.PacketFactory
+                            .CreateType<PeerHasLinkPacket>(PeerHasLinkPacket.TypeID);
+                    phlPeerHasLinkPacket.m_lLinkHash = clpChainLinkPacket.m_chlLink.m_lLinkPayloadHash;
+                    phlPeerHasLinkPacket.m_svaLinkSortValue = clpChainLinkPacket.m_chlLink.m_svaChainSortingValue;
+                    
+                    //send packet to all connected peers
+                    ParentNetworkConnection.TransmitPacketToAll(phlPeerHasLinkPacket);
                 }
             }
         }
@@ -385,6 +461,13 @@ namespace Networking
                     m_gmbMessageBuffer, 
                     m_ndbNetworkDataBridge, 
                     out bool bIsMessageBufferDirty);
+                
+                //add the chain link to the tracker
+                if (m_kplLinkTracker.m_svaOldestValidTime <= chlNextLink.m_svaChainSortingValue)
+                {
+                    m_kplLinkTracker.SetLinkAsReceived(chlNextLink.m_svaChainSortingValue,
+                        chlNextLink.m_lLinkPayloadHash);
+                }
 
                 if (bIsMessageBufferDirty)
                 {
@@ -395,6 +478,12 @@ namespace Networking
                         m_chmChainManager.VoteTimeout,
                         m_chmChainManager.MaxChannelCount);
                 }
+
+                //adding messages can change the base link.
+                //there is no point tracking links older than the base
+                //this function updates the out of date time for tracked links 
+                //and removes the corresponding tracking on peer connections
+                RemoveOldTrackedLinks();
 
                 //unlock network data bridge values 
 
@@ -544,6 +633,12 @@ namespace Networking
 
                 //update message buffer final state
                 m_gmbMessageBuffer.UpdateFinalMessageState(m_chmChainManager.m_chlBestChainHead.m_gmsState, m_ndbNetworkDataBridge, m_chmChainManager.VoteTimeout, m_chmChainManager.MaxChannelCount);
+                
+                //adding messages can change the base link.
+                //there is no point tracking links older than the base
+                //this function updates the out of date time for tracked links 
+                //and removes the corresponding tracking on peer connections
+                RemoveOldTrackedLinks();
                 
                 m_staState = State.Connected;
             }
@@ -1057,6 +1152,107 @@ namespace Networking
                 }
             }
         }
+
+        public void RemoveOldTrackedLinks()
+        {
+            Debug.Assert(m_chmChainManager != null, "ChainManagerShouldNotBeNull");
+            Debug.Assert(m_chmChainManager.m_chlChainBase != null, "if base is null cant get sort value");
+            Debug.Assert(m_kplLinkTracker != null, "LinkTracker should not be null");
+                
+            //check if new chain link has updated chain link base
+            if (m_chmChainManager.m_chlChainBase.m_svaChainSortingValue != m_kplLinkTracker.m_svaOldestValidTime)
+            {
+                //update the base value for chain link tracking 
+                List<long> lLinksToStopTracking =
+                    m_kplLinkTracker.RemoveTrackingOfLinksOlderThan(m_chmChainManager.m_chlChainBase
+                        .m_svaChainSortingValue);
+                    
+                //for each connection remove any tracked links that are now too old 
+                foreach (ConnectionGlobalMessengerProcessor cmpChildConnection in ChildConnectionProcessors.Values)
+                {
+                    cmpChildConnection.RemoveTrackingOfLinks(lLinksToStopTracking);
+                }
+            }
+        }
+
+        public void RequestMissingLinks()
+        {
+            //decide the newest time to get links for
+            DateTime dtmNewestRequestTime;
+            if (m_tnpNetworkTime.NetworkTime.Ticks > TimeBeforeRequestingLinkFromPeer.Ticks)
+            {
+                dtmNewestRequestTime = m_tnpNetworkTime.NetworkTime - TimeBeforeRequestingLinkFromPeer;
+            }
+            else
+            {
+                dtmNewestRequestTime = DateTime.MinValue;
+            }
+
+            //get list of all missing links
+            List<long> lstMissingLinks = m_kplLinkTracker.GetListOfMissingLinksOnLocalPeer(MaxActiveRequestsForLinkFromPeers, dtmNewestRequestTime);
+            
+            //loop through all the missing packest
+            foreach (long lMissingLinkHash in lstMissingLinks)
+            {
+                //get the current requests
+                Dictionary<long, DateTime> dicRequestedFromPeers =
+                    m_kplLinkTracker.m_dicTrackedLinks[lMissingLinkHash].m_dicRequestedFrom;
+
+                int iNumberOfRequests = dicRequestedFromPeers.Count;
+
+                int iRequestsNeeded = MaxActiveRequestsForLinkFromPeers - iNumberOfRequests;
+                
+                //pick a random peer to start at using the hash of the link
+                int iRandomStartPoint = m_rngDeterministicRandomNumberGenerator.GetRandomRangeInt(0,ChildConnectionProcessors.Count);
+
+                List<long> lstConnectionKeys = ChildConnectionProcessors.Keys.ToList();
+                
+                for (int i = 0; i < lstConnectionKeys.Count; i++)
+                {
+                    //move to the next connection
+                    iRandomStartPoint = (iRandomStartPoint + 1) % lstConnectionKeys.Count;
+
+                    long lPeerToRequestFrom = lstConnectionKeys[iRandomStartPoint];
+                    
+                    //check if we already have requested from this peer
+                    if (dicRequestedFromPeers.ContainsKey(lPeerToRequestFrom))
+                    {
+                        continue;
+                    }
+                    
+                    //create a new request 
+                    GlobalLinkRequest lrpLinkRequestPacket =
+                        ParentNetworkConnection.PacketFactory.CreateType<GlobalLinkRequest>(GlobalLinkRequest.TypeID);
+
+                    lrpLinkRequestPacket.m_lRequestedLinkHash = lMissingLinkHash;
+
+                    ChildConnectionProcessors[lPeerToRequestFrom].ParentConnection
+                        .QueuePacketToSend(lrpLinkRequestPacket);
+                    
+                    //add peer to the list of peers this packet has been requested from
+                    dicRequestedFromPeers.Add(lPeerToRequestFrom, m_tnpNetworkTime.NetworkTime);
+                    
+                    //decrease the number of requests needed 
+                    iRequestsNeeded--;
+
+                    if (iRequestsNeeded <= 0)
+                    {
+                        //have made enough requests for this link
+                        break;
+                    }
+                }
+                
+            }
+
+        }
+
+        public void CleanUpFailedLinkRequests()
+        {
+            DateTime dtmOldestValidRequests = m_tnpNetworkTime.NetworkTime - MaxValidLinkRequestAge;
+            
+            //tell link request system to remove all invalid requests 
+            m_kplLinkTracker.RemoveRequestsOlderThanDate(dtmOldestValidRequests);
+        }
     }
 
     public class ConnectionGlobalMessengerProcessor : ManagedConnectionPacketProcessor<NetworkGlobalMessengerProcessor>
@@ -1070,6 +1266,9 @@ namespace Networking
         public NetworkGlobalMessengerProcessor.State m_staPeerGlobalMessageState =
             NetworkGlobalMessengerProcessor.State.WaitingForConnection;
 
+        //what chain links does this peer have
+        public HashSet<long>  m_clrChainLinksOnPeer = new HashSet<long>();
+        
         public override int Priority
         {
             get
@@ -1090,13 +1289,20 @@ namespace Networking
                 //tell them about when this peer joined the global message chain
                 SyncLocalGlobalMessageState();
             }
+
+            if (cstNewState == Connection.ConnectionStatus.Disconnected)
+            {
+                //clean up tracked links 
+                //this is needed to detect if a packet request has failed because a peer left 
+                m_tParentPacketProcessor.m_kplLinkTracker.RemoveTrackingOfPeer(ParentConnection.m_lUserUniqueID);
+            }
         }
 
         public override void OnConnectionReset()
         {
             m_dtmEarliestChainState = DateTime.MaxValue;
             m_staPeerGlobalMessageState = NetworkGlobalMessengerProcessor.State.WaitingForConnection;
-            
+            m_clrChainLinksOnPeer = new HashSet<long>();
             StartStateSync();
             
             //tell them about when this peer joined the global message chain
@@ -1146,6 +1352,25 @@ namespace Networking
                 //set the start time for the connection
                 m_dtmEarliestChainState =  stpStartTimePacket.m_dtmStartOfChainSimulation;
                 m_staPeerGlobalMessageState = stpStartTimePacket.m_staGlobalMessagingState;
+            }
+            else if (pktInputPacket is PeerHasLinkPacket)
+            {
+                PeerHasLinkPacket hlpHasLinkPacket =
+                    pktInputPacket as PeerHasLinkPacket;
+                
+                //check if this link is too old and past the active 
+                //chain link base
+                if (m_tParentPacketProcessor.m_kplLinkTracker.m_svaOldestValidTime > hlpHasLinkPacket.m_svaLinkSortValue)
+                {
+                    //can reject the packet
+                    return null;
+                }
+                
+                //add the link to the local peer tracker
+                m_tParentPacketProcessor.m_kplLinkTracker.AddTrackingOfLink(hlpHasLinkPacket.m_svaLinkSortValue, hlpHasLinkPacket.m_lLinkHash,ParentConnection.m_lUserUniqueID);
+                
+                //add the hash of the link to the local connections tracking
+                m_clrChainLinksOnPeer.Add(hlpHasLinkPacket.m_lLinkHash);
             }
 
 
@@ -1215,9 +1440,7 @@ namespace Networking
                     foreach (PeerMessageNode pmnPeerMessage in m_tParentPacketProcessor.m_gmbMessageBuffer
                                  .UnConfirmedMessageBuffer.Values)
                     {
-                        
-                        
-                        
+
                         GlobalMessagePacket gmpMessagePacket =
                             m_tParentPacketProcessor.ParentNetworkConnection.PacketFactory
                                 .CreateType<GlobalMessagePacket>(GlobalMessagePacket.TypeID);
@@ -1226,6 +1449,29 @@ namespace Networking
 
                         //send to client
                         ParentConnection.QueuePacketToSend(gmpMessagePacket);
+                    }
+                }
+                
+                //send all the known chain link tracking details so other peer can fetch off you if needed
+                if (true)
+                {
+                    foreach ( KnownPeerChainLinkTracker.LinkTracker ltrlinkTracker in m_tParentPacketProcessor.m_kplLinkTracker.m_dicTrackedLinks.Values)
+                    {
+                        //skip if this local peer does not have
+                        if (ltrlinkTracker.m_lksLinkState !=
+                            KnownPeerChainLinkTracker.LinkTracker.LinkState.ExistsOnLocalPeer)
+                        {
+                            continue;
+                        }
+                        
+                        PeerHasLinkPacket phlPeerHasLinkPacket =
+                            m_tParentPacketProcessor.ParentNetworkConnection.PacketFactory
+                                .CreateType<PeerHasLinkPacket>(PeerHasLinkPacket.TypeID);
+                        phlPeerHasLinkPacket.m_lLinkHash = ltrlinkTracker.m_lLinkHash;
+                        phlPeerHasLinkPacket.m_svaLinkSortValue = ltrlinkTracker.m_svaLinkTime;
+                        
+                        //send to client
+                        ParentConnection.QueuePacketToSend(phlPeerHasLinkPacket);
                     }
                 }
             }
@@ -1245,5 +1491,15 @@ namespace Networking
             m_tParentPacketProcessor.ParentNetworkConnection.SendPacket(ParentConnection, stpStartTimeSync);
 
         }
+
+        public void RemoveTrackingOfLinks(List<long> lstLinksToStopTracking)
+        {
+            foreach (long lLinkHash in lstLinksToStopTracking)
+            {
+                m_clrChainLinksOnPeer.Remove(lLinkHash);
+            }
+            
+        }
+        
     }
 }

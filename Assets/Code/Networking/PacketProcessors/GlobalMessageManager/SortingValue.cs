@@ -216,6 +216,16 @@ namespace Networking
             return a.CompareTo(b) >-1;
         }
 
+        public static bool operator ==(SortingValue a, SortingValue b)
+        {
+            return a.Equals(b);
+        }
+        
+        public static bool operator !=(SortingValue a, SortingValue b)
+        {
+            return !a.Equals(b);
+        }
+
         public bool Equals(SortingValue other)
         {
             return m_lSortValueA == other.m_lSortValueA && m_lSortValueB == other.m_lSortValueB;

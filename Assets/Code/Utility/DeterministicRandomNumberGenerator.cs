@@ -61,20 +61,20 @@ namespace Utility
             return BitConverter.ToInt32(seedBits, 0);
         }
 
-        public uint GetRandomRangeInt(uint iMinInclusive, uint iMaxInclusive)
+        public uint GetRandomRangeInt(uint iMinInclusive, uint iMaxExclusive)
         {
             //get a random int 
-            uint iDif = (uint)(iMaxInclusive - iMinInclusive);
+            uint iDif = (uint)(iMaxExclusive - iMinInclusive);
             
             uint iModOfRandom = GetRandomInt() % iDif;
 
             return iMinInclusive + iModOfRandom;
         }
         
-        public int GetRandomRangeInt(int iMinInclusive, int iMaxInclusive)
+        public int GetRandomRangeInt(int iMinInclusive, int iMaxExclusive)
         {
             //get a random int 
-            uint iDif = (uint)(iMaxInclusive - iMinInclusive);
+            uint iDif = (uint)(iMaxExclusive - iMinInclusive);
             
             uint iModOfRandom = GetRandomInt() % iDif;
 
