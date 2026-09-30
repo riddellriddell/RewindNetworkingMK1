@@ -90,7 +90,7 @@ namespace Networking
                 LinkTracker ltrLink = m_dicTrackedLinks[lLinkHash];
 
                 ltrLink.m_lksLinkState = LinkTracker.LinkState.ExistsOnLocalPeer;
-
+                ltrLink.m_setPeersWithLink = null;
                 ltrLink.m_dicRequestedFrom = null;
                 
                 m_dicTrackedLinks[lLinkHash] = ltrLink;
@@ -102,6 +102,7 @@ namespace Networking
                 ltrLink.m_svaLinkTime = svaLinkTime;
                 ltrLink.m_lLinkHash = lLinkHash;
                 ltrLink.m_setPeersWithLink = null;
+                ltrLink.m_dicRequestedFrom = null;
                 ltrLink.m_lksLinkState = LinkTracker.LinkState.ExistsOnLocalPeer;
                 
                 m_dicTrackedLinks.Add(lLinkHash, ltrLink);
@@ -114,6 +115,11 @@ namespace Networking
             
             foreach (LinkTracker ltrLink in m_dicTrackedLinks.Values)
             {
+                if (ltrLink.m_lksLinkState == LinkTracker.LinkState.ExistsOnLocalPeer)
+                {
+                    continue;
+                }
+                
                 List<long> lstLinksToRemove = new List<long>();
                 
                 foreach (var kvpEntry in ltrLink.m_dicRequestedFrom)
@@ -138,10 +144,10 @@ namespace Networking
 
             foreach (var ltrKnownLink in m_dicTrackedLinks.Values)
             {
-                DateTime dtmTimeOfLink = new DateTime((long)(ltrKnownLink.m_svaLinkTime.m_lSortValueA)); 
+                DateTime dtmTimeOfLink = new DateTime((long)(ltrKnownLink.m_svaLinkTime.m_lSortValueA), DateTimeKind.Utc); 
                 
                 if (ltrKnownLink.m_lksLinkState == LinkTracker.LinkState.ExistsOnLocalPeer || 
-                    ltrKnownLink.m_dicRequestedFrom.Count < iMinPeerRequests ||
+                    ltrKnownLink.m_dicRequestedFrom.Count >= iMinPeerRequests ||
                     dtmTimeOfLink > dtmNewestTimeToRequestFor)
                 {
                     continue;
@@ -188,6 +194,7 @@ namespace Networking
                 ltrLink.m_lLinkHash = linkHash;
                 ltrLink.m_setPeersWithLink = new HashSet<long>();
                 ltrLink.m_setPeersWithLink.Add(lPeerID);
+                ltrLink.m_dicRequestedFrom = new Dictionary<long, DateTime>();
                 ltrLink.m_lksLinkState = LinkTracker.LinkState.ExistsOnExternalPeer;
                 
                 m_dicTrackedLinks.Add(linkHash, ltrLink);

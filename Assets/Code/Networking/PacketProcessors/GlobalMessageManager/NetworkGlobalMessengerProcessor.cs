@@ -1202,17 +1202,18 @@ namespace Networking
 
                 int iRequestsNeeded = MaxActiveRequestsForLinkFromPeers - iNumberOfRequests;
                 
-                //pick a random peer to start at using the hash of the link
-                int iRandomStartPoint = m_rngDeterministicRandomNumberGenerator.GetRandomRangeInt(0,ChildConnectionProcessors.Count);
-
-                List<long> lstConnectionKeys = ChildConnectionProcessors.Keys.ToList();
+                //get list of peers with link
+                long[] lPeersWithLink = m_kplLinkTracker.m_dicTrackedLinks[lMissingLinkHash].m_setPeersWithLink.ToArray();
                 
-                for (int i = 0; i < lstConnectionKeys.Count; i++)
+                //pick a random peer to start at using the hash of the link
+                int iRandomStartPoint = m_rngDeterministicRandomNumberGenerator.GetRandomRangeInt(0,lPeersWithLink.Length);
+
+                for (int i = 0; i < lPeersWithLink.Length; i++)
                 {
                     //move to the next connection
-                    iRandomStartPoint = (iRandomStartPoint + 1) % lstConnectionKeys.Count;
+                    iRandomStartPoint = (iRandomStartPoint + 1) % lPeersWithLink.Length;
 
-                    long lPeerToRequestFrom = lstConnectionKeys[iRandomStartPoint];
+                    long lPeerToRequestFrom = lPeersWithLink[iRandomStartPoint];
                     
                     //check if we already have requested from this peer
                     if (dicRequestedFromPeers.ContainsKey(lPeerToRequestFrom))
@@ -1434,7 +1435,7 @@ namespace Networking
                 //anyway, these messages should either get sent with the chain or they don't exist on the chain
                 //and will eventually get culled
 
-                if (true)
+                if (false)
                 {
                     //send all the messages in the unconfirmed message buffer
                     foreach (PeerMessageNode pmnPeerMessage in m_tParentPacketProcessor.m_gmbMessageBuffer
